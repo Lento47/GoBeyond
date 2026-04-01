@@ -14,8 +14,20 @@ import { StudentExperience } from "./StudentExperience";
 const storageKey = "gobeyond_admin_token";
 const studentStorageKey = "gobeyond_student_token";
 
+function getViewModeFromPath(pathname) {
+  if (pathname === "/admin") {
+    return "admin";
+  }
+
+  if (pathname === "/portal") {
+    return "portal";
+  }
+
+  return "landing";
+}
+
 export default function GoBeyondApp() {
-  const [viewMode, setViewMode] = useState("landing");
+  const [viewMode, setViewMode] = useState(() => getViewModeFromPath(window.location.pathname));
   const [token, setToken] = useState(() => window.localStorage.getItem(storageKey) ?? "");
   const [studentToken, setStudentToken] = useState(() => window.localStorage.getItem(studentStorageKey) ?? "");
   const [currentUser, setCurrentUser] = useState(null);
@@ -57,6 +69,37 @@ export default function GoBeyondApp() {
     loading: studentDashboardLoading,
     error: studentDashboardError,
   } = useStudentDashboard(studentToken);
+
+  useEffect(() => {
+    function handlePopState() {
+      setViewMode(getViewModeFromPath(window.location.pathname));
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const metaName = "robots";
+    let robotsMeta = document.querySelector(`meta[name="${metaName}"]`);
+
+    if (!robotsMeta) {
+      robotsMeta = document.createElement("meta");
+      robotsMeta.setAttribute("name", metaName);
+      document.head.appendChild(robotsMeta);
+    }
+
+    robotsMeta.setAttribute(
+      "content",
+      viewMode === "landing" ? "index,follow" : "noindex,nofollow,noarchive"
+    );
+  }, [viewMode]);
+
+  function navigateTo(nextView) {
+    const nextPath = nextView === "landing" ? "/" : `/${nextView}`;
+    window.history.pushState({}, "", nextPath);
+    setViewMode(nextView);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -186,22 +229,6 @@ export default function GoBeyondApp() {
     <div className="min-h-screen bg-[#f4efe7] text-[#1f1720]">
       {viewMode === "landing" ? (
         <div className="relative">
-          <div className="absolute right-6 top-6 z-20 flex gap-2">
-            <button
-              className="border border-[#d8cdbf] bg-white/90 px-4 py-2 text-sm text-[#5c4d46] backdrop-blur"
-              onClick={() => setViewMode("portal")}
-              type="button"
-            >
-              Portal estudiantil
-            </button>
-            <button
-              className="border border-[#d8cdbf] bg-white/90 px-4 py-2 text-sm text-[#5c4d46] backdrop-blur"
-              onClick={() => setViewMode("admin")}
-              type="button"
-            >
-              Acceso admin
-            </button>
-          </div>
           <PublicExperience content={publicContent} createTestimonialSubmission={createTestimonialSubmission} />
         </div>
       ) : viewMode === "portal" ? (
@@ -215,7 +242,7 @@ export default function GoBeyondApp() {
 
               <button
                 className="border border-[#d8cdbf] px-4 py-2 text-sm"
-                onClick={() => setViewMode("landing")}
+                onClick={() => navigateTo("landing")}
                 type="button"
               >
                 Volver al landing
@@ -244,7 +271,7 @@ export default function GoBeyondApp() {
 
               <button
                 className="border border-[#d8cdbf] px-4 py-2 text-sm"
-                onClick={() => setViewMode("landing")}
+                onClick={() => navigateTo("landing")}
                 type="button"
               >
                 Volver al landing
