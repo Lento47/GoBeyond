@@ -1,7 +1,11 @@
-import { getContent } from "../../_lib/content";
-import { json } from "../../_lib/response";
+import { getContent, getPublicContentView } from "../../_lib/content";
+import { error, json } from "../../_lib/response";
 
 export async function onRequestGet(context) {
-  const content = await getContent(context.env);
-  return json(content);
+  try {
+    const content = await getContent(context.env);
+    return json(getPublicContentView(content));
+  } catch (requestError) {
+    return error(requestError.message, requestError.status ?? 500);
+  }
 }

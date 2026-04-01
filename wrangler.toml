@@ -5,7 +5,7 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "gobeyond-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "c2df3df4-4112-4e86-8846-e5814e956f3a"
 
 [vars]
-APP_ORIGIN = "http://localhost:8788"
+APP_ORIGIN = "https://main.gobeyond.pages.dev"

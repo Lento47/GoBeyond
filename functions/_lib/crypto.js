@@ -1,4 +1,5 @@
 const encoder = new TextEncoder();
+const PBKDF2_ITERATIONS = 100000;
 
 function bytesToHex(bytes) {
   return Array.from(bytes)
@@ -39,7 +40,7 @@ export async function hashPassword(password, salt = randomHex(16)) {
     {
       name: "PBKDF2",
       salt: hexToBytes(salt),
-      iterations: 150000,
+      iterations: PBKDF2_ITERATIONS,
       hash: "SHA-256",
     },
     keyMaterial,

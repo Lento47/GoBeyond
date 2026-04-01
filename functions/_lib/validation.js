@@ -37,3 +37,46 @@ export function validatePassword(value) {
 
   return normalized;
 }
+
+export function validateRole(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  const allowedRoles = new Set(["admin", "teacher", "student"]);
+
+  if (!allowedRoles.has(normalized)) {
+    throw badRequest("Rol invalido.");
+  }
+
+  return normalized;
+}
+
+export function validateAccountStatus(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  const allowedStatuses = new Set(["active", "disabled"]);
+
+  if (!allowedStatuses.has(normalized)) {
+    throw badRequest("Estado de cuenta invalido.");
+  }
+
+  return normalized;
+}
+
+export function validateEnrollmentStatus(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  const allowedStatuses = new Set(["active", "paused", "completed", "expired"]);
+
+  if (!allowedStatuses.has(normalized)) {
+    throw badRequest("Estado de matricula invalido.");
+  }
+
+  return normalized;
+}
+
+export function validatePositiveInteger(value, label, { min = 1, max = 3650 } = {}) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw badRequest(`${label} es invalido.`);
+  }
+
+  return parsed;
+}

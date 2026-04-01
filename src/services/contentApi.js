@@ -24,6 +24,13 @@ export async function fetchPublicContent() {
   return request("/public/content");
 }
 
+export async function submitPublicTestimonial(payload) {
+  return request("/public/testimonials", {
+    method: "POST",
+    body: payload,
+  });
+}
+
 export async function fetchAdminContent(token) {
   return request("/admin/content", { token });
 }
@@ -51,6 +58,14 @@ export async function deleteAdminCollectionItem(token, section, id) {
   });
 }
 
+export async function updateAdminCollectionItem(token, section, id, item) {
+  return request(`/admin/collections/${section}?id=${encodeURIComponent(id)}`, {
+    method: "PUT",
+    token,
+    body: item,
+  });
+}
+
 export async function bootstrapAdmin(payload) {
   return request("/auth/bootstrap", {
     method: "POST",
@@ -65,6 +80,20 @@ export async function loginAdmin(payload) {
   });
 }
 
+export async function loginUser(payload) {
+  return request("/auth/login", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function registerStudent(payload) {
+  return request("/auth/register", {
+    method: "POST",
+    body: payload,
+  });
+}
+
 export async function fetchCurrentUser(token) {
   return request("/auth/me", {
     token,
@@ -74,6 +103,59 @@ export async function fetchCurrentUser(token) {
 export async function logoutAdmin(token) {
   return request("/auth/logout", {
     method: "POST",
+    token,
+  });
+}
+
+export async function fetchStudentDashboard(token) {
+  return request("/student/dashboard", {
+    token,
+  });
+}
+
+export async function fetchAdminUsers(token) {
+  return request("/admin/users", { token });
+}
+
+export async function createAdminUser(token, payload) {
+  return request("/admin/users", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function updateAdminUser(token, userId, payload) {
+  return request(`/admin/users/${encodeURIComponent(userId)}`, {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function fetchAdminEnrollments(token) {
+  return request("/admin/enrollments", { token });
+}
+
+export async function createAdminEnrollment(token, payload) {
+  return request("/admin/enrollments", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function updateAdminEnrollment(token, enrollmentId, payload) {
+  return request(`/admin/enrollments/${encodeURIComponent(enrollmentId)}`, {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteAdminEnrollment(token, enrollmentId) {
+  return request(`/admin/enrollments/${encodeURIComponent(enrollmentId)}`, {
+    method: "DELETE",
     token,
   });
 }

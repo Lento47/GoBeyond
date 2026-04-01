@@ -1,8 +1,8 @@
 import { defaultContent } from "../../src/data/defaultContent";
 import { parseJsonOrNull } from "./util";
 
-const blockSections = ["brand", "hero", "benefits", "accessTimeline", "subscription", "communityStats"];
-const collectionSections = ["liveSessions", "learningPath"];
+const blockSections = ["brand", "hero", "benefits", "accessTimeline", "subscription", "communityStats", "landing"];
+const collectionSections = ["liveSessions", "learningPath", "testimonials", "testimonialSubmissions", "courses"];
 
 export async function getContent(env) {
   const content = structuredClone(defaultContent);
@@ -33,6 +33,14 @@ export async function getContent(env) {
   }
 
   return content;
+}
+
+export function getPublicContentView(content) {
+  return {
+    ...content,
+    testimonials: (content.testimonials ?? []).filter((item) => item.status !== "pending"),
+    testimonialSubmissions: undefined,
+  };
 }
 
 export async function saveBlock(env, section, value, userId) {
@@ -70,6 +78,32 @@ export async function createCollectionItem(env, section, item) {
      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
   )
     .bind(item.id, section, JSON.stringify(item), nextPosition)
+    .run();
+}
+
+export async function updateCollectionItem(env, section, item) {
+  if (!collectionSections.includes(section)) {
+    throw new Error("Coleccion no permitida.");
+  }
+
+  const existing = await env.DB.prepare(
+    "SELECT id, position FROM collection_items WHERE section = ? AND id = ? LIMIT 1"
+  )
+    .bind(section, item.id)
+    .first();
+
+  if (!existing) {
+    const error = new Error("Elemento no encontrado.");
+    error.status = 404;
+    throw error;
+  }
+
+  await env.DB.prepare(
+    `UPDATE collection_items
+     SET value_json = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE section = ? AND id = ?`
+  )
+    .bind(JSON.stringify(item), section, item.id)
     .run();
 }
 

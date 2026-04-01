@@ -1,9 +1,49 @@
 import { hashPassword, randomHex, sha256, verifyPassword } from "./crypto";
 import { writeAuditLog } from "./audit";
 import { createId, getClientIp, nowIso } from "./util";
-import { validateEmail, validatePassword, validateRequiredString } from "./validation";
+import {
+  validateAccountStatus,
+  validateEmail,
+  validatePassword,
+  validateRequiredString,
+  validateRole,
+} from "./validation";
 
 const SESSION_HOURS = 12;
+
+async function createSessionForUser(request, env, user) {
+  const token = randomHex(32);
+  const tokenHash = await sha256(token);
+  const sessionId = createId("session");
+  const expiresAt = new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000).toISOString();
+
+  await env.DB.prepare(
+    `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?)`
+  )
+    .bind(sessionId, user.id, tokenHash, expiresAt, nowIso())
+    .run();
+
+  await writeAuditLog(env, {
+    actorUserId: user.id,
+    ipAddress: getClientIp(request),
+    eventType: "auth.login",
+    entityType: "session",
+    entityId: sessionId,
+  });
+
+  return {
+    token,
+    expiresAt,
+    user: {
+      id: user.id,
+      email: user.email,
+      fullName: user.full_name ?? user.fullName,
+      role: user.role,
+      status: user.status ?? "active",
+    },
+  };
+}
 
 export async function bootstrapAdmin(request, env, body) {
   if (!env.BOOTSTRAP_SECRET) {
@@ -33,8 +73,8 @@ export async function bootstrapAdmin(request, env, body) {
   const userId = createId("user");
 
   await env.DB.prepare(
-    `INSERT INTO users (id, email, password_hash, password_salt, full_name, role, created_at)
-     VALUES (?, ?, ?, ?, ?, 'admin', ?)`
+    `INSERT INTO users (id, email, password_hash, password_salt, full_name, role, status, created_at)
+     VALUES (?, ?, ?, ?, ?, 'admin', 'active', ?)`
   )
     .bind(userId, email, passwordData.hash, passwordData.salt, fullName, nowIso())
     .run();
@@ -61,7 +101,7 @@ export async function login(request, env, body) {
   const email = validateEmail(body.email);
   const password = validatePassword(body.password);
   const user = await env.DB.prepare(
-    "SELECT id, email, full_name, role, password_hash, password_salt FROM users WHERE email = ? LIMIT 1"
+    "SELECT id, email, full_name, role, COALESCE(status, 'active') AS status, password_hash, password_salt FROM users WHERE email = ? LIMIT 1"
   )
     .bind(email)
     .first();
@@ -80,36 +120,57 @@ export async function login(request, env, body) {
     throw error;
   }
 
-  const token = randomHex(32);
-  const tokenHash = await sha256(token);
-  const sessionId = createId("session");
-  const expiresAt = new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000).toISOString();
+  if (user.status !== "active") {
+    const error = new Error("La cuenta esta deshabilitada.");
+    error.status = 403;
+    throw error;
+  }
+
+  return createSessionForUser(request, env, user);
+}
+
+export async function registerStudent(request, env, body) {
+  const email = validateEmail(body.email);
+  const password = validatePassword(body.password);
+  const fullName = validateRequiredString(body.fullName, "Nombre completo", 255);
+
+  const existingUser = await env.DB.prepare(
+    "SELECT id FROM users WHERE email = ? LIMIT 1"
+  )
+    .bind(email)
+    .first();
+
+  if (existingUser) {
+    const error = new Error("Ya existe una cuenta con este correo.");
+    error.status = 409;
+    throw error;
+  }
+
+  const passwordData = await hashPassword(password);
+  const user = {
+    id: createId("user"),
+    email,
+    full_name: fullName,
+    role: "student",
+    status: "active",
+  };
 
   await env.DB.prepare(
-    `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?)`
+    `INSERT INTO users (id, email, password_hash, password_salt, full_name, role, status, created_at)
+     VALUES (?, ?, ?, ?, ?, 'student', 'active', ?)`
   )
-    .bind(sessionId, user.id, tokenHash, expiresAt, nowIso())
+    .bind(user.id, email, passwordData.hash, passwordData.salt, fullName, nowIso())
     .run();
 
   await writeAuditLog(env, {
     actorUserId: user.id,
     ipAddress: getClientIp(request),
-    eventType: "auth.login",
-    entityType: "session",
-    entityId: sessionId,
+    eventType: "auth.student_register",
+    entityType: "user",
+    entityId: user.id,
   });
 
-  return {
-    token,
-    expiresAt,
-    user: {
-      id: user.id,
-      email: user.email,
-      fullName: user.full_name,
-      role: user.role,
-    },
-  };
+  return createSessionForUser(request, env, user);
 }
 
 export async function requireAuth(request, env, allowedRoles = []) {
@@ -125,7 +186,7 @@ export async function requireAuth(request, env, allowedRoles = []) {
   const tokenHash = await sha256(token);
 
   const session = await env.DB.prepare(
-    `SELECT s.id, s.user_id, s.expires_at, u.email, u.full_name, u.role
+    `SELECT s.id, s.user_id, s.expires_at, u.email, u.full_name, u.role, COALESCE(u.status, 'active') AS status
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ?
@@ -147,6 +208,13 @@ export async function requireAuth(request, env, allowedRoles = []) {
     throw error;
   }
 
+  if ((session.status ?? "active") !== "active") {
+    await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(session.id).run();
+    const error = new Error("La cuenta esta deshabilitada.");
+    error.status = 403;
+    throw error;
+  }
+
   if (allowedRoles.length > 0 && !allowedRoles.includes(session.role)) {
     const error = new Error("No autorizado.");
     error.status = 403;
@@ -161,6 +229,7 @@ export async function requireAuth(request, env, allowedRoles = []) {
       email: session.email,
       fullName: session.full_name,
       role: session.role,
+      status: session.status ?? "active",
     },
   };
 }
@@ -175,4 +244,51 @@ export async function logout(request, env, auth) {
     entityType: "session",
     entityId: auth.sessionId,
   });
+}
+
+export async function createManagedUser(request, env, auth, body) {
+  const email = validateEmail(body.email);
+  const password = validatePassword(body.password);
+  const fullName = validateRequiredString(body.fullName, "Nombre completo", 255);
+  const role = validateRole(body.role);
+  const status = validateAccountStatus(body.status ?? "active");
+
+  const existingUser = await env.DB.prepare(
+    "SELECT id FROM users WHERE email = ? LIMIT 1"
+  )
+    .bind(email)
+    .first();
+
+  if (existingUser) {
+    const error = new Error("Ya existe una cuenta con este correo.");
+    error.status = 409;
+    throw error;
+  }
+
+  const passwordData = await hashPassword(password);
+  const userId = createId("user");
+
+  await env.DB.prepare(
+    `INSERT INTO users (id, email, password_hash, password_salt, full_name, role, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(userId, email, passwordData.hash, passwordData.salt, fullName, role, status, nowIso())
+    .run();
+
+  await writeAuditLog(env, {
+    actorUserId: auth.user.id,
+    ipAddress: getClientIp(request),
+    eventType: "admin.user_create",
+    entityType: "user",
+    entityId: userId,
+    detailsJson: { role, status },
+  });
+
+  return {
+    id: userId,
+    email,
+    fullName,
+    role,
+    status,
+  };
 }
