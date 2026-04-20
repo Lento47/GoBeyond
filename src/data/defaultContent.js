@@ -135,9 +135,12 @@ export const defaultContent = {
   ],
   mediaLibrary: [],
   news: [],
+  socialSources: [],
   supportTickets: [],
   courseInterestRequests: [],
   testimonialSubmissions: [],
+  sops: [],
+  sopChangeRequests: [],
   accessTimeline: [
     {
       id: "access-1",
@@ -190,6 +193,52 @@ export const defaultContent = {
       description: "Mas oportunidades dentro y fuera de Limon con formacion de alto impacto.",
     },
   ],
+  participationSection: {
+    eyebrow: "Modalidades",
+    title: "Formacion de alto valor, con acceso real.",
+    description:
+      "En Go Beyond combinamos programas 100% becados con esquemas accesibles para ampliar oportunidades, sostener el proyecto y multiplicar su impacto en mas jovenes e instituciones.",
+    footnote:
+      "Invertir en educacion de calidad no solo fortalece a las instituciones. Tambien transforma comunidades enteras.",
+    detailsHref: "https://go-beyond0.webnode.cr/precios/",
+    detailsLabel: "Ver mas detalles y condiciones",
+  },
+  participationOptions: [
+    {
+      id: "participation-independent",
+      eyebrow: "Independiente",
+      title: "Go Beyond 7",
+      price: "$0",
+      description:
+        "Pensado para jovenes actualmente desempleados que quieren prepararse con habilidades de alto valor y dar un paso real hacia mejores oportunidades.",
+      highlights: ["Para jovenes desempleados", "Cupos limitados", "Apertura sujeta a disponibilidad"],
+      ctaLabel: "Aplicar como independiente",
+      href: "https://form.jotform.com/252241086494054",
+    },
+    {
+      id: "participation-public",
+      eyebrow: "Instituciones publicas",
+      title: "Hasta 10 estudiantes becados",
+      price: "$0",
+      description:
+        "Las instituciones publicas pueden acceder a programas 100% becados. Si el grupo supera 10 estudiantes, se habilita una tarifa accesible por estudiante.",
+      highlights: ["100% becado", "Hasta 10 estudiantes por programa", "Tarifa accesible si excede 10"],
+      ctaLabel: "Aplicar como institucion educativa",
+      href: "https://form.jotform.com/260358820111044",
+    },
+    {
+      id: "participation-private",
+      eyebrow: "Instituciones privadas",
+      title: "Modelo accesible con impacto social",
+      price: "USD",
+      priceNote: "por estudiante / por programa",
+      description:
+        "Las instituciones privadas acceden a un modelo accesible que beneficia a sus estudiantes y contribuye directamente a la sostenibilidad de los programas becados.",
+      highlights: ["5 becas completas por programa", "Minimo 10 estudiantes", "Costo accesible por estudiante"],
+      ctaLabel: "Aplicar como institucion educativa",
+      href: "https://form.jotform.com/260358820111044",
+    },
+  ],
   securitySettings: {
     allowAdminPasswordChange: true,
     allowAdminResetNotification: true,
@@ -217,6 +266,13 @@ export const defaultContent = {
     contactTitle: "Quieres unirte al cambio?",
     contactBody:
       "Ponte en contacto con Go Beyond para abrir oportunidades de formacion de alto impacto para tu institucion, organizacion o comunidad.",
+    contactInfo: {
+      emailLabel: "Email",
+      emailValue: "info@gobeyondcr.org",
+      phoneLabel: "Telefono",
+      phonePrompt: "Llamanos",
+      phoneValue: "(+506) 8530 5317",
+    },
     contactActions: ["Contacto", "Noticias", "Facebook", "LinkedIn"],
     socialLinks: {
       facebook: "https://www.facebook.com/profile.php?id=61588185384903",

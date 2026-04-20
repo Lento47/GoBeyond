@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX, extractEmbedUrl } from "../../shared/embedPolicy";
+import { MarkdownContent } from "../../shared/MarkdownContent";
 import {
   ActionButton,
   EmptyState,
@@ -6,7 +8,6 @@ import {
   Input,
   MediaLibraryStrip,
   ModalShell,
-  PillButton,
   RowCard,
   ScrollArea,
   SecondaryButton,
@@ -16,9 +17,15 @@ import {
   SmallStat,
   Textarea,
 } from "./components/admin/AdminUI";
+import { getEmbedDescriptor } from "./embedUtils";
 import { CatalogSection } from "./sections/CatalogSection";
 import { IdentitySection } from "./sections/IdentitySection";
 import { PeopleSection } from "./sections/PeopleSection";
+import { AdminSopsSection } from "./SopsWorkspaceV2";
+
+function getPreviewEmbedUrl(value) {
+  return getEmbedDescriptor(value).embedUrl || extractEmbedUrl(value);
+}
 
 const initialSessionForm = {
   id: "",
@@ -56,8 +63,17 @@ const initialUserForm = {
   email: "",
   password: "",
   role: "student",
+  roles: ["student"],
   status: "active",
+  assignedCourseIds: [],
 };
+
+const roleOptions = ["student", "teacher", "admin"];
+
+function formatRolesLabel(roles = [], fallbackRole = "") {
+  const values = Array.isArray(roles) && roles.length ? roles : fallbackRole ? [fallbackRole] : [];
+  return values.join(" / ");
+}
 
 const initialEnrollmentForm = {
   id: "",
@@ -85,9 +101,19 @@ const initialNewsForm = {
   summary: "",
   link: "",
   embed: "",
+  image: "",
   status: "published",
   featured: false,
   publishedAt: "",
+};
+
+const initialSocialSourceForm = {
+  id: "",
+  nombre: "",
+  plataforma: "facebook",
+  page_url: "",
+  page_identifier: "",
+  activo: true,
 };
 
 const initialInstitutionForm = {
@@ -140,12 +166,46 @@ const initialRuleDraft = {
   points: "10",
 };
 
+export const adminViewLabels = {
+  identity: "Marca e identidad",
+  catalog: "Oferta academica",
+  people: "Administrativos",
+  queue: "Queue",
+  support: "Tickets y soporte",
+  community: "Editorial y comunidad",
+  sops: "SOPs",
+  search: "Busqueda global",
+};
+
+export const adminNavigationGroups = [
+  {
+    label: "Core",
+    items: ["identity", "catalog"],
+  },
+  {
+    label: "Operacion",
+    items: ["queue", "people", "support", "community"],
+  },
+  {
+    label: "Herramientas",
+    items: ["sops", "search"],
+  },
+];
+
 function normalizeLandingState(landing = {}) {
   return {
     ...landing,
+    contactInfo: {
+      emailLabel: landing?.contactInfo?.emailLabel ?? "Email",
+      emailValue: landing?.contactInfo?.emailValue ?? "info@gobeyondcr.org",
+      phoneLabel: landing?.contactInfo?.phoneLabel ?? "Telefono",
+      phonePrompt: landing?.contactInfo?.phonePrompt ?? "Llamanos",
+      phoneValue: landing?.contactInfo?.phoneValue ?? "(+506) 8530 5317",
+    },
     socialLinks: {
       facebook: landing?.socialLinks?.facebook ?? "",
       linkedin: landing?.socialLinks?.linkedin ?? "",
+      instagram: landing?.socialLinks?.instagram ?? "",
     },
   };
 }
@@ -226,24 +286,6 @@ function parseSessionDateParts(value) {
   };
 }
 
-function extractEmbedUrl(value) {
-  const input = String(value ?? "").trim();
-  if (!input) {
-    return "";
-  }
-
-  const iframeMatch = input.match(/src=["']([^"']+)["']/i);
-  if (iframeMatch?.[1]) {
-    return iframeMatch[1].trim();
-  }
-
-  if (/^https?:\/\//i.test(input)) {
-    return input;
-  }
-
-  return "";
-}
-
 function formatSessionLabel(dateInput, timeInput) {
   if (!dateInput) {
     return "";
@@ -272,12 +314,75 @@ function formatSessionLabel(dateInput, timeInput) {
   return `${dateLabel} · ${timeLabel}`;
 }
 
+function getQueueFocusConfig(item) {
+  if (item.kind === "Ticket") {
+    return {
+      view: "support",
+      sectionKey: null,
+      filterKey: "tickets",
+      filterValue: item.source?.subject || item.source?.student?.email || "",
+    };
+  }
+
+  if (item.kind === "Solicitud") {
+    return {
+      view: "people",
+      filterKey: "courseRequests",
+      filterValue: item.source?.courseTitle || item.source?.student?.email || "",
+    };
+  }
+
+  if (item.kind === "Hilo") {
+    return {
+      view: "community",
+      sectionKey: "threads",
+      filterKey: "communityThreads",
+      filterValue: item.source?.title || item.source?.authorEmail || "",
+    };
+  }
+
+  if (item.kind === "Cuenta") {
+    return {
+      view: "people",
+      filterKey: "users",
+      filterValue: item.source?.email || item.source?.fullName || "",
+    };
+  }
+
+  if (item.kind === "Moderacion") {
+    return {
+      view: "community",
+      sectionKey: "moderation",
+      filterKey: null,
+      filterValue: "",
+    };
+  }
+
+  if (item.kind === "Cambio SOP") {
+    return {
+      view: "sops",
+      sectionKey: null,
+      filterKey: null,
+      filterValue: "",
+    };
+  }
+
+  return {
+    view: item.view || "queue",
+    sectionKey: null,
+    filterKey: null,
+    filterValue: "",
+  };
+}
+
 export function AdminWorkspace({
+  activeView: controlledActiveView,
   authError,
   changeUserPassword,
   content,
   createCollectionItem,
   createEnrollment,
+  createSocialSource,
   createUser,
   currentUser,
   deleteCollectionItem,
@@ -288,15 +393,32 @@ export function AdminWorkspace({
   onLogout,
   removeUser,
   removeEnrollment,
+  removeSocialSource,
+  createSop,
+  updateSop,
+  deleteSop,
+  updateSopChangeRequest,
   updateCollectionItem,
   updateEnrollment,
+  updateSocialSource,
   updateSection,
   updateUser,
   uploadAsset,
   users,
   usersLoading,
+  onActiveViewChange,
+  socialSources,
+  socialSourcesLoading,
 }) {
-  const [activeView, setActiveView] = useState("identity");
+  const [internalActiveView, setInternalActiveView] = useState("queue");
+  const activeView = controlledActiveView ?? internalActiveView;
+  const setActiveView = (nextView) => {
+    if (controlledActiveView === undefined) {
+      setInternalActiveView(nextView);
+    }
+
+    onActiveViewChange?.(nextView);
+  };
   const [modal, setModal] = useState(null);
   const [brandForm, setBrandForm] = useState(content.brand);
   const [heroForm, setHeroForm] = useState(content.hero);
@@ -311,6 +433,7 @@ export function AdminWorkspace({
   const [enrollmentForm, setEnrollmentForm] = useState(initialEnrollmentForm);
   const [testimonialForm, setTestimonialForm] = useState(initialTestimonialForm);
   const [newsForm, setNewsForm] = useState(initialNewsForm);
+  const [socialSourceForm, setSocialSourceForm] = useState(initialSocialSourceForm);
   const [institutionForm, setInstitutionForm] = useState(initialInstitutionForm);
   const [supportTicketForm, setSupportTicketForm] = useState(initialSupportTicketForm);
   const [courseInterestForm, setCourseInterestForm] = useState(initialCourseInterestForm);
@@ -321,6 +444,12 @@ export function AdminWorkspace({
     course: "",
   });
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+  const [queueFilters, setQueueFilters] = useState({
+    query: "",
+    kind: "all",
+    state: "all",
+    attention: "all",
+  });
   const [viewFilters, setViewFilters] = useState({
     sessions: "",
     learning: "",
@@ -330,13 +459,17 @@ export function AdminWorkspace({
     users: "",
     enrollments: "",
     news: "",
+    socialSources: "",
     testimonials: "",
     tickets: "",
     courseRequests: "",
     communityThreads: "",
   });
+  const [communitySectionFocus, setCommunitySectionFocus] = useState(null);
   const [workspaceMessage, setWorkspaceMessage] = useState("");
   const [workspaceError, setWorkspaceError] = useState("");
+  const [focusedSopRequestId, setFocusedSopRequestId] = useState("");
+  const communitySectionRefs = useRef({});
 
   useEffect(() => {
     setBrandForm(content.brand);
@@ -345,7 +478,10 @@ export function AdminWorkspace({
     setSecuritySettingsForm(normalizeSecuritySettingsState(content.securitySettings));
   }, [content]);
 
-  const studentOptions = useMemo(() => users.filter((user) => user.role === "student"), [users]);
+  const studentOptions = useMemo(
+    () => users.filter((user) => (user.roles ?? [user.role]).includes("student")),
+    [users]
+  );
   const materialTemplates = useMemo(() => content.materialTemplates ?? [], [content.materialTemplates]);
   const institutions = useMemo(() => content.institutions ?? [], [content.institutions]);
   const mediaLibrary = useMemo(() => content.mediaLibrary ?? [], [content.mediaLibrary]);
@@ -408,6 +544,7 @@ export function AdminWorkspace({
             item.fullName,
             item.email,
             item.role,
+            ...(item.roles ?? []),
             item.status,
             item.emailVerified ? "verificada" : "pendiente",
             item.passwordExpired ? "expirada" : "vigente",
@@ -490,6 +627,23 @@ export function AdminWorkspace({
       ),
     [content.news, viewFilters.news]
   );
+  const filteredSocialSources = useMemo(
+    () =>
+      (socialSources ?? []).filter((item) =>
+        includesQuery(
+          [
+            item.nombre,
+            item.plataforma,
+            item.page_url,
+            item.page_identifier,
+            item.activo ? "activa" : "inactiva",
+            item.automationStatus === "active" ? "automatica" : "planificada",
+          ],
+          viewFilters.socialSources
+        )
+      ),
+    [socialSources, viewFilters.socialSources]
+  );
   const filteredTestimonials = useMemo(
     () =>
       (content.testimonials ?? []).filter((item) =>
@@ -557,6 +711,148 @@ export function AdminWorkspace({
       ),
     [content.courseInterestRequests, viewFilters.courseRequests]
   );
+  const queueItems = useMemo(() => {
+    const items = [];
+
+    for (const user of users) {
+      const needsVerification = !user.emailVerified;
+      const passwordExpired = Boolean(user.passwordExpired);
+      const restricted = (user.status ?? "active") !== "active";
+
+      if (!needsVerification && !passwordExpired && !restricted) {
+        continue;
+      }
+
+      const reasons = [];
+      if (needsVerification) reasons.push("correo pendiente");
+      if (passwordExpired) reasons.push("contrasena expirada");
+      if (restricted) reasons.push(`estado ${user.status ?? "inactive"}`);
+
+      items.push({
+        id: `user-${user.id}`,
+        entityId: user.id,
+        kind: "Cuenta",
+        state: restricted ? user.status ?? "inactive" : needsVerification ? "pending_verification" : "password_expired",
+        attention: passwordExpired ? "critica" : needsVerification ? "seguimiento" : "operativa",
+        title: user.fullName,
+        subtitle: `${user.email} · ${formatRolesLabel(user.roles, user.role)}`,
+        body: `Requiere atencion por ${reasons.join(", ")}.`,
+        view: "people",
+        manageLabel: "Gestionar cuenta",
+        source: user,
+      });
+    }
+
+    for (const ticket of content.supportTickets ?? []) {
+      items.push({
+        id: `ticket-${ticket.id}`,
+        entityId: ticket.id,
+        kind: "Ticket",
+        state: ticket.status || "open",
+        attention: ticket.priority === "high" ? "critica" : ticket.status === "open" ? "nueva" : "seguimiento",
+        title: ticket.subject,
+        subtitle: `${ticket.student?.fullName ?? "Sin estudiante"} · ${ticket.category || "soporte"}`,
+        body: ticket.description || "Sin descripcion.",
+        view: "support",
+        manageLabel: "Gestionar ticket",
+        source: ticket,
+      });
+    }
+
+    for (const request of content.courseInterestRequests ?? []) {
+      items.push({
+        id: `request-${request.id}`,
+        entityId: request.id,
+        kind: "Solicitud",
+        state: request.status || "open",
+        attention: request.status === "open" ? "nueva" : request.status === "waitlist" ? "seguimiento" : "operativa",
+        title: request.courseTitle || "Solicitud de apertura",
+        subtitle: `${request.student?.fullName ?? "Sin estudiante"} · ${request.contact?.value ?? request.student?.email ?? "Sin contacto"}`,
+        body: request.note || "Sin nota adicional.",
+        view: "people",
+        manageLabel: "Gestionar solicitud",
+        source: request,
+      });
+    }
+
+    for (const thread of content.communityThreads ?? []) {
+      items.push({
+        id: `thread-${thread.id}`,
+        entityId: thread.id,
+        kind: "Hilo",
+        state: thread.visibility === "hidden" ? "hidden" : thread.status || "open",
+        attention: thread.visibility === "hidden" ? "critica" : thread.status === "open" ? "nueva" : "seguimiento",
+        title: thread.title,
+        subtitle: `${thread.authorName ?? "Sin autor"}${thread.courseTitle ? ` · ${thread.courseTitle}` : ""}`,
+        body: thread.body || "Sin contenido.",
+        view: "community",
+        manageLabel: "Gestionar hilo",
+        source: thread,
+      });
+    }
+
+    for (const submission of content.testimonialSubmissions ?? []) {
+      items.push({
+        id: `testimonial-${submission.id}`,
+        entityId: submission.id,
+        kind: "Moderacion",
+        state: "pending_review",
+        attention: "nueva",
+        title: submission.author || "Testimonio pendiente",
+        subtitle: submission.organization || "Formulario publico",
+        body: submission.quote || "Sin cita disponible.",
+        view: "community",
+        manageLabel: "Abrir moderacion",
+        source: submission,
+      });
+    }
+
+    for (const request of content.sopChangeRequests ?? []) {
+      if (request.status === "completed") {
+        continue;
+      }
+
+      const lastComment = Array.isArray(request.comments) && request.comments.length ? request.comments[request.comments.length - 1] : null;
+      items.push({
+        id: `sop-request-${request.id}`,
+        entityId: request.id,
+        kind: "Cambio SOP",
+        state: request.status || "open",
+        attention: request.status === "open" ? "nueva" : "seguimiento",
+        title: request.sopTitle || "Solicitud de cambio de SOP",
+        subtitle: `${request.requesterName ?? "Sin remitente"} · ${request.requesterEmail ?? "Sin correo"}`,
+        body: lastComment?.body || "Sin comentario adicional.",
+        view: "sops",
+        manageLabel: "Gestionar solicitud",
+        source: request,
+      });
+    }
+
+    return items.sort((left, right) => {
+      const attentionWeight = { critica: 0, nueva: 1, seguimiento: 2, operativa: 3 };
+      const leftWeight = attentionWeight[left.attention] ?? 99;
+      const rightWeight = attentionWeight[right.attention] ?? 99;
+      if (leftWeight !== rightWeight) {
+        return leftWeight - rightWeight;
+      }
+
+      return left.title.localeCompare(right.title);
+    });
+  }, [content.communityThreads, content.courseInterestRequests, content.sopChangeRequests, content.supportTickets, content.testimonialSubmissions, users]);
+  const filteredQueueItems = useMemo(
+    () =>
+      queueItems.filter((item) => {
+        const queryMatch = includesQuery(
+          [item.kind, item.state, item.attention, item.title, item.subtitle, item.body],
+          queueFilters.query
+        );
+        const kindMatch = queueFilters.kind === "all" || item.kind === queueFilters.kind;
+        const stateMatch = queueFilters.state === "all" || item.state === queueFilters.state;
+        const attentionMatch = queueFilters.attention === "all" || item.attention === queueFilters.attention;
+        return queryMatch && kindMatch && stateMatch && attentionMatch;
+      }),
+    [queueFilters.attention, queueFilters.kind, queueFilters.query, queueFilters.state, queueItems]
+  );
   const globalSearchResults = useMemo(() => {
     const query = globalSearchQuery.trim();
     if (!query) {
@@ -596,8 +892,14 @@ export function AdminWorkspace({
       }
     }
     for (const item of users) {
-      if (includesQuery([item.fullName, item.email, item.role, item.status], query)) {
-        results.push({ id: item.id, type: "Usuario", title: item.fullName, subtitle: `${item.role} · ${item.email}`, view: "people" });
+      if (includesQuery([item.fullName, item.email, item.role, ...(item.roles ?? []), item.status], query)) {
+        results.push({
+          id: item.id,
+          type: "Usuario",
+          title: item.fullName,
+          subtitle: `${formatRolesLabel(item.roles, item.role)} · ${item.email}`,
+          view: "people",
+        });
       }
     }
     for (const item of enrollments) {
@@ -617,7 +919,7 @@ export function AdminWorkspace({
     }
     for (const item of content.supportTickets ?? []) {
       if (includesQuery([item.subject, item.category, item.status, item.student?.fullName, item.student?.email], query)) {
-        results.push({ id: item.id, type: "Ticket", title: item.subject, subtitle: `${item.status} · ${item.student?.fullName ?? "Sin estudiante"}`, view: "community" });
+        results.push({ id: item.id, type: "Ticket", title: item.subject, subtitle: `${item.status} · ${item.student?.fullName ?? "Sin estudiante"}`, view: "support" });
       }
     }
     for (const item of content.courseInterestRequests ?? []) {
@@ -640,6 +942,28 @@ export function AdminWorkspace({
     }));
   }
 
+  function updateQueueFilter(key, value) {
+    setQueueFilters((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  function openAdminView(view, { filterKey = null, filterValue = "", sectionKey = null } = {}) {
+    setActiveView(view);
+    if (view === "community") {
+      setCommunitySectionFocus(sectionKey || null);
+    } else {
+      setCommunitySectionFocus(null);
+    }
+    if (filterKey) {
+      setViewFilters((current) => ({
+        ...current,
+        [filterKey]: filterValue,
+      }));
+    }
+  }
+
   function openModal(nextModal) {
     setWorkspaceError("");
     setWorkspaceMessage("");
@@ -650,6 +974,60 @@ export function AdminWorkspace({
     });
     setModal(nextModal);
   }
+
+  function handleQueueItemManage(item) {
+    const focus = getQueueFocusConfig(item);
+    openAdminView(focus.view, focus);
+
+    if (item.kind === "Ticket") {
+      startEditSupportTicket(item.source);
+      return;
+    }
+
+    if (item.kind === "Solicitud") {
+      startEditCourseInterest(item.source);
+      return;
+    }
+
+    if (item.kind === "Hilo") {
+      startEditCommunityThread(item.source);
+      return;
+    }
+
+    if (item.kind === "Cuenta") {
+      startEditUser(item.source);
+      return;
+    }
+
+    if (item.kind === "Cambio SOP") {
+      setFocusedSopRequestId(item.source?.id ?? item.entityId ?? "");
+    }
+  }
+
+  function handleQueueItemOpenSection(item) {
+    const focus = getQueueFocusConfig(item);
+    openAdminView(focus.view, focus);
+  }
+
+  useEffect(() => {
+    if (activeView !== "community" || !communitySectionFocus) {
+      return undefined;
+    }
+
+    const targetSection = communitySectionRefs.current[communitySectionFocus];
+    if (!targetSection) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      targetSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 40);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeView, communitySectionFocus]);
 
   async function runAction(action, successMessage, { closeAfter = false } = {}) {
     setWorkspaceMessage("");
@@ -673,9 +1051,17 @@ export function AdminWorkspace({
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean),
+      contactInfo: {
+        emailLabel: String(landingForm.contactInfo?.emailLabel ?? "").trim(),
+        emailValue: String(landingForm.contactInfo?.emailValue ?? "").trim(),
+        phoneLabel: String(landingForm.contactInfo?.phoneLabel ?? "").trim(),
+        phonePrompt: String(landingForm.contactInfo?.phonePrompt ?? "").trim(),
+        phoneValue: String(landingForm.contactInfo?.phoneValue ?? "").trim(),
+      },
       socialLinks: {
         facebook: String(landingForm.socialLinks?.facebook ?? "").trim(),
         linkedin: String(landingForm.socialLinks?.linkedin ?? "").trim(),
+        instagram: String(landingForm.socialLinks?.instagram ?? "").trim(),
       },
     };
   }
@@ -870,7 +1256,9 @@ export function AdminWorkspace({
       email: user.email,
       password: "",
       role: user.role,
+      roles: user.roles ?? [user.role],
       status: user.status,
+      assignedCourseIds: user.assignedCourseIds ?? [],
     });
     openModal("user");
   }
@@ -1011,6 +1399,23 @@ export function AdminWorkspace({
     openModal("news");
   }
 
+  function startCreateSocialSource() {
+    setSocialSourceForm(initialSocialSourceForm);
+    openModal("social-source");
+  }
+
+  function startEditSocialSource(item) {
+    setSocialSourceForm({
+      id: item.id,
+      nombre: item.nombre ?? "",
+      plataforma: item.plataforma ?? "facebook",
+      page_url: item.page_url ?? "",
+      page_identifier: item.page_identifier ?? "",
+      activo: item.activo !== false,
+    });
+    openModal("social-source");
+  }
+
   function startEditNews(item) {
     setNewsForm({
       id: item.id,
@@ -1019,6 +1424,7 @@ export function AdminWorkspace({
       summary: item.summary ?? "",
       link: item.link ?? "",
       embed: item.embed ?? "",
+      image: item.image ?? "",
       status: item.status ?? "published",
       featured: Boolean(item.featured),
       publishedAt: String(item.publishedAt ?? "").slice(0, 10),
@@ -1145,15 +1551,19 @@ export function AdminWorkspace({
 
   async function saveUser(event) {
     event.preventDefault();
+    const normalizedRoles = Array.from(new Set([userForm.role, ...(userForm.roles ?? [])]));
     const payload = {
       fullName: userForm.fullName,
       email: userForm.email,
       role: userForm.role,
+      primaryRole: userForm.role,
+      roles: normalizedRoles,
       status: userForm.status,
+      assignedCourseIds: normalizedRoles.includes("teacher") ? userForm.assignedCourseIds ?? [] : [],
     };
     const successMessage = userForm.id
       ? "Usuario actualizado."
-      : securitySettingsForm.requireEmailVerification && payload.role === "student"
+      : securitySettingsForm.requireEmailVerification && payload.roles.includes("student")
         ? "Usuario creado. La cuenta queda pendiente hasta verificar el correo."
         : "Usuario creado.";
 
@@ -1166,11 +1576,15 @@ export function AdminWorkspace({
 
   async function saveManagedUserPassword() {
     if (!userForm.id) {
-      throw new Error("Debes abrir un usuario existente para actualizar su contrasena.");
+      setWorkspaceMessage("");
+      setWorkspaceError("Debes abrir un usuario existente para actualizar su contrasena.");
+      return;
     }
 
     if (!userForm.password.trim()) {
-      throw new Error("Ingresa una nueva contrasena segura.");
+      setWorkspaceMessage("");
+      setWorkspaceError("Ingresa una nueva contrasena segura.");
+      return;
     }
 
     await runAction(
@@ -1187,7 +1601,9 @@ export function AdminWorkspace({
 
   async function sendManagedUserPasswordReset() {
     if (!userForm.id) {
-      throw new Error("Debes abrir un usuario existente para enviar el enlace.");
+      setWorkspaceMessage("");
+      setWorkspaceError("Debes abrir un usuario existente para enviar el enlace.");
+      return;
     }
 
     await runAction(
@@ -1198,7 +1614,9 @@ export function AdminWorkspace({
 
   async function sendManagedUserVerification() {
     if (!userForm.id) {
-      throw new Error("Debes abrir un usuario existente para enviar el enlace.");
+      setWorkspaceMessage("");
+      setWorkspaceError("Debes abrir un usuario existente para enviar el enlace.");
+      return;
     }
 
     await runAction(
@@ -1209,7 +1627,9 @@ export function AdminWorkspace({
 
   async function deleteManagedUserAccount() {
     if (!userForm.id) {
-      throw new Error("Debes abrir un usuario existente para eliminar la cuenta.");
+      setWorkspaceMessage("");
+      setWorkspaceError("Debes abrir un usuario existente para eliminar la cuenta.");
+      return;
     }
 
     await runAction(
@@ -1292,6 +1712,26 @@ export function AdminWorkspace({
     await runAction(
       () => (newsForm.id ? updateCollectionItem("news", newsForm.id, payload) : createCollectionItem("news", payload)),
       newsForm.id ? "Noticia actualizada." : "Noticia creada.",
+      { closeAfter: true }
+    );
+  }
+
+  async function saveSocialSource(event) {
+    event.preventDefault();
+    const payload = {
+      nombre: socialSourceForm.nombre,
+      plataforma: socialSourceForm.plataforma,
+      page_url: socialSourceForm.page_url,
+      page_identifier: socialSourceForm.page_identifier,
+      activo: Boolean(socialSourceForm.activo),
+    };
+
+    await runAction(
+      () =>
+        socialSourceForm.id
+          ? updateSocialSource(socialSourceForm.id, payload)
+          : createSocialSource(payload),
+      socialSourceForm.id ? "Fuente social actualizada." : "Fuente social creada.",
       { closeAfter: true }
     );
   }
@@ -1460,6 +1900,22 @@ export function AdminWorkspace({
     );
   }
 
+  function renderSopsView() {
+    return (
+      <AdminSopsSection
+        changeRequests={content.sopChangeRequests ?? []}
+        managedRequestId={focusedSopRequestId}
+        onCreateSop={createSop}
+        onDeleteSop={deleteSop}
+        onManagedRequestHandled={() => setFocusedSopRequestId("")}
+        onUpdateChangeRequest={updateSopChangeRequest}
+        onUpdateSop={updateSop}
+        onUploadAsset={uploadAsset}
+        sops={content.sops ?? []}
+      />
+    );
+  }
+
   function renderPeopleView() {
     return (
       <PeopleSection
@@ -1487,9 +1943,127 @@ export function AdminWorkspace({
     );
   }
 
+  function renderQueueView() {
+    const criticalCount = filteredQueueItems.filter((item) => item.attention === "critica").length;
+    const newCount = filteredQueueItems.filter((item) => item.attention === "nueva").length;
+    const followUpCount = filteredQueueItems.filter((item) => item.attention === "seguimiento").length;
+
+    return (
+      <div className="grid gap-6">
+        <SectionCard
+          title="Queue operativa"
+          description="Una bandeja unica para revisar trabajo pendiente de cuentas, solicitudes, soporte, comunidad y moderacion sin saltar entre modulos en cada paso."
+        >
+          <div className="grid gap-4 md:grid-cols-4">
+            <SmallStat label="En bandeja" value={filteredQueueItems.length} help="Elementos visibles con los filtros actuales." tone="accent" />
+            <SmallStat label="Criticos" value={criticalCount} help="Casos que bloquean acceso o requieren accion prioritaria." />
+            <SmallStat label="Nuevos" value={newCount} help="Entradas nuevas que aun no reciben gestion." />
+            <SmallStat label="Seguimiento" value={followUpCount} help="Elementos en observacion o con proxima accion." />
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Filtro de cola"
+          description="Combina filtros como haria una consola de operaciones: tipo de caso, estado, nivel de atencion y texto libre."
+        >
+          <SectionToolbar
+            helper={`${queueItems.length} items totales · ${filteredQueueItems.length} visibles · ${criticalCount} criticos con la vista actual.`}
+            action={
+              <SecondaryButton
+                onClick={() =>
+                  setQueueFilters({
+                    query: "",
+                    kind: "all",
+                    state: "all",
+                    attention: "all",
+                  })
+                }
+                type="button"
+              >
+                Limpiar filtros
+              </SecondaryButton>
+            }
+          >
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,0.7fr))]">
+              <FilterInput
+                onChange={(event) => updateQueueFilter("query", event.target.value)}
+                placeholder="Busca por usuario, correo, curso, ticket, solicitud, SOP o nota"
+                value={queueFilters.query}
+              />
+              <Select value={queueFilters.kind} onChange={(event) => updateQueueFilter("kind", event.target.value)}>
+                <option value="all">Todos los tipos</option>
+                <option value="Cuenta">Cuentas</option>
+                <option value="Ticket">Tickets</option>
+                <option value="Solicitud">Solicitudes</option>
+                <option value="Hilo">Hilos</option>
+                <option value="Cambio SOP">Cambios SOP</option>
+                <option value="Moderacion">Moderacion</option>
+              </Select>
+              <Select value={queueFilters.state} onChange={(event) => updateQueueFilter("state", event.target.value)}>
+                <option value="all">Todos los estados</option>
+                <option value="open">open</option>
+                <option value="in_progress">in_progress</option>
+                <option value="resolved">resolved</option>
+                <option value="closed">closed</option>
+                <option value="reviewing">reviewing</option>
+                <option value="waitlist">waitlist</option>
+                <option value="pending_verification">pending_verification</option>
+                <option value="password_expired">password_expired</option>
+                <option value="hidden">hidden</option>
+                <option value="pending_review">pending_review</option>
+                <option value="inactive">inactive</option>
+              </Select>
+              <Select value={queueFilters.attention} onChange={(event) => updateQueueFilter("attention", event.target.value)}>
+                <option value="all">Toda atencion</option>
+                <option value="critica">Critica</option>
+                <option value="nueva">Nueva</option>
+                <option value="seguimiento">Seguimiento</option>
+                <option value="operativa">Operativa</option>
+              </Select>
+            </div>
+          </SectionToolbar>
+
+          <ScrollArea>
+            <div className="grid gap-4">
+              {filteredQueueItems.length ? (
+                filteredQueueItems.map((item) => (
+                  <RowCard
+                    key={item.id}
+                    eyebrow={`${item.kind} · ${item.state} · ${item.attention}`}
+                    title={item.title}
+                    meta={item.subtitle}
+                    body={item.body}
+                  >
+                    <ActionButton onClick={() => handleQueueItemManage(item)} type="button">
+                      {item.manageLabel}
+                    </ActionButton>
+                    <SecondaryButton onClick={() => handleQueueItemOpenSection(item)} type="button">
+                      Abrir seccion
+                    </SecondaryButton>
+                    {item.kind === "Moderacion" ? (
+                      <SecondaryButton onClick={() => approveTestimonialSubmission(item.source)} type="button">
+                        Aprobar
+                      </SecondaryButton>
+                    ) : null}
+                  </RowCard>
+                ))
+              ) : (
+                <EmptyState
+                  title="No hay coincidencias en la queue"
+                  body="Ajusta los filtros o limpia la consulta para volver a ver toda la bandeja operativa."
+                />
+              )}
+            </div>
+          </ScrollArea>
+        </SectionCard>
+      </div>
+    );
+  }
+
   function renderCommunityView() {
     return (
       <div className="grid gap-6">
+        <div ref={(node) => { communitySectionRefs.current.threads = node; }}>
         <SectionCard
           title="Foro estudiantil"
           description="Modera los hilos reales de /comunidad, define visibilidad, marca la mejor respuesta y revisa la expiracion automatica a 6 meses."
@@ -1528,7 +2102,61 @@ export function AdminWorkspace({
             </div>
           </ScrollArea>
         </SectionCard>
+        </div>
 
+        <div ref={(node) => { communitySectionRefs.current.socialSources = node; }}>
+        <SectionCard
+          title="Fuentes sociales"
+          description="Aqui defines que cuentas oficiales monitorea la automatizacion de noticias. Facebook, LinkedIn e Instagram se administran aqui; los links visibles del landing se editan aparte."
+        >
+          <SectionToolbar
+            action={
+              <ActionButton onClick={startCreateSocialSource} type="button">
+                Agregar fuente
+              </ActionButton>
+            }
+            helper={`${filteredSocialSources.filter((item) => item.activo).length} activas · ${filteredSocialSources.filter((item) => item.automationStatus === "planned").length} planificadas · ${filteredSocialSources.length} visibles con el filtro actual.`}
+          >
+            <FilterInput
+              onChange={(event) => updateViewFilter("socialSources", event.target.value)}
+              placeholder="Filtrar por nombre, plataforma, URL, handle o estado"
+              value={viewFilters.socialSources}
+            />
+          </SectionToolbar>
+          <ScrollArea>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {filteredSocialSources.length ? (
+                filteredSocialSources.map((item) => (
+                  <RowCard
+                    key={item.id}
+                    eyebrow={`${item.plataforma} · ${item.activo ? "Activa" : "Inactiva"} · ${item.automationStatus === "active" ? "Automatizada" : "Planeada"}`}
+                    title={item.nombre}
+                    meta={`${item.page_identifier} · ${item.page_url}`}
+                    body={
+                      item.automationStatus === "active"
+                        ? "Esta fuente ya puede recibir publicaciones automaticas por webhook."
+                        : "La fuente queda registrada por UI, pero su automatizacion se activara cuando Make y el backend soporten esa red."
+                    }
+                  >
+                    <SecondaryButton onClick={() => startEditSocialSource(item)} type="button">
+                      Editar
+                    </SecondaryButton>
+                    <SecondaryButton onClick={() => removeSocialSource(item.id)} type="button">
+                      Eliminar
+                    </SecondaryButton>
+                  </RowCard>
+                ))
+              ) : socialSourcesLoading ? (
+                <EmptyState title="Cargando fuentes sociales" body="Estamos consultando las cuentas configuradas en la base de datos." />
+              ) : (
+                <EmptyState title="No hay fuentes sociales que coincidan" body="Agrega una cuenta oficial para que el flujo de automatizacion pueda asociar publicaciones con una fuente conocida." />
+              )}
+            </div>
+          </ScrollArea>
+        </SectionCard>
+        </div>
+
+        <div ref={(node) => { communitySectionRefs.current.news = node; }}>
         <SectionCard
           title="Noticias y novedades"
           description="Esta area funciona como un bloque editorial completamente editable desde admin: imagen, resumen, enlace y orden por aparicion."
@@ -1539,6 +2167,7 @@ export function AdminWorkspace({
                 Crear noticia
               </ActionButton>
             }
+            helper={`${filteredNews.filter((item) => item.status === "draft").length} borradores · ${filteredNews.filter((item) => item.featured).length} destacadas · ${filteredNews.length} visibles con el filtro actual.`}
           >
             <FilterInput
               onChange={(event) => updateViewFilter("news", event.target.value)}
@@ -1577,13 +2206,83 @@ export function AdminWorkspace({
           </div>
           </ScrollArea>
         </SectionCard>
+        </div>
 
+        <div ref={(node) => { communitySectionRefs.current.moderation = node; }}>
         <SectionCard
-          title="Tickets de soporte"
-          description="Aqui ves los mini-tickets creados desde el portal estudiantil cuando alguien necesita ayuda o seguimiento administrativo."
+          title="Testimonios y comunidad"
+          description="Publica testimonios desde un editor limpio y modera lo que llega del formulario publico sin saturar la pantalla."
         >
           <SectionToolbar
-            helper={`${filteredSupportTickets.filter((item) => item.status === "open").length} abiertos · ${filteredSupportTickets.length} visibles con el filtro actual.`}
+            action={
+              <ActionButton onClick={startCreateTestimonial} type="button">
+                Crear testimonio
+              </ActionButton>
+            }
+            helper={`${filteredTestimonials.length} testimonios publicados · ${content.testimonialSubmissions?.length ?? 0} pendientes de aprobacion.`}
+          >
+            <FilterInput
+              onChange={(event) => updateViewFilter("testimonials", event.target.value)}
+              placeholder="Filtrar testimonios por autor, institucion o contenido"
+              value={viewFilters.testimonials}
+            />
+          </SectionToolbar>
+          <ScrollArea>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {filteredTestimonials.length ? (
+              filteredTestimonials.map((item) => (
+                <RowCard key={item.id} title={item.author} meta={item.organization} body={`“${item.quote}”`}>
+                  <SecondaryButton onClick={() => deleteCollectionItem("testimonials", item.id)} type="button">
+                    Eliminar
+                  </SecondaryButton>
+                </RowCard>
+              ))
+            ) : (
+              <EmptyState title="No hay testimonios que coincidan" body="Crea uno nuevo o ajusta el filtro actual." />
+            )}
+          </div>
+          </ScrollArea>
+
+          <div className="mt-8 rounded-[1.15rem] border border-[#dfe6ee] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Moderacion</p>
+                <h4 className="mt-2 font-['Georgia'] text-2xl text-[#172033]">Pendientes de aprobacion</h4>
+              </div>
+              <p className="text-sm text-[#617085]">{content.testimonialSubmissions?.length ?? 0} esperando revision</p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {content.testimonialSubmissions?.length ? (
+                content.testimonialSubmissions.map((item) => (
+                  <RowCard key={item.id} title={item.author} meta={item.organization} body={`“${item.quote}”`}>
+                    <ActionButton onClick={() => approveTestimonialSubmission(item)} type="button">
+                      Aprobar
+                    </ActionButton>
+                    <SecondaryButton onClick={() => deleteCollectionItem("testimonialSubmissions", item.id)} type="button">
+                      Rechazar
+                    </SecondaryButton>
+                  </RowCard>
+                ))
+              ) : (
+                <EmptyState title="Todo al dia" body="No hay testimonios esperando moderacion en este momento." />
+              )}
+            </div>
+          </div>
+        </SectionCard>
+        </div>
+      </div>
+    );
+  }
+
+  function renderSupportView() {
+    return (
+      <div className="grid gap-6">
+        <SectionCard
+          title="Tickets de soporte"
+          description="Centraliza aqui los tickets reales generados por estudiantes. Esta vista existe solo para seguimiento operativo, prioridad, estado y resolucion administrativa."
+        >
+          <SectionToolbar
+            helper={`${filteredSupportTickets.filter((item) => item.status === "open").length} abiertos · ${filteredSupportTickets.filter((item) => item.status === "in_progress").length} en seguimiento · ${filteredSupportTickets.length} visibles con el filtro actual.`}
           >
             <FilterInput
               onChange={(event) => updateViewFilter("tickets", event.target.value)}
@@ -1608,74 +2307,17 @@ export function AdminWorkspace({
                   </RowCard>
                 ))
               ) : (
-                <EmptyState title="No hay tickets que coincidan" body="Cuando un estudiante solicite ayuda desde el portal, el ticket aparecera aqui." />
+                <EmptyState
+                  title="No hay tickets que coincidan"
+                  body="Cuando un estudiante solicite ayuda desde el portal, el ticket aparecera aqui para atencion administrativa."
+                />
               )}
             </div>
           </ScrollArea>
-        </SectionCard>
-
-        <SectionCard
-          title="Testimonios y comunidad"
-          description="Publica testimonios desde un editor limpio y modera lo que llega del formulario publico sin saturar la pantalla."
-        >
-          <SectionToolbar
-            action={
-              <ActionButton onClick={startCreateTestimonial} type="button">
-                Crear testimonio
-              </ActionButton>
-            }
-          >
-            <FilterInput
-              onChange={(event) => updateViewFilter("testimonials", event.target.value)}
-              placeholder="Filtrar testimonios por autor, institucion o contenido"
-              value={viewFilters.testimonials}
-            />
-          </SectionToolbar>
-          <ScrollArea>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {filteredTestimonials.length ? (
-              filteredTestimonials.map((item) => (
-                <RowCard key={item.id} title={item.author} meta={item.organization} body={`“${item.quote}”`}>
-                  <SecondaryButton onClick={() => deleteCollectionItem("testimonials", item.id)} type="button">
-                    Eliminar
-                  </SecondaryButton>
-                </RowCard>
-              ))
-            ) : (
-              <EmptyState title="No hay testimonios que coincidan" body="Crea uno nuevo o ajusta el filtro actual." />
-            )}
-          </div>
-          </ScrollArea>
-
-          <div className="mt-8 border-t border-[#eadfce] pt-6">
-            <div className="mb-4 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Moderacion</p>
-                <h4 className="mt-2 font-['Georgia'] text-2xl text-[#20181f]">Pendientes de aprobacion</h4>
-              </div>
-              <p className="text-sm text-[#6d5a51]">{content.testimonialSubmissions?.length ?? 0} esperando revision</p>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {content.testimonialSubmissions?.length ? (
-                content.testimonialSubmissions.map((item) => (
-                  <RowCard key={item.id} title={item.author} meta={item.organization} body={`“${item.quote}”`}>
-                    <ActionButton onClick={() => approveTestimonialSubmission(item)} type="button">
-                      Aprobar
-                    </ActionButton>
-                    <SecondaryButton onClick={() => deleteCollectionItem("testimonialSubmissions", item.id)} type="button">
-                      Rechazar
-                    </SecondaryButton>
-                  </RowCard>
-                ))
-              ) : (
-                <EmptyState title="Todo al dia" body="No hay testimonios esperando moderacion en este momento." />
-              )}
-            </div>
-          </div>
         </SectionCard>
       </div>
-      );
-    }
+    );
+  }
 
   function renderSearchView() {
     return (
@@ -1683,14 +2325,25 @@ export function AdminWorkspace({
         title="Resultados de busqueda"
         description="Usa esta vista para encontrar objetos en toda la cabina sin recorrer cada apartado manualmente."
       >
-        <div className="mb-4">
-          <FilterInput
-            onChange={(event) => setGlobalSearchQuery(event.target.value)}
-            placeholder="Busca cursos, sesiones, usuarios, matriculas, noticias, testimonios o instituciones"
-            value={globalSearchQuery}
-          />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="rounded-[1.1rem] border border-[#dfe6ee] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+            <FilterInput
+              onChange={(event) => setGlobalSearchQuery(event.target.value)}
+              placeholder="Busca cursos, sesiones, usuarios, matriculas, noticias, testimonios o instituciones"
+              value={globalSearchQuery}
+            />
+          </div>
+          <div className="rounded-[1.1rem] border border-[#dfe6ee] bg-[#f8fafc] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Indice</p>
+            <p className="mt-3 text-sm leading-relaxed text-[#617085]">
+              {globalSearchResults.length
+                ? `${globalSearchResults.length} coincidencias activas. Usa "Abrir seccion" para saltar directo al bloque relacionado.`
+                : "Escribe una palabra clave para recorrer identidad, cursos, personas y comunidad desde una sola vista."}
+            </p>
+          </div>
         </div>
-        <ScrollArea>
+
+        <ScrollArea className="mt-4">
           <div className="grid gap-4">
             {globalSearchResults.length ? (
               globalSearchResults.map((item) => (
@@ -1767,9 +2420,76 @@ export function AdminWorkspace({
             <form className="grid gap-4" onSubmit={saveLanding}>
             <Input value={landingForm.aboutTitle} onChange={(event) => setLandingForm({ ...landingForm, aboutTitle: event.target.value })} placeholder="Titulo sobre nosotros" />
             <Textarea value={landingForm.aboutBody} onChange={(event) => setLandingForm({ ...landingForm, aboutBody: event.target.value })} placeholder="Texto principal" />
-            <Textarea value={landingForm.aboutBodyTwo} onChange={(event) => setLandingForm({ ...landingForm, aboutBodyTwo: event.target.value })} placeholder="Texto secundario" />
+              <Textarea value={landingForm.aboutBodyTwo} onChange={(event) => setLandingForm({ ...landingForm, aboutBodyTwo: event.target.value })} placeholder="Texto secundario" />
               <Textarea value={landingForm.relevanceBody} onChange={(event) => setLandingForm({ ...landingForm, relevanceBody: event.target.value })} placeholder="Texto de relevancia laboral" />
               <Textarea value={landingForm.contactBody} onChange={(event) => setLandingForm({ ...landingForm, contactBody: event.target.value })} placeholder="Texto de contacto" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  value={landingForm.contactInfo?.emailLabel ?? ""}
+                  onChange={(event) =>
+                    setLandingForm((current) => ({
+                      ...current,
+                      contactInfo: {
+                        ...current.contactInfo,
+                        emailLabel: event.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Etiqueta de email"
+                />
+                <Input
+                  value={landingForm.contactInfo?.emailValue ?? ""}
+                  onChange={(event) =>
+                    setLandingForm((current) => ({
+                      ...current,
+                      contactInfo: {
+                        ...current.contactInfo,
+                        emailValue: event.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="info@gobeyondcr.org"
+                />
+                <Input
+                  value={landingForm.contactInfo?.phoneLabel ?? ""}
+                  onChange={(event) =>
+                    setLandingForm((current) => ({
+                      ...current,
+                      contactInfo: {
+                        ...current.contactInfo,
+                        phoneLabel: event.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Etiqueta de telefono"
+                />
+                <Input
+                  value={landingForm.contactInfo?.phonePrompt ?? ""}
+                  onChange={(event) =>
+                    setLandingForm((current) => ({
+                      ...current,
+                      contactInfo: {
+                        ...current.contactInfo,
+                        phonePrompt: event.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Texto auxiliar del telefono"
+                />
+              </div>
+              <Input
+                value={landingForm.contactInfo?.phoneValue ?? ""}
+                onChange={(event) =>
+                  setLandingForm((current) => ({
+                    ...current,
+                    contactInfo: {
+                      ...current.contactInfo,
+                      phoneValue: event.target.value,
+                    },
+                  }))
+                }
+                placeholder="(+506) 8530 5317"
+              />
               <div className="grid gap-4 md:grid-cols-2">
                 <Input
                   value={landingForm.socialLinks?.facebook ?? ""}
@@ -1798,6 +2518,19 @@ export function AdminWorkspace({
                   placeholder="Link de LinkedIn"
                 />
               </div>
+              <Input
+                value={landingForm.socialLinks?.instagram ?? ""}
+                onChange={(event) =>
+                  setLandingForm((current) => ({
+                    ...current,
+                    socialLinks: {
+                      ...current.socialLinks,
+                      instagram: event.target.value,
+                    },
+                  }))
+                }
+                placeholder="Link de Instagram"
+              />
               <div className="flex gap-3">
                 <ActionButton type="submit">Guardar narrativa</ActionButton>
                 <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
@@ -1816,8 +2549,8 @@ export function AdminWorkspace({
         >
           <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <form className="grid gap-4" onSubmit={saveSession}>
-              <div className="grid gap-3 border border-[#eadfce] bg-[#fbf8f2] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Plantillas de sesiones</p>
+              <div className="grid gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Plantillas de sesiones</p>
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
                   <Select
                     value={templateSelections.session}
@@ -1903,8 +2636,8 @@ export function AdminWorkspace({
         >
           <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <form className="grid gap-4" onSubmit={saveLearning}>
-              <div className="grid gap-3 border border-[#eadfce] bg-[#fbf8f2] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Plantillas de modulos</p>
+              <div className="grid gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Plantillas de modulos</p>
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
                   <Select
                     value={templateSelections.learning}
@@ -1967,8 +2700,8 @@ export function AdminWorkspace({
         >
           <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <form className="grid gap-4" onSubmit={saveCourse}>
-              <div className="grid gap-3 border border-[#eadfce] bg-[#fbf8f2] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Plantillas de cursos</p>
+              <div className="grid gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Plantillas de cursos</p>
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
                   <Select
                     value={templateSelections.course}
@@ -2011,8 +2744,8 @@ export function AdminWorkspace({
               <Textarea value={courseForm.description} onChange={(event) => setCourseForm({ ...courseForm, description: event.target.value })} placeholder="Descripcion del curso" />
                 <Textarea value={courseForm.outcomes} onChange={(event) => setCourseForm({ ...courseForm, outcomes: event.target.value })} placeholder="Resultados esperados" />
                 <div className="grid gap-2">
-                  <label className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Portada o panel del curso</label>
-                  <p className="text-sm text-[#6d5a51]">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Portada o panel del curso</label>
+                  <p className="text-sm leading-6 text-[#617085]">
                     Puedes usar una URL externa, subir a la nube de GoBeyond o reutilizar una portada ya existente desde la biblioteca.
                   </p>
                   <Input
@@ -2045,8 +2778,8 @@ export function AdminWorkspace({
                   />
                 </div>
 
-              <div className="grid gap-4 border border-[#eadfce] bg-[#fbf8f2] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Asignaciones del curso</p>
+              <div className="grid gap-4 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Asignaciones del curso</p>
                 <div className="grid gap-3">
                   <Input value={assignmentDraft.title} onChange={(event) => setAssignmentDraft({ ...assignmentDraft, title: event.target.value })} placeholder="Titulo de la asignacion" />
                   <Textarea value={assignmentDraft.instruction} onChange={(event) => setAssignmentDraft({ ...assignmentDraft, instruction: event.target.value })} placeholder="Instrucciones de la tarea" />
@@ -2109,8 +2842,8 @@ export function AdminWorkspace({
                 </div>
               </div>
 
-              <div className="grid gap-4 border border-[#eadfce] bg-[#fbf8f2] p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Gamificacion del curso</p>
+              <div className="grid gap-4 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Gamificacion del curso</p>
                 <div className="grid gap-3">
                   <Input value={ruleDraft.title} onChange={(event) => setRuleDraft({ ...ruleDraft, title: event.target.value })} placeholder="Nombre de la regla" />
                   <Textarea value={ruleDraft.condition} onChange={(event) => setRuleDraft({ ...ruleDraft, condition: event.target.value })} placeholder="Condicion para ganar puntos" />
@@ -2145,34 +2878,34 @@ export function AdminWorkspace({
               </div>
             </form>
 
-            <article className="border border-[#d8cdbf] bg-white p-7">
+            <article className="rounded-[1.25rem] border border-[#dbe3ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-7 shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
               {courseForm.coverImage ? (
-                <div className="mb-5 aspect-[16/9] overflow-hidden bg-[#efe4d6]">
+                <div className="mb-5 aspect-[16/9] overflow-hidden rounded-[1rem] bg-[#eef3f8]">
                   <img alt={courseForm.title || "Portada del curso"} className="h-full w-full object-cover" src={courseForm.coverImage} />
                 </div>
               ) : null}
-              <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">
                 {(courseForm.format || "Formato") + " · " + (courseForm.duration || "Duracion")}
               </p>
-              <h3 className="mt-3 font-['Georgia'] text-3xl text-[#20181f]">{courseForm.title || "Nombre del curso"}</h3>
-              <p className="mt-3 text-sm uppercase tracking-[0.2em] text-[#8b6d55]">
+              <h3 className="mt-3 font-['Georgia'] text-3xl text-[#172033]">{courseForm.title || "Nombre del curso"}</h3>
+              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#748197]">
                 {courseForm.audience || "Publico objetivo"}
               </p>
-              <p className="mt-4 text-sm text-[#8b6d55]">
+              <p className="mt-4 text-sm leading-6 text-[#617085]">
                 {courseForm.detailSummary || "Los detalles adicionales del curso apareceran aqui para una experiencia mas completa."}
               </p>
-              <p className="mt-4 text-[#5c4d46]">
+              <p className="mt-4 leading-7 text-[#324154]">
                 {courseForm.description || "La descripcion aparecera aqui para que puedas revisar tono y claridad antes de guardar."}
               </p>
-              <p className="mt-4 border-t border-[#eadfce] pt-4 text-sm text-[#5c4d46]">
-                <strong className="text-[#20181f]">Resultados esperados:</strong>{" "}
+              <p className="mt-4 border-t border-[#e2e8f0] pt-4 text-sm leading-6 text-[#617085]">
+                <strong className="text-[#172033]">Resultados esperados:</strong>{" "}
                 {courseForm.outcomes || "Los resultados del curso se mostraran aqui como vista previa."}
               </p>
-              <div className="mt-4 border-t border-[#eadfce] pt-4 text-sm text-[#5c4d46]">
-                <strong className="text-[#20181f]">Asignaciones:</strong> {(courseForm.assignments ?? []).length}
+              <div className="mt-4 border-t border-[#e2e8f0] pt-4 text-sm text-[#617085]">
+                <strong className="text-[#172033]">Asignaciones:</strong> {(courseForm.assignments ?? []).length}
               </div>
-              <div className="mt-2 text-sm text-[#5c4d46]">
-                <strong className="text-[#20181f]">Reglas de gamificacion:</strong> {(courseForm.gamificationRules ?? []).length}
+              <div className="mt-2 text-sm text-[#617085]">
+                <strong className="text-[#172033]">Reglas de gamificacion:</strong> {(courseForm.gamificationRules ?? []).length}
               </div>
             </article>
           </div>
@@ -2181,6 +2914,11 @@ export function AdminWorkspace({
     }
 
     if (modal === "user") {
+    const assignedRoles = Array.from(
+      new Set(((userForm.roles?.length ? userForm.roles : [userForm.role]) ?? []).filter(Boolean))
+    );
+    const canRemoveAssignedRole = assignedRoles.length > 1;
+
       return (
         <ModalShell
           title={userForm.id ? "Editar usuario" : "Crear usuario"}
@@ -2206,58 +2944,164 @@ export function AdminWorkspace({
                   placeholder="Contrasena temporal"
                 />
               ) : securitySettingsForm.allowAdminPasswordChange ? (
-                <Input
-                  type="password"
-                  value={userForm.password}
-                  onChange={(event) => setUserForm({ ...userForm, password: event.target.value })}
-                  placeholder="Nueva contrasena manual"
-                />
+                <div className="grid gap-2">
+                  <Input
+                    type="password"
+                    value={userForm.password}
+                    onChange={(event) => setUserForm({ ...userForm, password: event.target.value })}
+                    placeholder="Nueva contrasena manual"
+                  />
+                  <p className="text-sm leading-6 text-[#617085]">
+                    Usa este campo solo si vas a cambiar la contrasena manualmente. Para que el usuario la cambie por su cuenta, usa el enlace de recuperacion.
+                  </p>
+                </div>
               ) : null}
               <div className="grid gap-4 md:grid-cols-2">
-                <Select value={userForm.role} onChange={(event) => setUserForm({ ...userForm, role: event.target.value })}>
-                  <option value="student">student</option>
-                  <option value="teacher">teacher</option>
-                  <option value="admin">admin</option>
-                </Select>
+                <div className="grid gap-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Rol principal</p>
+                  <Select
+                    value={userForm.role}
+                    onChange={(event) =>
+                      setUserForm((current) => ({
+                        ...current,
+                        role: event.target.value,
+                      }))
+                    }
+                  >
+                    {roleOptions
+                      .filter((roleOption) => assignedRoles.includes(roleOption))
+                      .map((roleOption) => (
+                        <option key={roleOption} value={roleOption}>
+                          {roleOption}
+                        </option>
+                      ))}
+                  </Select>
+                </div>
                 <Select value={userForm.status} onChange={(event) => setUserForm({ ...userForm, status: event.target.value })}>
                   <option value="active">active</option>
                   <option value="disabled">disabled</option>
                 </Select>
               </div>
+              <div className="grid gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Roles asignados</p>
+                <p className="text-sm leading-6 text-[#617085]">
+                  El rol principal define el contexto inicial al ingresar. Los roles adicionales habilitan otros workspaces y el switcher de contexto.
+                </p>
+                <p className="text-xs leading-6 text-[#748197]">Debes dejar al menos un rol asignado. Si quieres cambiar el contexto inicial, usa el selector de rol principal.</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {roleOptions.map((roleOption) => {
+                    const checked = (userForm.roles ?? []).includes(roleOption);
+                    return (
+                      <label
+                        key={roleOption}
+                        className="flex items-center gap-3 rounded-[0.9rem] border border-[#dbe3ec] bg-white px-3 py-3 text-sm text-[#172033]"
+                      >
+                        <input
+                          checked={checked}
+                          disabled={checked && !canRemoveAssignedRole}
+                          onChange={(event) => {
+                            const nextRoles = event.target.checked
+                              ? Array.from(new Set([...(assignedRoles ?? []), roleOption]))
+                              : assignedRoles.filter((item) => item !== roleOption);
+                            setUserForm((current) => ({
+                              ...current,
+                              role: nextRoles.includes(current.role) ? current.role : nextRoles[0] ?? current.role,
+                              roles: nextRoles.length ? nextRoles : [current.role],
+                              assignedCourseIds:
+                                roleOption === "teacher" && !event.target.checked ? [] : current.assignedCourseIds ?? [],
+                            }));
+                          }}
+                          type="checkbox"
+                        />
+                        <span>{roleOption}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              {assignedRoles.includes("teacher") ? (
+                <div className="grid gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Cursos a cargo</p>
+                  <p className="text-sm leading-6 text-[#617085]">
+                    El docente solo podra operar cursos, matriculas, tareas e incidencias de los programas que queden asignados aqui.
+                  </p>
+                  <div className="grid gap-2">
+                    {(content.courses ?? []).length ? (
+                      (content.courses ?? []).map((course) => {
+                        const checked = (userForm.assignedCourseIds ?? []).includes(course.id);
+                        return (
+                          <label
+                            key={course.id}
+                            className="flex items-start gap-3 rounded-[0.9rem] border border-[#dbe3ec] bg-white px-3 py-3 text-sm text-[#172033]"
+                          >
+                            <input
+                              checked={checked}
+                              onChange={(event) => {
+                                setUserForm((current) => {
+                                  const currentIds = Array.isArray(current.assignedCourseIds) ? current.assignedCourseIds : [];
+                                  const nextIds = event.target.checked
+                                    ? Array.from(new Set([...currentIds, course.id]))
+                                    : currentIds.filter((item) => item !== course.id);
+
+                                  return {
+                                    ...current,
+                                    assignedCourseIds: nextIds,
+                                  };
+                                });
+                              }}
+                              type="checkbox"
+                            />
+                            <span className="grid gap-1">
+                              <span className="font-semibold text-[#172033]">{course.title}</span>
+                              <span className="text-xs leading-5 text-[#748197]">
+                                {course.audience || "Curso"} · {course.format || "Formato libre"}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="rounded-[0.9rem] border border-dashed border-[#dbe3ec] bg-white px-3 py-4 text-sm text-[#617085]">
+                        Aun no hay cursos disponibles para asignar.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
               <div className="flex gap-3">
                 <ActionButton type="submit">{userForm.id ? "Guardar cambios" : "Crear usuario"}</ActionButton>
                 <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
               </div>
               {userForm.id ? (
-                <div className="grid gap-3 border border-[#eadfce] bg-[#fbf8f2] p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Acciones de credenciales</p>
+                <div className="grid gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Acciones de credenciales</p>
                   {securitySettingsForm.allowAdminPasswordChange ? (
                     <SecondaryButton onClick={saveManagedUserPassword} type="button">
                       Cambiar contrasena ahora
                     </SecondaryButton>
                   ) : (
-                    <p className="text-sm text-[#6d5a51]">La politica actual no permite cambios manuales de contrasena desde administracion.</p>
+                    <p className="text-sm leading-6 text-[#617085]">La politica actual no permite cambios manuales de contrasena desde administracion.</p>
                   )}
                   {securitySettingsForm.allowAdminResetNotification ? (
                     <SecondaryButton onClick={sendManagedUserPasswordReset} type="button">
                       Enviar enlace de recuperacion
                     </SecondaryButton>
                   ) : (
-                    <p className="text-sm text-[#6d5a51]">La politica actual no permite enviar enlaces de recuperacion desde administracion.</p>
+                    <p className="text-sm leading-6 text-[#617085]">La politica actual no permite enviar enlaces de recuperacion desde administracion.</p>
                   )}
                   {currentEditingUser?.emailVerified ? (
-                    <p className="text-sm text-[#6d5a51]">La cuenta ya esta verificada y no necesita un nuevo enlace.</p>
+                    <p className="text-sm leading-6 text-[#617085]">La cuenta ya esta verificada y no necesita un nuevo enlace.</p>
                   ) : securitySettingsForm.allowAdminVerificationNotification ? (
                     <SecondaryButton onClick={sendManagedUserVerification} type="button">
                       Enviar enlace de verificacion
                     </SecondaryButton>
                   ) : (
-                    <p className="text-sm text-[#6d5a51]">La politica actual no permite enviar enlaces de verificacion desde administracion.</p>
+                    <p className="text-sm leading-6 text-[#617085]">La politica actual no permite enviar enlaces de verificacion desde administracion.</p>
                   )}
                   <SecondaryButton onClick={deleteManagedUserAccount} type="button">
                     Eliminar cuenta
                   </SecondaryButton>
-                  <p className="text-sm text-[#6d5a51]">
+                  <p className="text-sm leading-6 text-[#617085]">
                     Esta accion elimina la cuenta y cierra sus sesiones. No podras borrar tu propia cuenta ni dejar al sistema sin un admin activo.
                   </p>
                 </div>
@@ -2265,28 +3109,28 @@ export function AdminWorkspace({
             </form>
 
             <RowCard
-              eyebrow={`${userForm.role || "student"} · ${userForm.status || "active"} · ${currentEditingUser?.emailVerified ? "correo verificado" : "correo pendiente"}`}
+              eyebrow={`${formatRolesLabel(userForm.roles, userForm.role) || "student"} · ${userForm.status || "active"} · ${currentEditingUser?.emailVerified ? "correo verificado" : "correo pendiente"}`}
               title={userForm.fullName || "Nombre del usuario"}
               meta={userForm.email || "correo@dominio.com"}
               body="Vista previa de como quedara esta cuenta dentro del listado administrativo."
             >
               {currentEditingUser ? (
                 <>
-                  <p className="w-full text-sm text-[#5c4d46]">
+                  <p className="w-full text-sm leading-6 text-[#617085]">
                     Verificacion de correo:{" "}
                     {currentEditingUser.emailVerified
                       ? `Completada el ${formatDate(currentEditingUser.emailVerifiedAt)}`
                       : "Pendiente de activacion"}
                   </p>
-                  <p className="w-full text-sm text-[#5c4d46]">
+                  <p className="w-full text-sm leading-6 text-[#617085]">
                     Ultimo cambio de contrasena: {formatDate(currentEditingUser.passwordChangedAt)}
                   </p>
-                  <p className="w-full text-sm text-[#5c4d46]">
+                  <p className="w-full text-sm leading-6 text-[#617085]">
                     {currentEditingUser.passwordExpiresAt
                       ? `Expira el ${formatDate(currentEditingUser.passwordExpiresAt)}`
                       : "Sin expiracion automatica activa"}
                   </p>
-                  <p className="w-full text-sm text-[#5c4d46]">
+                  <p className="w-full text-sm leading-6 text-[#617085]">
                     Estado: {currentEditingUser.passwordExpired ? "Contrasena expirada" : "Contrasena vigente"}
                   </p>
                 </>
@@ -2349,7 +3193,7 @@ export function AdminWorkspace({
                 <option value="expired">expired</option>
               </Select>
 
-              <label className="flex items-center gap-3 text-sm text-[#20181f]">
+              <label className="flex items-center gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] px-4 py-3 text-sm text-[#172033] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                 <input
                   checked={enrollmentForm.gamificationEnabled}
                   onChange={(event) => setEnrollmentForm({ ...enrollmentForm, gamificationEnabled: event.target.checked })}
@@ -2490,14 +3334,14 @@ export function AdminWorkspace({
                 meta={`${currentThread?.authorName || "Sin autor"} · ${currentThread?.authorEmail || "Sin correo"}${currentThread?.courseTitle ? ` · ${currentThread.courseTitle}` : ""}`}
                 body={currentThread?.body || "Sin contenido."}
               >
-                <p className="text-sm text-[#5c4d46]">
+                <p className="text-sm leading-6 text-[#617085]">
                   Expira el {formatDate(currentThread?.expiresAt)}{currentThread?.lastAdminActionAt ? ` · ultima gestion ${formatDate(currentThread.lastAdminActionAt)}` : ""}
                 </p>
-                {currentThread?.adminNote ? <p className="text-sm text-[#5c4d46]">{currentThread.adminNote}</p> : null}
+                {currentThread?.adminNote ? <p className="text-sm leading-6 text-[#617085]">{currentThread.adminNote}</p> : null}
               </RowCard>
 
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Respuestas</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Respuestas</p>
                 <ScrollArea className="mt-3 max-h-[24rem]">
                   <div className="grid gap-3">
                     {currentThread?.replies?.length ? (
@@ -2561,7 +3405,9 @@ export function AdminWorkspace({
               meta={`${currentTicket?.student?.fullName || "Sin estudiante"} · ${currentTicket?.student?.email || "Sin correo"}${currentTicket?.courseTitle ? ` · ${currentTicket.courseTitle}` : ""}`}
               body={currentTicket?.description || "Sin descripcion."}
             >
-              {currentTicket?.adminNote ? <p className="text-sm text-[#5c4d46]">{currentTicket.adminNote}</p> : null}
+              {currentTicket?.adminNote ? (
+                <MarkdownContent className="text-sm leading-6 text-[#617085]">{currentTicket.adminNote}</MarkdownContent>
+              ) : null}
             </RowCard>
           </div>
         </ModalShell>
@@ -2603,12 +3449,65 @@ export function AdminWorkspace({
               meta={`${currentRequest?.student?.fullName || "Sin estudiante"} · ${currentRequest?.student?.email || "Sin correo"} · ${currentRequest?.contact?.value || "Sin dato de contacto"}`}
               body={currentRequest?.note || "Sin comentario del estudiante."}
             >
-              {currentRequest?.adminNote ? <p className="text-sm text-[#5c4d46]">{currentRequest.adminNote}</p> : null}
+              {currentRequest?.adminNote ? (
+                <MarkdownContent className="text-sm leading-6 text-[#617085]">{currentRequest.adminNote}</MarkdownContent>
+              ) : null}
             </RowCard>
           </div>
         </ModalShell>
       );
     }
+
+      if (modal === "social-source") {
+        return (
+          <ModalShell
+            title={socialSourceForm.id ? "Editar fuente social" : "Agregar fuente social"}
+            subtitle="Esta configuracion controla que cuentas oficiales se reconocen por webhook. Los secretos siguen viviendo en variables de entorno, no en este formulario."
+            onClose={closeModal}
+          >
+            <form className="grid gap-4" onSubmit={saveSocialSource}>
+              <Input
+                value={socialSourceForm.nombre}
+                onChange={(event) => setSocialSourceForm((current) => ({ ...current, nombre: event.target.value }))}
+                placeholder="Nombre visible de la fuente"
+              />
+              <Select
+                value={socialSourceForm.plataforma}
+                onChange={(event) => setSocialSourceForm((current) => ({ ...current, plataforma: event.target.value }))}
+              >
+                <option value="facebook">Facebook</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="instagram">Instagram</option>
+              </Select>
+              <Input
+                value={socialSourceForm.page_url}
+                onChange={(event) => setSocialSourceForm((current) => ({ ...current, page_url: event.target.value }))}
+                placeholder="https://www.facebook.com/..."
+              />
+              <Input
+                value={socialSourceForm.page_identifier}
+                onChange={(event) => setSocialSourceForm((current) => ({ ...current, page_identifier: event.target.value }))}
+                placeholder="ID de pagina, slug o handle"
+              />
+              <label className="flex items-center gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] px-4 py-3 text-sm text-[#172033] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <input
+                  checked={Boolean(socialSourceForm.activo)}
+                  onChange={(event) => setSocialSourceForm((current) => ({ ...current, activo: event.target.checked }))}
+                  type="checkbox"
+                />
+                Mantener la fuente activa para automatizacion
+              </label>
+              <p className="text-sm leading-6 text-[#617085]">
+                Facebook, LinkedIn e Instagram quedan listos para ingestion automatica por webhook una vez conectes su escenario en Make.
+              </p>
+              <div className="flex gap-3">
+                <ActionButton type="submit">{socialSourceForm.id ? "Guardar cambios" : "Crear fuente"}</ActionButton>
+                <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
+              </div>
+            </form>
+          </ModalShell>
+        );
+      }
 
       if (modal === "news") {
         return (
@@ -2648,7 +3547,7 @@ export function AdminWorkspace({
                   onChange={(event) => setNewsForm((current) => ({ ...current, publishedAt: event.target.value }))}
                 />
               </div>
-              <label className="flex items-center gap-3 rounded-[1rem] border border-[#d8cdbf] bg-[#fbf8f2] px-4 py-3 text-sm text-[#20181f]">
+              <label className="flex items-center gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] px-4 py-3 text-sm text-[#172033] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                 <input
                   checked={Boolean(newsForm.featured)}
                   onChange={(event) => setNewsForm((current) => ({ ...current, featured: event.target.checked }))}
@@ -2661,12 +3560,46 @@ export function AdminWorkspace({
                 onChange={(event) => setNewsForm({ ...newsForm, link: event.target.value })}
                 placeholder="https://enlace-de-referencia.com"
               />
+              <div className="grid gap-2">
+                <label className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Portada de la noticia</label>
+                <p className="text-sm leading-6 text-[#617085]">
+                  Usa una imagen propia para asegurar una miniatura estable en el landing. Los enlaces embebidos no siempre generan vista previa visual.
+                </p>
+                <Input
+                  value={newsForm.image}
+                  onChange={(event) => setNewsForm((current) => ({ ...current, image: event.target.value }))}
+                  placeholder="https://imagen-de-portada.com/noticia.jpg"
+                />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) {
+                      return;
+                    }
+
+                    try {
+                      const asset = await uploadMedia(file, "news-image");
+                      setNewsForm((current) => ({ ...current, image: asset.url }));
+                      setWorkspaceMessage(asset.deduplicated ? "Portada reutilizada desde la biblioteca existente." : "Portada subida a la biblioteca.");
+                    } catch (error) {
+                      setWorkspaceError(error.message);
+                    }
+                  }}
+                />
+                <MediaLibraryStrip
+                  emptyLabel="Cuando subas portadas de noticias apareceran aqui para reutilizarlas."
+                  items={imageLibraryItems.filter((item) => item.purpose === "news-image")}
+                  onSelect={(item) => setNewsForm((current) => ({ ...current, image: item.url }))}
+                />
+              </div>
               <Textarea
                 value={newsForm.embed}
                 onChange={(event) => setNewsForm((current) => ({ ...current, embed: event.target.value }))}
                 placeholder={'Pega aqui el embed o iframe. Ejemplo: <iframe src="https://..."></iframe> o solo https://...'}
               />
-              <p className="text-sm text-[#6d5a51]">
+              <p className="text-sm leading-6 text-[#617085]">
                 Puedes pegar el codigo embed completo o solo una URL embebida de video, publicacion o recurso externo.
               </p>
               <div className="flex gap-3">
@@ -2675,39 +3608,41 @@ export function AdminWorkspace({
               </div>
             </form>
 
-            <article className="overflow-hidden border border-[#d8cdbf] bg-white">
-              {extractEmbedUrl(newsForm.embed) ? (
-                <div className="aspect-[16/9] bg-[#f3ede3]">
+            <article className="overflow-hidden rounded-[1.25rem] border border-[#dbe3ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+              {getPreviewEmbedUrl(newsForm.embed) ? (
+                <div className="aspect-[16/9] bg-[#eef3f8]">
                   <iframe
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allow={EMBED_IFRAME_ALLOW}
                     allowFullScreen
                     className="h-full w-full border-0"
+                    loading="lazy"
                     referrerPolicy="strict-origin-when-cross-origin"
-                    src={extractEmbedUrl(newsForm.embed)}
+                    sandbox={EMBED_IFRAME_SANDBOX}
+                    src={getPreviewEmbedUrl(newsForm.embed)}
                     title={newsForm.title || "Vista previa de la noticia"}
                   />
                 </div>
               ) : newsForm.image ? (
-                <div className="aspect-[16/9] bg-[#f3ede3]">
+                <div className="aspect-[16/9] bg-[#eef3f8]">
                   <img alt={newsForm.title || "Vista previa de la noticia"} className="h-full w-full object-cover" src={newsForm.image} />
                 </div>
               ) : (
-                <div className="aspect-[16/9] bg-[linear-gradient(135deg,#f3e6d7_0%,#efe5db_100%)]" />
+                <div className="aspect-[16/9] bg-[linear-gradient(135deg,#edf2f7_0%,#f8fafc_100%)]" />
               )}
               <div className="p-7">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">
                   {newsForm.category || "Noticia"} · {newsForm.status === "draft" ? "Borrador" : newsForm.featured ? "Destacada" : "Publicada"}
                 </p>
-                <h3 className="mt-3 font-['Georgia'] text-3xl text-[#20181f]">{newsForm.title || "Titulo de la noticia"}</h3>
-                <p className="mt-4 text-[#5c4d46]">
+                <h3 className="mt-3 font-['Georgia'] text-3xl text-[#172033]">{newsForm.title || "Titulo de la noticia"}</h3>
+                <MarkdownContent className="mt-4 leading-7 text-[#324154]">
                   {newsForm.summary || "El resumen de la noticia aparecera aqui para revisar claridad y tono antes de publicarla."}
-                </p>
-                <p className="mt-4 text-sm text-[#5c4d46]">
-                  <strong className="text-[#20181f]">Publicacion:</strong>{" "}
+                </MarkdownContent>
+                <p className="mt-4 text-sm leading-6 text-[#617085]">
+                  <strong className="text-[#172033]">Publicacion:</strong>{" "}
                   {newsForm.publishedAt ? formatDate(newsForm.publishedAt) : "Se asignara automaticamente al publicar."}
                 </p>
-                <p className="mt-4 border-t border-[#eadfce] pt-4 text-sm text-[#5c4d46]">
-                  <strong className="text-[#20181f]">Enlace:</strong> {newsForm.link || "Sin enlace de referencia por ahora."}
+                <p className="mt-4 border-t border-[#e2e8f0] pt-4 text-sm leading-6 text-[#617085]">
+                  <strong className="text-[#172033]">Enlace:</strong> {newsForm.link || "Sin enlace de referencia por ahora."}
                 </p>
               </div>
             </article>
@@ -2740,10 +3675,10 @@ export function AdminWorkspace({
                     onChange={(event) => setInstitutionForm({ ...institutionForm, embed: event.target.value })}
                     placeholder={'Pega aqui el embed o iframe. Ejemplo: <iframe src="https://..."></iframe> o solo https://...'}
                   />
-                  <p className="text-sm text-[#6d5a51]">
+                  <p className="text-sm leading-6 text-[#617085]">
                     Puedes pegar el codigo embed completo o solo la URL del contenido insertado. El landing usara eso como vista principal.
                   </p>
-                <label className="flex items-center gap-3 text-sm text-[#5c4d46]">
+                <label className="flex items-center gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] px-4 py-3 text-sm text-[#172033] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                   <input
                     checked={institutionForm.featured}
                     onChange={(event) => setInstitutionForm({ ...institutionForm, featured: event.target.checked })}
@@ -2761,31 +3696,33 @@ export function AdminWorkspace({
                 </div>
               </form>
 
-              <article className="overflow-hidden border border-[#d8cdbf] bg-white">
-                <div className="aspect-[16/10] bg-[#edf1f4]">
-                  {extractEmbedUrl(institutionForm.embed) ? (
+              <article className="overflow-hidden rounded-[1.25rem] border border-[#dbe3ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+                <div className="aspect-[16/10] bg-[#eef3f8]">
+                  {getPreviewEmbedUrl(institutionForm.embed) ? (
                     <iframe
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allow={EMBED_IFRAME_ALLOW}
                       allowFullScreen
                       className="h-full w-full border-0"
+                      loading="lazy"
                       referrerPolicy="strict-origin-when-cross-origin"
-                      src={extractEmbedUrl(institutionForm.embed)}
+                      sandbox={EMBED_IFRAME_SANDBOX}
+                      src={getPreviewEmbedUrl(institutionForm.embed)}
                       title={institutionForm.name || "Vista previa institucional"}
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-[#8b6d55]">
+                    <div className="flex h-full items-center justify-center px-6 text-center text-sm leading-6 text-[#617085]">
                       La vista previa del embed aparecera aqui
                     </div>
                   )}
                 </div>
                 <div className="p-7">
-                  <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">
                     {institutionForm.featured ? "Destacada en landing" : "Guardada solo en admin"}
                   </p>
-                  <h3 className="mt-3 font-['Georgia'] text-3xl text-[#20181f]">
+                  <h3 className="mt-3 font-['Georgia'] text-3xl text-[#172033]">
                     {institutionForm.name || "Nombre de la institucion"}
                   </h3>
-                  <p className="mt-4 text-[#5c4d46]">
+                  <p className="mt-4 leading-7 text-[#324154]">
                     {institutionForm.link || "Agrega un enlace si quieres abrir sitio, red social o referencia externa."}
                   </p>
                 </div>
@@ -2800,95 +3737,89 @@ export function AdminWorkspace({
 
   return (
     <div className="grid gap-6">
-        <SectionCard
-          title="Cabina administrativa"
-        description="Todo cambio queda registrado en backend. Ahora las acciones viven en vistas mas limpias y modales enfocados, no en una sola pagina saturada."
-        accent="dark"
+      <SectionCard
+        title="Cabina administrativa"
+        description="Todo cambio queda registrado en backend. Esta capa ordena la operacion con navegacion clara, busqueda superior y bloques mas faciles de escanear."
+        accent="strong"
       >
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm text-[#d8cdc5]">
-              <strong>{currentUser.fullName}</strong> · {currentUser.email}
-            </p>
-            <p className="mt-1 text-sm text-[#d8cdc5]">
-              Rol: {currentUser.role} · Estado: {currentUser.status}
-            </p>
-          </div>
-          <button className="w-fit border border-white/25 px-4 py-2 text-sm text-white" onClick={onLogout} type="button">
-            Cerrar sesion
-          </button>
-        </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <SmallStat label="Cursos" value={content.courses?.length ?? 0} help="Programas visibles para captacion y aprendizaje." />
-          <SmallStat label="Usuarios" value={users.length} help="Cuentas administrables desde la UI." />
-          <SmallStat label="Matriculas" value={enrollments.length} help="Accesos activos o historicos por estudiante." />
-          <SmallStat label="Pendientes" value={content.testimonialSubmissions?.length ?? 0} help="Testimonios esperando moderacion." />
-        </div>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <PillButton active={activeView === "identity"} onClick={() => setActiveView("identity")} type="button">
-              Identidad
-            </PillButton>
-          <PillButton active={activeView === "catalog"} onClick={() => setActiveView("catalog")} type="button">
-            Cursos
-          </PillButton>
-          <PillButton active={activeView === "people"} onClick={() => setActiveView("people")} type="button">
-            Personas
-          </PillButton>
-            <PillButton active={activeView === "community"} onClick={() => setActiveView("community")} type="button">
-              Comunidad
-            </PillButton>
-            {globalSearchQuery.trim() ? (
-              <PillButton
-                active={activeView === "search"}
-                className="px-3 py-1.5 text-xs"
-                onClick={() => setActiveView("search")}
+        <div className="grid gap-6">
+          <div className="grid gap-4 rounded-[18px] border border-[#d7e0ea] bg-white p-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:items-center">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#6b7a90]">Sesion operativa</p>
+              <p className="mt-2 text-lg font-semibold text-[#172033]">
+                {currentUser.fullName} · <span className="text-[#536277]">{currentUser.email}</span>
+              </p>
+              <p className="mt-1 text-sm text-[#536277]">
+                Rol activo: {currentUser.role} · Roles: {formatRolesLabel(currentUser.roles, currentUser.role)} · Estado: {currentUser.status}
+              </p>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+              <FilterInput
+                onChange={(event) => {
+                  const nextQuery = event.target.value;
+                  setGlobalSearchQuery(nextQuery);
+                  if (nextQuery.trim()) {
+                    setActiveView("search");
+                  }
+                }}
+                placeholder="Busqueda general: cursos, usuarios, matriculas, sesiones, noticias, instituciones..."
+                value={globalSearchQuery}
+              />
+              <SecondaryButton
+                className="px-3 py-2 text-xs"
+                onClick={() => {
+                  setGlobalSearchQuery("");
+                  if (activeView === "search") {
+                    setActiveView("queue");
+                  }
+                }}
                 type="button"
               >
-                Busqueda
-              </PillButton>
-            ) : null}
+                Limpiar
+              </SecondaryButton>
+            </div>
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-            <FilterInput
-              onChange={(event) => {
-                const nextQuery = event.target.value;
-                setGlobalSearchQuery(nextQuery);
-                if (nextQuery.trim()) {
-                  setActiveView("search");
-                }
-              }}
-              placeholder="Busqueda general: cursos, usuarios, matriculas, sesiones, noticias, instituciones..."
-              value={globalSearchQuery}
-            />
-            <SecondaryButton
-              className="border-white/30 bg-transparent px-3 py-2 text-xs text-white hover:bg-white/10 hover:text-white"
-              onClick={() => {
-                setGlobalSearchQuery("");
-                if (activeView === "search") {
-                  setActiveView("identity");
-                }
-              }}
-              type="button"
-            >
-              Limpiar busqueda
-            </SecondaryButton>
+          <div className="grid gap-4 md:grid-cols-4">
+            <SmallStat label="Cursos" value={content.courses?.length ?? 0} help="Programas visibles para captacion y aprendizaje." tone="accent" />
+            <SmallStat label="Usuarios" value={users.length} help="Cuentas administrables desde la UI." />
+            <SmallStat label="Matriculas" value={enrollments.length} help="Accesos activos o historicos por estudiante." />
+            <SmallStat label="Queue" value={queueItems.length} help="Bandeja unificada de trabajo operativo." />
           </div>
 
-          {authError ? <p className="mt-4 text-sm text-[#ffb8a6]">{authError}</p> : null}
-        {workspaceError ? <p className="mt-4 text-sm text-[#ffb8a6]">{workspaceError}</p> : null}
-        {workspaceMessage ? <p className="mt-4 text-sm text-[#f4d9b2]">{workspaceMessage}</p> : null}
+          <div className="grid gap-4">
+            <div className="grid gap-4 rounded-[18px] border border-[#d7e0ea] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7edf5] pb-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Vista activa</p>
+                  <p className="mt-2 text-lg font-semibold text-[#172033]">{adminViewLabels[activeView]}</p>
+                </div>
+                <div className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-2 text-[11px] font-semibold text-[#536277]">
+                  {globalSearchQuery.trim() ? "Busqueda focalizada" : "Modo de trabajo normal"}
+                </div>
+              </div>
+              <p className="text-sm leading-6 text-[#617085]">Usa el sidebar principal para cambiar de bloque y la queue para aterrizar casos puntuales dentro de cada modulo.</p>
+              {authError ? <p className="mt-3 text-sm text-[#b45309]">{authError}</p> : null}
+              {workspaceError ? <p className="mt-3 text-sm text-[#b45309]">{workspaceError}</p> : null}
+              {workspaceMessage ? <p className="mt-3 text-sm text-[#1d4ed8]">{workspaceMessage}</p> : null}
+              {!authError && !workspaceError && !workspaceMessage ? (
+                <p className="mt-3 text-sm leading-relaxed text-[#617085]">Sin alertas activas. Los mensajes de guardado y seguimiento apareceran aqui.</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
       </SectionCard>
 
-        {activeView === "identity" ? renderIdentityView() : null}
-        {activeView === "catalog" ? renderCatalogView() : null}
-        {activeView === "people" ? renderPeopleView() : null}
-        {activeView === "community" ? renderCommunityView() : null}
-        {activeView === "search" ? renderSearchView() : null}
+      {activeView === "queue" ? renderQueueView() : null}
+      {activeView === "identity" ? renderIdentityView() : null}
+      {activeView === "catalog" ? renderCatalogView() : null}
+      {activeView === "people" ? renderPeopleView() : null}
+      {activeView === "support" ? renderSupportView() : null}
+      {activeView === "community" ? renderCommunityView() : null}
+      {activeView === "sops" ? renderSopsView() : null}
+      {activeView === "search" ? renderSearchView() : null}
 
-        {renderModal()}
-      </div>
+      {renderModal()}
+    </div>
   );
 }

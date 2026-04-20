@@ -1,0 +1,32 @@
+export const workspaceTokens = {
+  canvas: "#f5f7fb",
+  canvasAlt: "#eef3f8",
+  sidebar: "#fbfcfe",
+  panel: "#ffffff",
+  panelMuted: "#f7f9fc",
+  panelStrong: "#eef4ff",
+  border: "#d7e0ea",
+  borderStrong: "#bbc8d9",
+  accent: "#1d4ed8",
+  accentSoft: "#dbeafe",
+  ink: "#172033",
+  text: "#435066",
+  textMuted: "#66758c",
+  success: "#15803d",
+  successSoft: "#dcfce7",
+  warning: "#b45309",
+  warningSoft: "#ffedd5",
+};
+
+export const workspaceChrome = {
+  canvas: "bg-[#f5f7fb]",
+  canvasAlt: "bg-[#eef3f8]",
+  sidebar: "bg-[#fbfcfe]",
+  topbar: "border-b border-[#d7e0ea] bg-[#fbfcfe]/95 backdrop-blur supports-[backdrop-filter]:bg-[#fbfcfe]/88",
+  shellPanel: "rounded-[22px] border border-[#d7e0ea] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)]",
+  surface: "rounded-[18px] border border-[#d7e0ea] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)]",
+  elevatedSurface: "rounded-[18px] border border-[#bbc8d9] bg-white shadow-[0_12px_32px_rgba(15,23,42,0.08)]",
+  mutedSurface: "rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] shadow-[0_1px_2px_rgba(15,23,42,0.03)]",
+  strongSurface: "rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] shadow-[0_1px_2px_rgba(29,78,216,0.06)]",
+  darkSurface: "rounded-[20px] border border-[#1e293b] bg-[#111827] shadow-[0_18px_44px_rgba(15,23,42,0.18)]",
+};

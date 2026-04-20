@@ -1,4 +1,5 @@
 import { bootstrapAdmin } from "../../_lib/auth";
+import { assertTrustedOrigin, readJsonBody } from "../../_lib/requestSecurity";
 import { error, json, options } from "../../_lib/response";
 
 export async function onRequestOptions() {
@@ -7,7 +8,8 @@ export async function onRequestOptions() {
 
 export async function onRequestPost(context) {
   try {
-    const body = await context.request.json();
+    assertTrustedOrigin(context.request, context.env);
+    const body = await readJsonBody(context.request, { maxBytes: 16_384 });
     const result = await bootstrapAdmin(context.request, context.env, body);
     return json(result, { status: 201 });
   } catch (requestError) {

@@ -17,6 +17,21 @@ function hexToBytes(hex) {
   return bytes;
 }
 
+function constantTimeEqual(left, right) {
+  const leftBytes = hexToBytes(String(left ?? ""));
+  const rightBytes = hexToBytes(String(right ?? ""));
+  const maxLength = Math.max(leftBytes.length, rightBytes.length);
+  let mismatch = leftBytes.length === rightBytes.length ? 0 : 1;
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftValue = leftBytes[index] ?? 0;
+    const rightValue = rightBytes[index] ?? 0;
+    mismatch |= leftValue ^ rightValue;
+  }
+
+  return mismatch === 0;
+}
+
 export function randomHex(length = 32) {
   const bytes = crypto.getRandomValues(new Uint8Array(length));
   return bytesToHex(bytes);
@@ -55,5 +70,5 @@ export async function hashPassword(password, salt = randomHex(16)) {
 
 export async function verifyPassword(password, salt, expectedHash) {
   const candidate = await hashPassword(password, salt);
-  return candidate.hash === expectedHash;
+  return constantTimeEqual(candidate.hash, expectedHash);
 }

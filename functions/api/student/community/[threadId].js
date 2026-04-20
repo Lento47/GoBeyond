@@ -1,5 +1,6 @@
 import { requireAuth } from "../../../_lib/auth";
 import { listCommunityThreads, replyToCommunityThread, updateCommunityThreadByStudent } from "../../../_lib/community";
+import { assertTrustedOrigin, readJsonBody } from "../../../_lib/requestSecurity";
 import { error, json, options } from "../../../_lib/response";
 
 export function onRequestOptions() {
@@ -9,7 +10,8 @@ export function onRequestOptions() {
 export async function onRequestPut(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["student"]);
-    const body = await context.request.json().catch(() => ({}));
+    assertTrustedOrigin(context.request, context.env);
+    const body = await readJsonBody(context.request, { maxBytes: 24_000 });
     const action = String(body.action ?? "").trim().toLowerCase();
 
     if (action === "reply") {

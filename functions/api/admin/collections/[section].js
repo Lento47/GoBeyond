@@ -1,5 +1,6 @@
 import { requireAuth } from "../../../_lib/auth";
 import { createCollectionItem, deleteCollectionItem, getContent, updateCollectionItem } from "../../../_lib/content";
+import { assertTrustedOrigin, readJsonBody } from "../../../_lib/requestSecurity";
 import { writeAuditLog } from "../../../_lib/audit";
 import { error, json, options } from "../../../_lib/response";
 import { createId, getClientIp } from "../../../_lib/util";
@@ -11,7 +12,8 @@ export async function onRequestOptions() {
 export async function onRequestPost(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["admin"]);
-    const body = await context.request.json();
+    assertTrustedOrigin(context.request, context.env);
+    const body = await readJsonBody(context.request, { maxBytes: 64_000 });
     const normalizedId =
       typeof body.id === "string" && body.id.trim()
         ? body.id.trim()
@@ -41,6 +43,7 @@ export async function onRequestPost(context) {
 export async function onRequestDelete(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["admin"]);
+    assertTrustedOrigin(context.request, context.env);
     const itemId = new URL(context.request.url).searchParams.get("id");
 
     if (!itemId) {
@@ -67,13 +70,14 @@ export async function onRequestDelete(context) {
 export async function onRequestPut(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["admin"]);
+    assertTrustedOrigin(context.request, context.env);
     const itemId = new URL(context.request.url).searchParams.get("id");
 
     if (!itemId) {
       return error("Falta el id.", 400);
     }
 
-    const body = await context.request.json();
+    const body = await readJsonBody(context.request, { maxBytes: 64_000 });
     const item = {
       ...body,
       id: itemId,

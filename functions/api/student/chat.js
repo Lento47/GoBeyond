@@ -1,6 +1,7 @@
 import { requireAuth } from "../../_lib/auth";
 import { getContent } from "../../_lib/content";
 import { listStudentEnrollments } from "../../_lib/enrollments";
+import { assertTrustedOrigin, enforceRequestThrottle, readJsonBody, recordRequestAttempt, throttlePolicies } from "../../_lib/requestSecurity";
 import { error, json, options } from "../../_lib/response";
 
 const MODEL = "@cf/meta/llama-3.2-1b-instruct";
@@ -9,6 +10,16 @@ const MAX_HISTORY_ITEMS = 6;
 const MAX_HISTORY_CONTENT = 500;
 const MAX_CONTEXT_COURSES = 4;
 const MAX_CONTEXT_PROGRAMS = 6;
+const GENERIC_DENIAL_PATTERNS = [
+  /^no tengo informaci[oó]n/i,
+  /^no cuento con informaci[oó]n/i,
+  /^no puedo acceder/i,
+  /^no tengo acceso/i,
+  /^no puedo ver/i,
+  /^no puedo consultar/i,
+  /mi capacidad se limita/i,
+  /informaci[oó]n personal/i,
+];
 
 function trimText(value, limit) {
   return String(value ?? "").trim().slice(0, limit);
@@ -43,23 +54,48 @@ function formatAssignments(course) {
     .join("; ");
 }
 
+function formatActiveEnrollmentLine(item) {
+  const course = item.course ?? {};
+  const progress = Number(item.enhancement?.progressPercent ?? 0);
+  const assignments = Array.isArray(course.assignments) ? course.assignments.length : 0;
+
+  return [
+    `- ${trimText(course.title, 100) || "Curso sin titulo"}`,
+    `formato: ${trimText(course.format, 40) || "N/D"}`,
+    `duracion: ${trimText(course.duration, 40) || "N/D"}`,
+    `vence: ${item.accessExpiresAt ? new Date(item.accessExpiresAt).toLocaleDateString("es-CR") : "N/D"}`,
+    `progreso: ${progress}%`,
+    `asignaciones visibles: ${assignments}`,
+    `detalle tareas: ${formatAssignments(course)}`,
+  ].join(" | ");
+}
+
+function buildProgressSummary(activeEnrollments) {
+  if (!activeEnrollments.length) {
+    return "No tiene cursos activos en este momento.";
+  }
+
+  const averageProgress = Math.round(
+    activeEnrollments.reduce((sum, item) => sum + Number(item.enhancement?.progressPercent ?? 0), 0) / activeEnrollments.length,
+  );
+  const nextExpiry = activeEnrollments
+    .map((item) => item.accessExpiresAt)
+    .filter(Boolean)
+    .sort()[0];
+
+  return [
+    `Cursos activos: ${activeEnrollments.length}.`,
+    `Progreso promedio visible: ${averageProgress}%.`,
+    nextExpiry ? `Proximo vencimiento visible: ${new Date(nextExpiry).toLocaleDateString("es-CR")}.` : "No hay vencimientos visibles.",
+  ].join(" ");
+}
+
 function buildContext(user, content, enrollments) {
   const activeEnrollments = enrollments
     .filter((item) => item.status === "active")
     .slice(0, MAX_CONTEXT_COURSES);
 
-  const activeCourseLines = activeEnrollments.map((item) => {
-    const course = item.course ?? {};
-    const progress = Number(item.enhancement?.progressPercent ?? 0);
-    return [
-      `- ${trimText(course.title, 100) || "Curso sin titulo"}`,
-      `formato: ${trimText(course.format, 40) || "N/D"}`,
-      `duracion: ${trimText(course.duration, 40) || "N/D"}`,
-      `vence: ${item.accessExpiresAt ? new Date(item.accessExpiresAt).toLocaleDateString("es-CR") : "N/D"}`,
-      `progreso: ${progress}%`,
-      `asignaciones: ${formatAssignments(course)}`,
-    ].join(" | ");
-  });
+  const activeCourseLines = activeEnrollments.map(formatActiveEnrollmentLine);
 
   const visibleCourses = (content.courses ?? [])
     .filter((course) => !activeEnrollments.some((item) => item.courseId === course.id))
@@ -89,6 +125,7 @@ function buildContext(user, content, enrollments) {
     `Descripcion institucional: ${trimText(content.brand?.description, 220)}`,
     `Oferta principal de GoBeyond: Project Management, Six Sigma, Scrum y programas relacionados de empleabilidad, mejora continua y agilidad.`,
     `Estudiante: ${trimText(user.fullName, 80)}`,
+    `Resumen operativo del estudiante: ${buildProgressSummary(activeEnrollments)}`,
     `Cursos activos (${activeCourseLines.length}):`,
     activeCourseLines.length ? activeCourseLines.join("\n") : "- No tiene cursos activos en este momento.",
     `Cursos visibles para explorar:`,
@@ -107,6 +144,59 @@ function buildFallbackAnswer(message, content, enrollments) {
   const normalized = trimText(message, 400).toLowerCase();
   const courses = content.courses ?? [];
   const activeEnrollments = enrollments.filter((item) => item.status === "active");
+  const activeCourseLines = activeEnrollments.slice(0, 4).map((item) => {
+    const title = item.course?.title || "Curso sin titulo";
+    const progress = Number(item.enhancement?.progressPercent ?? 0);
+    const expires = item.accessExpiresAt ? new Date(item.accessExpiresAt).toLocaleDateString("es-CR") : "sin fecha visible";
+    return `- ${title}: ${progress}% de progreso · acceso hasta ${expires}`;
+  });
+
+  if (
+    normalized.includes("progreso") ||
+    normalized.includes("avance") ||
+    normalized.includes("como voy") ||
+    normalized.includes("cómo voy")
+  ) {
+    if (activeCourseLines.length) {
+      return ["Esto es lo visible en tu progreso actual dentro de GoBeyond:", ...activeCourseLines].join("\n");
+    }
+
+    return "Por ahora no veo cursos activos con progreso visible en tu portal.";
+  }
+
+  if (
+    normalized.includes("mis cursos") ||
+    normalized.includes("curso activo") ||
+    normalized.includes("que llevo") ||
+    normalized.includes("qué llevo") ||
+    normalized.includes("matricul")
+  ) {
+    if (activeCourseLines.length) {
+      return ["Estos son tus cursos activos visibles en este momento:", ...activeCourseLines].join("\n");
+    }
+
+    return "No veo matriculas activas en este momento dentro de tu portal.";
+  }
+
+  if (
+    normalized.includes("vence") ||
+    normalized.includes("vencimiento") ||
+    normalized.includes("expira") ||
+    normalized.includes("acceso")
+  ) {
+    if (activeEnrollments.length) {
+      return [
+        "Esto es lo visible sobre vigencia y acceso de tus cursos activos:",
+        ...activeEnrollments.slice(0, 4).map((item) => {
+          const title = item.course?.title || "Curso sin titulo";
+          const expires = item.accessExpiresAt ? new Date(item.accessExpiresAt).toLocaleDateString("es-CR") : "sin fecha visible";
+          return `- ${title}: acceso vigente hasta ${expires}`;
+        }),
+      ].join("\n");
+    }
+
+    return "Por ahora no veo accesos activos con fecha de vencimiento visible.";
+  }
 
   if (normalized.includes("programa") || normalized.includes("curso") || normalized.includes("oferta")) {
     if (courses.length) {
@@ -139,6 +229,10 @@ function buildFallbackAnswer(message, content, enrollments) {
   return "Puedo ayudarte con tus cursos activos, progreso, asignaciones y la oferta visible de GoBeyond. Hazme una pregunta puntual y te respondo con lo disponible en tu portal.";
 }
 
+function isGenericDenialResponse(answer) {
+  return GENERIC_DENIAL_PATTERNS.some((pattern) => pattern.test(answer));
+}
+
 function buildMessages(systemContext, history, message) {
   return [
     {
@@ -147,6 +241,9 @@ function buildMessages(systemContext, history, message) {
         "Eres el asistente puntual de GoBeyond para estudiantes.",
         "Responde siempre en espanol claro.",
         "Usa un tono breve, util y orientado a accion.",
+        "SI tienes acceso al contexto del portal del estudiante incluido abajo.",
+        "Cuando el estudiante pregunte por sus cursos, progreso, acceso, tareas o matriculas, responde primero con ese contexto personal visible.",
+        "Nunca digas que no puedes acceder a informacion personal o del portal si el contexto incluido ya trae cursos activos, progreso, asignaciones o vencimientos.",
         "No inventes datos, politicas, fechas ni accesos.",
         "Si el estudiante pregunta algo fuera del contexto disponible, indicale que debe consultar al equipo administrativo.",
         "Da respuestas de maximo 5 lineas o 3 bullets cortos.",
@@ -201,7 +298,17 @@ export async function onRequestPost(context) {
     }
 
     const auth = await requireAuth(context.request, context.env, ["student"]);
-    const body = await context.request.json().catch(() => ({}));
+    assertTrustedOrigin(context.request, context.env);
+    await enforceRequestThrottle(context.env, context.request, throttlePolicies.studentChat, {
+      actorUserId: auth.user.id,
+    });
+    await recordRequestAttempt(context.env, context.request, throttlePolicies.studentChat, {
+      actorUserId: auth.user.id,
+      detailsJson: {
+        route: "student.chat",
+      },
+    });
+    const body = await readJsonBody(context.request, { maxBytes: 24_000 });
     const message = trimText(body.message, MAX_MESSAGE_LENGTH);
 
     if (!message) {
@@ -227,9 +334,7 @@ export async function onRequestPost(context) {
 
     const rawAnswer = trimText(result?.response, 1400);
     const answer =
-      !rawAnswer ||
-      /^no tengo informaci[oó]n/i.test(rawAnswer) ||
-      /^no cuento con informaci[oó]n/i.test(rawAnswer)
+      !rawAnswer || isGenericDenialResponse(rawAnswer)
         ? buildFallbackAnswer(message, content, enrollments)
         : rawAnswer;
 

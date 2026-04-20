@@ -1,16 +1,10 @@
 import { useMemo } from "react";
 
-import { getPublishedNews } from "./newsUtils";
-
-function getEmbedUrl(value) {
-  const input = String(value ?? "").trim();
-  if (!input) return "";
-
-  const iframeMatch = input.match(/src=["']([^"']+)["']/i);
-  if (iframeMatch?.[1]) return iframeMatch[1].trim();
-  if (/^https?:\/\//i.test(input)) return input;
-  return "";
-}
+import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX } from "../../shared/embedPolicy";
+import { MarkdownContent } from "../../shared/MarkdownContent";
+import { PublicImageWithFallback } from "../../shared/PublicImageWithFallback";
+import { getDomainLabel, getEmbedDescriptor } from "./embedUtils";
+import { getPublishedNews, normalizeSocialNewsItem } from "./newsUtils";
 
 function EmptyState({ title, body }) {
   return (
@@ -21,41 +15,57 @@ function EmptyState({ title, body }) {
   );
 }
 
+function EmbedFrame({ src, title }) {
+  return (
+    <iframe
+      allow={EMBED_IFRAME_ALLOW}
+      allowFullScreen
+      className="h-full w-full border-0"
+      loading="lazy"
+      referrerPolicy="strict-origin-when-cross-origin"
+      sandbox={EMBED_IFRAME_SANDBOX}
+      src={src}
+      title={title}
+    />
+  );
+}
+
 function NewsCard({ item, compact = false }) {
-  const embedUrl = getEmbedUrl(item.embed);
+  const embed = getEmbedDescriptor(item.embed);
   const publishedLabel = item.publishedAt ? new Date(item.publishedAt).toLocaleDateString("es-CR") : "Sin fecha";
+  const sourceLabel = item.source === "facebook" || item.source === "linkedin" || item.source === "instagram"
+    ? item.source
+    : item.category || "Noticia";
 
   if (compact) {
     return (
       <article className="overflow-hidden rounded-[1.7rem] border border-white/10 bg-white/[0.03] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30">
         <div className="grid gap-0 sm:grid-cols-[10rem_minmax(0,1fr)]">
-          {embedUrl ? (
-            <div className="h-full min-h-[9rem] overflow-hidden bg-[#0b0f17]">
-              <iframe
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="h-full w-full border-0"
-                loading="lazy"
-                referrerPolicy="strict-origin-when-cross-origin"
-                src={embedUrl}
-                title={item.title}
-              />
-            </div>
-          ) : item.image ? (
-            <div className="h-full min-h-[9rem] overflow-hidden bg-[#0b0f17]">
-              <img alt={item.title} className="h-full w-full object-cover" src={item.image} />
-            </div>
-          ) : (
-            <div className="flex min-h-[9rem] items-center justify-center bg-white/[0.03] px-4 text-center text-xs text-gray-500">
-              Noticia editorial de GoBeyond
-            </div>
-          )}
+          <div className="h-full min-h-[9rem] overflow-hidden bg-[#0b0f17]">
+            <PublicImageWithFallback
+              alt={item.title}
+              className="h-full w-full object-cover"
+              fallback={
+                embed.embedUrl ? (
+                  <EmbedFrame src={embed.embedUrl} title={item.title} />
+                ) : (
+                  <div className="flex h-full min-h-[9rem] flex-col items-center justify-center bg-white/[0.03] px-4 text-center text-xs text-gray-500">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-blue-300">
+                      {getDomainLabel(item.link || embed.externalUrl) || "Noticia editorial"}
+                    </p>
+                    <p className="mt-2">Noticia editorial de GoBeyond</p>
+                  </div>
+                )
+              }
+              src={item.image}
+            />
+          </div>
           <div className="p-5">
             <p className="text-[10px] uppercase tracking-[0.28em] text-blue-400">
-              {item.category || "Noticia"} · {publishedLabel}
+              {sourceLabel} · {publishedLabel}
             </p>
             <h3 className="mt-3 text-xl font-black tracking-tight text-white">{item.title}</h3>
-            {item.summary ? <p className="mt-3 text-sm leading-relaxed text-gray-400">{item.summary}</p> : null}
+            {item.summary ? <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-400">{item.summary}</MarkdownContent> : null}
             {item.link ? (
               <a
                 className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-400 transition hover:gap-3 hover:text-blue-300"
@@ -75,33 +85,32 @@ function NewsCard({ item, compact = false }) {
 
   return (
     <article className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03] shadow-[0_28px_70px_rgba(0,0,0,0.22)] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30">
-      {embedUrl ? (
-        <div className="h-[18rem] overflow-hidden bg-[#0b0f17] sm:h-[23rem]">
-          <iframe
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            className="h-full w-full border-0"
-            loading="lazy"
-            referrerPolicy="strict-origin-when-cross-origin"
-            src={embedUrl}
-            title={item.title}
-          />
-        </div>
-      ) : item.image ? (
-        <div className="aspect-[16/8] overflow-hidden bg-[#0b0f17]">
-          <img alt={item.title} className="h-full w-full object-cover" src={item.image} />
-        </div>
-      ) : (
-        <div className="aspect-[16/8] bg-[linear-gradient(135deg,rgba(37,99,235,0.14),rgba(8,8,8,0.95))]" />
-      )}
+      <div className="aspect-[16/8] overflow-hidden bg-[#0b0f17]">
+        <PublicImageWithFallback
+          alt={item.title}
+          className="h-full w-full object-cover"
+          fallback={
+            embed.embedUrl ? (
+              <EmbedFrame src={embed.embedUrl} title={item.title} />
+            ) : (
+              <div className="flex h-full flex-col justify-end bg-[linear-gradient(135deg,rgba(37,99,235,0.14),rgba(8,8,8,0.95))] p-6">
+                <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-blue-300">
+                  {getDomainLabel(item.link || embed.externalUrl) || "Referencia externa"}
+                </p>
+              </div>
+            )
+          }
+          src={item.image}
+        />
+      </div>
       <div className="p-7 sm:p-8">
         <p className="text-[11px] uppercase tracking-[0.28em] text-blue-400">
-          {item.category || "Noticia"}
+          {sourceLabel}
           {item.featured ? " · Destacada" : ""}
           {` · ${publishedLabel}`}
         </p>
         <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">{item.title}</h2>
-        {item.summary ? <p className="mt-5 max-w-3xl text-base leading-relaxed text-gray-400">{item.summary}</p> : null}
+        {item.summary ? <MarkdownContent className="mt-5 max-w-3xl text-base leading-relaxed text-gray-400">{item.summary}</MarkdownContent> : null}
         {item.link ? (
           <a
             className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-400 transition hover:gap-3 hover:text-blue-300"
@@ -118,9 +127,15 @@ function NewsCard({ item, compact = false }) {
   );
 }
 
-export function NewsArchive({ content, onBack, onRequestLogin }) {
+export function NewsArchive({ content, noticiasPosts = [], noticiasLoading = false, noticiasError = "", onBack, onRequestLogin }) {
   const brand = content?.brand ?? {};
-  const publishedNews = useMemo(() => getPublishedNews(content?.news ?? []), [content?.news]);
+  const publishedNews = useMemo(() => {
+    if (noticiasPosts.length) {
+      return noticiasPosts.map((item) => normalizeSocialNewsItem(item));
+    }
+
+    return getPublishedNews(content?.news ?? []);
+  }, [content?.news, noticiasPosts]);
   const featuredStory = publishedNews[0] ?? null;
   const remainingStories = featuredStory ? publishedNews.slice(1) : [];
 
@@ -168,6 +183,20 @@ export function NewsArchive({ content, onBack, onRequestLogin }) {
         </div>
 
         <div className="mt-14 grid gap-8">
+          {noticiasLoading ? (
+            <EmptyState
+              body="Estamos consultando las publicaciones mas recientes de las redes sociales de GoBeyond."
+              title="Cargando noticias"
+            />
+          ) : null}
+
+          {noticiasError ? (
+            <EmptyState
+              body={noticiasError}
+              title="No pudimos cargar las noticias automaticas"
+            />
+          ) : null}
+
           {featuredStory ? <NewsCard item={featuredStory} /> : null}
 
           {remainingStories.length ? (
@@ -183,7 +212,7 @@ export function NewsArchive({ content, onBack, onRequestLogin }) {
 
           {!publishedNews.length ? (
             <EmptyState
-              body="Cuando el equipo publique noticias desde el panel administrativo, apareceran aqui ordenadas por prioridad y fecha."
+              body="Cuando Make.com envie nuevas publicaciones desde Facebook o LinkedIn, apareceran aqui ordenadas por fecha."
               title="Sin noticias publicadas"
             />
           ) : null}

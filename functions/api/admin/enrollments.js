@@ -1,5 +1,6 @@
 import { requireAuth } from "../../_lib/auth";
 import { createEnrollment, listEnrollments } from "../../_lib/enrollments";
+import { assertTrustedOrigin, readJsonBody } from "../../_lib/requestSecurity";
 import { error, json, options } from "../../_lib/response";
 
 export async function onRequestOptions() {
@@ -19,7 +20,8 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["admin"]);
-    const body = await context.request.json();
+    assertTrustedOrigin(context.request, context.env);
+    const body = await readJsonBody(context.request, { maxBytes: 32_000 });
     await createEnrollment(context.request, context.env, auth, body);
     const enrollments = await listEnrollments(context.env);
     return json({ enrollments }, { status: 201 });
