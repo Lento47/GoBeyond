@@ -3,7 +3,7 @@ const { URL } = require("node:url");
 const { appendAuditEvent } = require("./auditStore");
 const { authenticateRequest, bootstrapAdmin, login, logout, requireRole, sanitizeUser } = require("./authService");
 const { config } = require("./config");
-const { appendItem, readContent, removeItem, updateSection } = require("./contentStore");
+const { appendItem, readContent, removeItem, updateItem, updateSection } = require("./contentStore");
 const { assertOrigin, enforceRateLimit, getIpAddress, readBody, sendJson } = require("./lib/http");
 const { validateRequiredString } = require("./lib/validation");
 
@@ -119,6 +119,32 @@ async function handleAuthenticatedAdmin(request, response, url) {
     });
 
     sendJson(response, 201, content);
+    return;
+  }
+
+  if (request.method === "PUT" && url.pathname.startsWith("/api/admin/collections/")) {
+    const section = url.pathname.replace("/api/admin/collections/", "");
+    const id = url.searchParams.get("id");
+
+    if (!id) {
+      sendJson(response, 400, { error: "Falta el id." });
+      return;
+    }
+
+    const body = await readBody(request);
+    const safeItem = validateCollectionItem(section, { ...body, id });
+    const content = await updateItem(section, id, safeItem);
+
+    await appendAuditEvent({
+      type: "content.update_item",
+      actorUserId: auth.user.id,
+      ipAddress,
+      section,
+      entityId: id,
+      createdAt: new Date().toISOString(),
+    });
+
+    sendJson(response, 200, content);
     return;
   }
 
