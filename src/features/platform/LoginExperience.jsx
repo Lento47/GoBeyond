@@ -519,7 +519,7 @@ export function LoginExperience({
                   {!isResetFlow && !isVerificationFlow ? (
                     <div className="mt-8 inline-flex rounded-full border border-[#d7e0ea] bg-[#f7f9fc] p-1.5">
                       <button
-                        className={`rounded-full px-5 py-2.5 text-[0.72rem] uppercase tracking-[0.26em] transition-all ${
+                        className={`rounded-full px-5 py-2.5 text-[0.72rem] font-black uppercase tracking-[0.26em] transition-all ${
                           mode === "login" ? "bg-[#1d4ed8] text-white shadow-[0_10px_25px_rgba(29,78,216,0.18)]" : "text-[#6b7a90]"
                         }`}
                         onClick={() => onModeChange("login")}
@@ -528,7 +528,7 @@ export function LoginExperience({
                         Ingresar
                       </button>
                       <button
-                        className={`rounded-full px-5 py-2.5 text-[0.72rem] uppercase tracking-[0.26em] transition-all ${
+                        className={`rounded-full px-5 py-2.5 text-[0.72rem] font-black uppercase tracking-[0.26em] transition-all ${
                           mode === "register" ? "bg-[#1d4ed8] text-white shadow-[0_10px_25px_rgba(29,78,216,0.18)]" : "text-[#6b7a90]"
                         }`}
                         onClick={() => onModeChange("register")}
