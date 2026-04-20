@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { workspaceChrome } from "./workspaceTheme";
 
 const ROLE_META = {
   teacher: { id: "teacher", name: "Docente", description: "Gestion de catedras", color: "bg-[#f38020]" },
@@ -111,6 +112,17 @@ function SidebarItem({ label, icon, active = false, muted = false, onClick }) {
       <span className={active ? "text-white" : "text-[#9ca3af]"}>{icon}</span>
       <span className="min-w-0 truncate text-sm font-semibold">{label}</span>
     </button>
+  );
+}
+
+function getTeacherInitials(currentUser) {
+  return (
+    String(currentUser?.fullName ?? "")
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "GB"
   );
 }
 
@@ -229,25 +241,71 @@ export function TeacherExperience({ currentUser, onLogout, onSwitchRole }) {
     () => availableRoles.find((role) => role.id === currentRole) ?? ROLE_META[currentRole] ?? availableRoles[0] ?? ROLE_META.teacher,
     [availableRoles, currentRole]
   );
+  const teacherInitials = getTeacherInitials(currentUser);
 
   return (
-    <div className="min-h-screen bg-[#f7f3ed] text-[#1d1d1b]">
-      <div className="lg:grid lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside className="border-r border-[#e2e0db] bg-white">
-          <div className="flex h-full flex-col px-4 py-5">
-            <div className="border-b border-slate-100 px-4 pb-5">
+    <div className="overflow-hidden rounded-[24px] border border-[#d7e0ea] bg-[linear-gradient(180deg,#f9fbfe_0%,#f3f7fc_48%,#eef3f8_100%)] text-[#172033] shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+      <header className="border-b border-[#d7e0ea] bg-[#fbfcfe]/96 px-4 py-4 backdrop-blur-xl sm:px-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex min-w-0 items-center gap-3 border-r border-[#d7e0ea] pr-4">
+              <img alt="GoBeyond" className="h-10 w-10 object-contain" src="/logo-icon.png" />
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-[0.42em] text-[#c07d36]">GoBeyond</p>
+                <p className="mt-1 truncate text-sm font-semibold text-[#172033]">
+                  {currentRole === "teacher" ? "Panel docente" : "Panel institucional"}
+                </p>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#6b7a90]">Contexto operativo</p>
+              <p className="mt-1 truncate text-sm text-[#536277]">{currentRoleMeta.name} · {currentRoleMeta.description}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-full border border-[#d7e0ea] bg-white px-3 py-2">
+            <span className={`rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] ${
+              currentRole === "teacher"
+                ? "border border-[#e8d4bf] bg-[#fff8f1] text-[#b66e2a]"
+                : "border border-[#c6d4ec] bg-[#eef4ff] text-[#1d4ed8]"
+            }`}>
+              {currentRoleMeta.name}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold text-[#172033]">{currentUser?.fullName || "Docente"}</p>
+              <p className="truncate text-[11px] text-[#6b7a90]">{currentUser?.email}</p>
+            </div>
+            <button
+              className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold ${
+                currentRole === "teacher"
+                  ? "border-[#e8d4bf] bg-[linear-gradient(135deg,#fff8f1,#f3e2cf)] text-[#b66e2a]"
+                  : "border-[#c6d4ec] bg-[linear-gradient(135deg,#eef4ff,#dbeafe)] text-[#1d4ed8]"
+              }`}
+              onClick={onLogout}
+              title="Cerrar sesion"
+              type="button"
+            >
+              {teacherInitials}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="grid min-h-[calc(100vh-16rem)] xl:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="border-b border-[#d7e0ea] bg-[#fbfcfe] p-4 xl:border-b-0 xl:border-r xl:p-3">
+          <div className="flex h-full flex-col gap-4">
+            <div className="px-3 pb-2">
               <div className="flex items-center gap-3">
-                <img alt="Logo de GoBeyond" className="h-10 w-auto object-contain" src="/logo-icon.png" />
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">GoBeyond</p>
-                  <p className="truncate text-sm font-semibold text-slate-900">Teacher workspace</p>
+                  <p className="text-[8px] font-black uppercase tracking-[0.3em] text-[#94a3b8]">Sesion</p>
+                  <p className="mt-2 text-sm font-semibold text-[#172033]">{currentRole === "teacher" ? "Workspace docente" : "Workspace administrativo"}</p>
                 </div>
               </div>
             </div>
 
-            <div className="relative mb-6 px-4 pt-6" ref={contextRef}>
+            <div className="relative px-3" ref={contextRef}>
               <button
-                className="w-full rounded-md border border-slate-200 bg-white p-2 text-left shadow-sm transition-all hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-[#f38020]"
+                className="w-full rounded-[12px] border border-[#d7e0ea] bg-white p-3 text-left shadow-sm transition-all hover:bg-[#f7f9fc] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe]"
                 onClick={() => setIsContextOpen((current) => !current)}
                 type="button"
               >
@@ -255,12 +313,12 @@ export function TeacherExperience({ currentUser, onLogout, onSwitchRole }) {
                   <div className="flex items-center gap-3 overflow-hidden">
                     <div className={`h-6 w-6 shrink-0 rounded-sm ${currentRoleMeta.color} shadow-inner`} />
                     <div className="overflow-hidden leading-none">
-                      <p className="text-[11px] font-bold uppercase tracking-tighter text-slate-400">Contexto Operativo</p>
-                      <p className="truncate text-sm font-bold text-slate-900">{currentRoleMeta.name}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-tighter text-[#94a3b8]">Contexto operativo</p>
+                      <p className="truncate text-sm font-bold text-[#172033]">{currentRoleMeta.name}</p>
                     </div>
                   </div>
                   <svg
-                    className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isContextOpen ? "rotate-180" : ""}`}
+                    className={`h-4 w-4 text-[#94a3b8] transition-transform duration-200 ${isContextOpen ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -271,14 +329,14 @@ export function TeacherExperience({ currentUser, onLogout, onSwitchRole }) {
               </button>
 
               {isContextOpen ? (
-                <div className="absolute left-4 right-4 z-[100] mt-2 overflow-hidden rounded-md border border-slate-200 bg-white shadow-2xl">
-                  <div className="border-b border-slate-100 bg-slate-50 p-2">
-                    <p className="px-2 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Cambiar de rol</p>
+                <div className="absolute left-3 right-3 z-[100] mt-2 overflow-hidden rounded-[12px] border border-[#d7e0ea] bg-white shadow-2xl">
+                  <div className="border-b border-[#e7edf5] bg-[#f7f9fc] p-2">
+                    <p className="px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[#94a3b8]">Cambiar de rol</p>
                   </div>
                   {availableRoles.map((role) => (
                     <button
-                      className={`flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-slate-50 ${
-                        currentRole === role.id ? "bg-orange-50/50" : ""
+                      className={`flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-[#f7f9fc] ${
+                        currentRole === role.id ? "bg-[#eef4ff]" : ""
                       }`}
                       key={role.id}
                       onClick={async () => {
@@ -298,11 +356,11 @@ export function TeacherExperience({ currentUser, onLogout, onSwitchRole }) {
                     >
                       <div className={`h-5 w-5 rounded-sm ${role.color} shadow-sm`} />
                       <div>
-                        <p className="text-xs font-bold text-slate-900">{role.name}</p>
-                        <p className="text-[10px] text-slate-500">{role.description}</p>
+                        <p className="text-xs font-bold text-[#172033]">{role.name}</p>
+                        <p className="text-[10px] text-[#6b7a90]">{role.description}</p>
                       </div>
                       {currentRole === role.id ? (
-                        <svg className="ml-auto h-4 w-4 text-[#f38020]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="ml-auto h-4 w-4 text-[#1d4ed8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
                         </svg>
                       ) : null}
@@ -312,7 +370,10 @@ export function TeacherExperience({ currentUser, onLogout, onSwitchRole }) {
               ) : null}
             </div>
 
-            <nav className="flex-1 space-y-1 overflow-y-auto px-4">
+            <nav className="flex-1 space-y-4 overflow-y-auto px-3">
+              <div>
+                <p className="px-3 text-[8px] font-black uppercase tracking-[0.3em] text-[#94a3b8]">Principal</p>
+                <div className="mt-2 space-y-1.5">
               {currentRole === "teacher" ? (
                 <>
                   <SidebarItem active={activeTab === "overview"} icon={<HomeIcon />} label="Dashboard Global" onClick={() => setActiveTab("overview")} />
@@ -327,9 +388,11 @@ export function TeacherExperience({ currentUser, onLogout, onSwitchRole }) {
                   <SidebarItem active={activeTab === "payments"} icon={<CreditCardIcon />} label="Auditoria de Pagos" onClick={() => setActiveTab("payments")} />
                 </>
               )}
+                </div>
+              </div>
 
-              <div className="mt-6 border-t border-slate-100 px-0 py-6">
-                <p className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Servicios</p>
+              <div className="border-t border-[#d7e0ea] px-0 py-3">
+                <p className="mb-3 px-3 text-[8px] font-black uppercase tracking-[0.3em] text-[#94a3b8]">Servicios</p>
                 <div className="space-y-1">
                   <SidebarItem icon={<BotIcon />} label="Neural Assistant" muted />
                   <SidebarItem icon={<CloudIcon />} label="Cloud Storage" muted />
@@ -337,12 +400,12 @@ export function TeacherExperience({ currentUser, onLogout, onSwitchRole }) {
               </div>
             </nav>
 
-            <div className="border-t border-slate-100 px-4 pt-5">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Sesion Firme</p>
-              <p className="mt-3 truncate text-sm font-black uppercase text-slate-900">{currentUser?.fullName || "Docente"}</p>
-              <p className="mt-1 truncate text-xs text-slate-500">{currentUser?.email}</p>
+            <div className="border-t border-[#d7e0ea] px-3 pt-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#94a3b8]">Sesion firme</p>
+              <p className="mt-3 truncate text-sm font-semibold text-[#172033]">{currentUser?.fullName || "Docente"}</p>
+              <p className="mt-1 truncate text-xs text-[#6b7a90]">{currentUser?.email}</p>
               <button
-                className="mt-4 w-full rounded-md bg-[#1d1d1b] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black"
+                className="mt-4 w-full rounded-[12px] border border-[#d7e0ea] bg-white px-4 py-3 text-sm font-semibold text-[#9a3412] transition hover:bg-[#fff7ed]"
                 onClick={onLogout}
                 type="button"
               >
@@ -352,26 +415,50 @@ export function TeacherExperience({ currentUser, onLogout, onSwitchRole }) {
           </div>
         </aside>
 
-        <main className="min-w-0 bg-[#f7f3ed]">
-          <header className="border-b border-[#e2e0db] bg-white">
-            <div className="flex h-14 items-center justify-between px-5 sm:px-6 lg:px-8">
+        <main className="min-w-0 p-4 sm:p-6">
+          <div className="grid gap-6">
+            <section className={workspaceChrome.darkSurface}>
+              <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,24rem)] lg:items-end">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#9fb0c9]">
+                    <span className={`h-2 w-2 rounded-full ${currentRole === "teacher" ? "bg-[#d6a46e]" : "bg-[#60a5fa]"}`} />
+                    {currentRole === "teacher" ? "Panel docente" : "Panel institucional"}
+                  </div>
+                  <h2 className="mt-5 text-[1.85rem] font-semibold leading-tight text-white sm:text-[2.15rem]">
+                    {currentRole === "teacher" ? "Operacion academica" : "Operacion institucional"}
+                  </h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9fb0c9]">
+                    Unificamos navegacion, contexto y acciones principales en una cabina mas clara para el trabajo diario.
+                  </p>
+                </div>
+                <div className="grid gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#9fb0c9]">Sesion activa</p>
+                  <p className="text-lg font-semibold text-white">{currentUser?.fullName || "Docente"}</p>
+                  <p className="text-sm leading-6 text-[#c2cfdf]">{currentRoleMeta.description}</p>
+                </div>
+              </div>
+            </section>
+
+            <section className={`${workspaceChrome.surface} overflow-hidden`}>
+              <div className="flex h-14 items-center justify-between px-5 sm:px-6">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
-                  {currentRole === "teacher" ? "Dashboard Docente" : "Control Administrativo"}
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">
+                  {currentRole === "teacher" ? "Dashboard docente" : "Control administrativo"}
                 </p>
-                <p className="truncate text-sm font-semibold text-slate-900">
-                  {currentRole === "teacher" ? "Operacion academica" : "Operacion institucional"}
+                <p className="truncate text-sm font-semibold text-[#172033]">
+                  {currentRole === "teacher" ? "Resumen de trabajo" : "Resumen institucional"}
                 </p>
               </div>
               <div className="hidden items-center gap-3 sm:flex">
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Sesion Firme</span>
-                <span className="truncate text-sm font-black uppercase text-slate-900">{currentUser?.fullName || "Docente"}</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#94a3b8]">Sesion firme</span>
+                <span className="truncate text-sm font-semibold text-[#172033]">{currentUser?.fullName || "Docente"}</span>
               </div>
-            </div>
-          </header>
+              </div>
+            </section>
 
-          <div className="px-5 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <div>
             <TeacherPanel currentRole={currentRole} />
+          </div>
           </div>
         </main>
       </div>

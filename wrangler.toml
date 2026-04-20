@@ -23,8 +23,6 @@ RESEND_TEMPLATE_AUTH = "gobeyondtemplateresend"
 RESEND_TEMPLATE_RESET = "gobeyondtemplatereset"
 RESEND_TEMPLATE_ENROLLMENT = "gobeyondtemplateenrrollment"
 TURNSTILE_SITE_KEY = ""
-# Webhook secret used by Make.com when POSTing social posts into `/webhook`.
-WEBHOOK_SECRET = "replace-with-a-strong-secret-token"
 
 [[r2_buckets]]
 binding = "MEDIA_BUCKET"

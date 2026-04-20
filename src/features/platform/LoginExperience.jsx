@@ -439,7 +439,7 @@ export function LoginExperience({
 
         <main className="flex flex-1 items-center py-8 lg:py-12">
           <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] lg:items-center">
-            <section className="login-fade-up relative overflow-hidden rounded-[2rem] border border-[#d7e0ea] bg-[linear-gradient(180deg,_rgba(255,255,255,0.86)_0%,_rgba(247,250,253,0.92)_100%)] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8 lg:min-h-[38rem] lg:p-10" style={{ animationDelay: "120ms" }}>
+            <section className="login-fade-up order-2 relative overflow-hidden rounded-[2rem] border border-[#d7e0ea] bg-[linear-gradient(180deg,_rgba(255,255,255,0.86)_0%,_rgba(247,250,253,0.92)_100%)] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8 lg:order-1 lg:min-h-[38rem] lg:p-10" style={{ animationDelay: "120ms" }}>
               <div className="absolute inset-y-0 right-0 w-[32%] bg-[linear-gradient(180deg,_rgba(219,234,254,0.65)_0%,_rgba(255,255,255,0)_100%)]" />
               <div className="absolute left-[-3rem] top-[-2rem] h-40 w-40 rounded-full bg-[#f3e2cf] blur-3xl" />
               <div className="absolute bottom-[-2rem] right-10 h-48 w-48 rounded-full bg-[#dbeafe] blur-3xl" />
@@ -480,7 +480,7 @@ export function LoginExperience({
               </div>
             </section>
 
-            <section className="login-fade-up relative" style={{ animationDelay: "220ms" }}>
+            <section className="login-fade-up order-1 relative lg:order-2" style={{ animationDelay: "220ms" }}>
               <div className="absolute inset-x-10 top-0 h-20 rounded-full bg-[#d6a46e]/16 blur-3xl" />
 
               <div className="relative overflow-hidden rounded-[2rem] border border-[#d7e0ea] bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.10)] sm:p-8">

@@ -77,7 +77,7 @@ export async function onRequestOptions() {
 
 export async function onRequestPost(context) {
   try {
-    const auth = await requireAuth(context.request, context.env, ["admin"]);
+    const auth = await requireAuth(context.request, context.env, ["admin", "teacher"]);
     assertTrustedOrigin(context.request, context.env);
     await enforceRequestThrottle(context.env, context.request, throttlePolicies.adminUploads, {
       actorUserId: auth.user.id,

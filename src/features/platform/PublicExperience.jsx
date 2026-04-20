@@ -3,6 +3,7 @@ import { EmbedFeedbackCarousel } from "./components/EmbedFeedbackCarousel";
 import HeroArcadePanel from "./components/HeroArcadePanel";
 import { SecurityTurnstile } from "./components/SecurityTurnstile";
 import { getDomainLabel, getEmbedDescriptor, normalizePublicMediaUrl } from "./embedUtils";
+import { normalizeLearningPath } from "./learningPath";
 import { getPublishedNews, normalizeSocialNewsItem } from "./newsUtils";
 import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX } from "../../shared/embedPolicy";
 import { MarkdownContent } from "../../shared/MarkdownContent";
@@ -272,7 +273,7 @@ export function PublicExperience({
   const hero = content?.hero ?? {};
   const brand = content?.brand ?? {};
   const benefits = useMemo(() => content?.benefits ?? [], [content?.benefits]);
-  const learningPath = useMemo(() => content?.learningPath ?? [], [content?.learningPath]);
+  const learningPath = useMemo(() => normalizeLearningPath(content?.learningPath ?? []), [content?.learningPath]);
   const courses = useMemo(() => content?.courses ?? [], [content?.courses]);
   const liveSessions = useMemo(() => content?.liveSessions ?? [], [content?.liveSessions]);
   const participationSection = useMemo(() => content?.participationSection ?? defaultParticipationSection, [content?.participationSection]);
@@ -546,9 +547,10 @@ export function PublicExperience({
           <div className="mt-14 sm:mt-16 lg:mt-20 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {learningPath.length ? learningPath.map((item, index) => (
               <GlassCard key={item.id || `${item.title}-${index}`} className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-                <Badge>{item.type}</Badge>
+                <Badge>{item.track}</Badge>
                 <h3 className="text-2xl font-bold mt-6 mb-4">{item.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{item.status}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/45">{item.stageLabel}</p>
+                <p className="mt-3 text-gray-500 text-sm leading-relaxed">{item.description}</p>
               </GlassCard>
             )) : (
               <div className="md:col-span-3">

@@ -242,12 +242,12 @@ export function EmptyState({ title, body }) {
 
 export function RowCard({ eyebrow, title, meta, body, children, density = "comfortable" }) {
   return (
-    <div className={`rounded-[18px] border border-[#d7e0ea] bg-white ${density === "compact" ? "p-4" : "p-5"} transition hover:border-[#bbc8d9] hover:bg-[#fbfcfe]`}>
-      {eyebrow ? <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{eyebrow}</p> : null}
-      <h4 className="mt-2 text-lg font-semibold leading-tight text-[#172033] sm:text-xl">{title}</h4>
-      {meta ? <p className="mt-2 text-sm leading-relaxed text-[#5d6b80]">{meta}</p> : null}
-      {body ? <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#435066]">{body}</MarkdownContent> : null}
-      {children ? <div className="mt-4 flex flex-wrap gap-3">{children}</div> : null}
+    <div className={`min-w-0 rounded-[18px] border border-[#d7e0ea] bg-white ${density === "compact" ? "p-4" : "p-5"} transition hover:border-[#bbc8d9] hover:bg-[#fbfcfe]`}>
+      {eyebrow ? <p className="break-words text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{eyebrow}</p> : null}
+      <h4 className="mt-2 break-words text-lg font-semibold leading-tight text-[#172033] sm:text-xl">{title}</h4>
+      {meta ? <p className="mt-2 break-words text-sm leading-relaxed text-[#5d6b80]">{meta}</p> : null}
+      {body ? <MarkdownContent className="mt-3 break-words text-sm leading-relaxed text-[#435066]">{body}</MarkdownContent> : null}
+      {children ? <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">{children}</div> : null}
     </div>
   );
 }

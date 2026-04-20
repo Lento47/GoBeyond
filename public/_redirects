@@ -1,0 +1,2 @@
+# SPA fallback handled by functions/[[path]].js.
+# Keep this file inert so static assets under /assets are served with their real MIME type.

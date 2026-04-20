@@ -4,16 +4,17 @@ import { applyApiSecurityHeaders, error } from "../../_lib/response";
 
 export async function onRequestGet(context) {
   try {
-    const auth = await requireAuth(context.request, context.env, ["admin", "student"]);
+    const auth = await requireAuth(context.request, context.env, ["admin", "student", "teacher"]);
     const url = new URL(context.request.url);
     const courseId = String(url.searchParams.get("courseId") ?? "").trim();
     const assignmentId = String(url.searchParams.get("assignmentId") ?? "").trim();
+    const attachmentId = String(url.searchParams.get("attachmentId") ?? "").trim();
 
     if (!courseId || !assignmentId) {
       return error("Faltan parametros para descargar el archivo.", 400);
     }
 
-    const asset = await resolveAssignmentFileDownload(context.env, auth, courseId, assignmentId);
+    const asset = await resolveAssignmentFileDownload(context.env, auth, courseId, assignmentId, attachmentId);
     const headers = new Headers();
     asset.object.writeHttpMetadata(headers);
     headers.set("Content-Disposition", `attachment; filename="${asset.fileName || "archivo"}"`);
