@@ -2,8 +2,10 @@ node_modules/
 dist/
 .wrangler/
 .claude/
+.agents/
 .env
 .dev.vars
+skills-lock.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
