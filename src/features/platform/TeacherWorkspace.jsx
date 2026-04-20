@@ -280,6 +280,9 @@ export function TeacherExperience(props) {
   ).size;
   const metrics = {
     assignedCourses: coursesLoading ? dashboard?.metrics?.assignedCourses ?? 0 : courses?.length ?? 0,
+    activeCohorts: coursesLoading
+      ? dashboard?.metrics?.activeCohorts ?? 0
+      : courses?.reduce((total, course) => total + (course.cohorts ?? []).filter((item) => item.status === "active").length, 0) ?? 0,
     activeStudents: enrollmentsLoading ? dashboard?.metrics?.activeStudents ?? 0 : liveActiveStudents,
     pendingAssignments: coursesLoading
       ? dashboard?.metrics?.pendingAssignments ?? 0
@@ -524,6 +527,7 @@ export function TeacherExperience(props) {
         >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <SmallStat help="Programas bajo tu alcance docente." label="Cursos asignados" value={dashboardLoading ? "..." : metrics.assignedCourses} />
+            <SmallStat help="Grupos activos configurados para tus cursos." label="Cohortes activas" value={dashboardLoading ? "..." : metrics.activeCohorts} />
             <SmallStat help="Estudiantes activos en tus cohortes." label="Estudiantes activos" value={dashboardLoading ? "..." : metrics.activeStudents} />
             <SmallStat help="Asignaciones publicadas para seguimiento." label="Tareas publicadas" value={dashboardLoading ? "..." : metrics.pendingAssignments} />
             <SmallStat help="Tickets, solicitudes e hilos que requieren atencion." label="Casos abiertos" value={dashboardLoading ? "..." : metrics.openCases} />
@@ -575,8 +579,9 @@ export function TeacherExperience(props) {
               >
                 <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                   <div className="grid gap-3">
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                       <SmallStat help="Matriculas registradas." label="Matriculas" value={course.enrollmentCount ?? 0} />
+                      <SmallStat help="Grupos configurados para este curso." label="Cohortes" value={course.cohortCount ?? 0} />
                       <SmallStat help="Estudiantes con acceso activo." label="Activos" value={course.activeStudentCount ?? 0} />
                       <SmallStat help="Entregables creados." label="Tareas" value={course.assignmentCount ?? 0} />
                     </div>
@@ -590,7 +595,36 @@ export function TeacherExperience(props) {
                     </div>
                   </div>
                   <div className="grid gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cohorte visible</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cohortes visibles</p>
+                    {(course.cohorts ?? []).length ? (
+                      <div className="grid gap-2">
+                        {(course.cohorts ?? []).slice(0, 4).map((cohort) => (
+                          <div className="rounded-[16px] border border-[#dbe3ec] bg-white px-3 py-3" key={cohort.id}>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-[#172033]">{cohort.title}</p>
+                                <p className="truncate text-xs text-[#617085]">
+                                  {cohort.status || "planned"}
+                                  {cohort.startDate ? ` · inicia ${formatDate(cohort.startDate)}` : ""}
+                                  {cohort.endDate ? ` · cierra ${formatDate(cohort.endDate)}` : ""}
+                                </p>
+                              </div>
+                              {cohort.capacity ? (
+                                <span className="shrink-0 text-xs text-[#617085]">{cohort.capacity} cupos</span>
+                              ) : null}
+                            </div>
+                          </div>
+                        ))}
+                        {(course.cohorts ?? []).length > 4 ? (
+                          <p className="text-xs uppercase tracking-[0.18em] text-[#6b7a90]">+ {(course.cohorts ?? []).length - 4} cohortes adicionales</p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[#617085]">Todavia no hay cohortes configuradas para este curso.</p>
+                    )}
+                  </div>
+                  <div className="grid gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] p-4 lg:col-span-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estudiantes visibles</p>
                     <CourseStudentsPreview students={course.students ?? []} />
                   </div>
                 </div>

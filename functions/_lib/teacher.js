@@ -74,6 +74,10 @@ function mapCourseLookup(content) {
   return new Map((content?.courses ?? []).map((course) => [course.id, course]));
 }
 
+function mapTeacherLookup(users = []) {
+  return new Map(users.map((user) => [user.id, user]));
+}
+
 function getDefaultCourse(courseId) {
   return (defaultContent.courses ?? []).find((course) => course.id === courseId) ?? null;
 }
@@ -110,6 +114,27 @@ function mergeCourseRecord(courseId, ...sources) {
     ...merged,
     id: resolvedId || courseId,
     title: title || detailSummary || description || `Curso ${courseId}`,
+  };
+}
+
+function normalizeCohortRecord(cohort, courseLookup, teacherLookup) {
+  if (!cohort || typeof cohort !== "object") {
+    return null;
+  }
+
+  const courseId = cleanOptionalString(cohort.courseId, 255);
+  const teacherUserId = cleanOptionalString(cohort.teacherUserId, 255);
+  const course = courseLookup.get(courseId) ?? getDefaultCourse(courseId);
+  const teacher = teacherLookup.get(teacherUserId) ?? null;
+  const status = cleanOptionalString(cohort.status, 40).toLowerCase() || "planned";
+
+  return {
+    ...cohort,
+    courseId,
+    teacherUserId,
+    status,
+    courseTitle: cleanOptionalString(cohort.courseTitle, 255) || cleanOptionalString(course?.title, 255) || "Curso sin titulo",
+    teacherName: cleanOptionalString(cohort.teacherName, 255) || cleanOptionalString(teacher?.fullName, 255),
   };
 }
 
@@ -372,10 +397,16 @@ async function loadTeacherScopedCollections(env, teacherUserId) {
   const courseIds = await getAssignedCourseSet(env, teacherUserId);
   const content = await getContent(env);
   const courseLookup = mapCourseLookup(content);
+  const teacherLookup = mapTeacherLookup(await listTeacherOptions(env));
   const enrollments = (await listEnrollments(env)).filter((item) => courseIds.has(item.courseId));
   const tickets = sortByUpdatedAt((content.supportTickets ?? []).filter((item) => courseIds.has(item.courseId)));
   const courseRequests = sortByUpdatedAt((content.courseInterestRequests ?? []).filter((item) => courseIds.has(item.courseId)));
   const threads = sortByUpdatedAt((content.communityThreads ?? []).filter((item) => courseIds.has(item.courseId)));
+  const cohorts = sortByUpdatedAt(
+    (content.cohorts ?? [])
+      .map((item) => normalizeCohortRecord(item, courseLookup, teacherLookup))
+      .filter((item) => item && courseIds.has(item.courseId))
+  );
 
   const courses = await Promise.all(
     Array.from(courseIds).map(async (courseId) => {
@@ -384,10 +415,12 @@ async function loadTeacherScopedCollections(env, teacherUserId) {
           return null;
         }
         const courseEnrollments = enrollments.filter((item) => item.courseId === cleanedCourse.id);
+        const courseCohorts = cohorts.filter((item) => item.courseId === cleanedCourse.id);
 
         return {
           ...cleanedCourse,
           enrollments: courseEnrollments,
+          cohorts: courseCohorts,
           students: courseEnrollments.map((item) => ({
             enrollmentId: item.id,
             id: item.student?.id ?? item.userId,
@@ -401,6 +434,7 @@ async function loadTeacherScopedCollections(env, teacherUserId) {
           })),
           enrollmentCount: courseEnrollments.length,
           activeStudentCount: courseEnrollments.filter((item) => item.status === "active").length,
+          cohortCount: courseCohorts.length,
           assignmentCount: (cleanedCourse.assignments ?? []).length,
           openTicketCount: tickets.filter((item) => item.courseId === cleanedCourse.id && item.status !== "closed").length,
           openRequestCount: courseRequests.filter((item) => item.courseId === cleanedCourse.id && item.status !== "closed").length,
@@ -412,6 +446,7 @@ async function loadTeacherScopedCollections(env, teacherUserId) {
   return {
     courseIds,
     courses: courses.filter(Boolean),
+    cohorts,
     enrollments,
     tickets,
     courseRequests,
@@ -429,6 +464,26 @@ async function listTeacherStudentOptions(env) {
     : `SELECT id, full_name, email
        FROM users
        WHERE role = 'student' AND COALESCE(status, 'active') = 'active'
+       ORDER BY full_name COLLATE NOCASE ASC`;
+
+  const result = await env.DB.prepare(query).all();
+  return (result.results ?? []).map((row) => ({
+    id: row.id,
+    fullName: row.full_name,
+    email: row.email,
+  }));
+}
+
+async function listTeacherOptions(env) {
+  const query = (await hasUserRolesTable(env))
+    ? `SELECT DISTINCT u.id, u.full_name, u.email
+       FROM users u
+       JOIN user_roles ur ON ur.user_id = u.id
+       WHERE ur.role = 'teacher' AND COALESCE(u.status, 'active') = 'active'
+       ORDER BY u.full_name COLLATE NOCASE ASC`
+    : `SELECT id, full_name, email
+       FROM users
+       WHERE role = 'teacher' AND COALESCE(status, 'active') = 'active'
        ORDER BY full_name COLLATE NOCASE ASC`;
 
   const result = await env.DB.prepare(query).all();
@@ -465,7 +520,7 @@ async function getPersistedCourse(env, courseId) {
 }
 
 export async function getTeacherDashboard(env, teacherUserId, teacherName = "") {
-  const { courses, enrollments, tickets, courseRequests, threads } = await loadTeacherScopedCollections(env, teacherUserId);
+  const { courses, cohorts, enrollments, tickets, courseRequests, threads } = await loadTeacherScopedCollections(env, teacherUserId);
   const openCases =
     tickets.filter((item) => item.status !== "closed").length +
     courseRequests.filter((item) => item.status !== "closed").length +
@@ -477,6 +532,7 @@ export async function getTeacherDashboard(env, teacherUserId, teacherName = "") 
       "Administra tus cursos asignados, publica tareas, matricula estudiantes y da seguimiento a incidencias relacionadas con tus cohortes.",
     metrics: {
       assignedCourses: courses.length,
+      activeCohorts: cohorts.filter((item) => item.status === "active").length,
       activeStudents: uniqueActiveStudents(enrollments),
       pendingAssignments: courses.reduce((total, course) => total + (course.assignments ?? []).length, 0),
       openCases,

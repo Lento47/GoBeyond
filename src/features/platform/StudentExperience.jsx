@@ -458,12 +458,21 @@ function StudentAssistant({ courseCount, availableCount, activeCourses }) {
 // --- COMPONENTE: MODAL DE DETALLE DE CURSO ---
 
 function CourseDetailModal({ course, onClose }) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   if (!course) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#0f172a]/28 px-4 py-8 backdrop-blur-[8px]">
-      <div className="mb-10 w-full max-w-6xl rounded-[24px] border border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.18)]">
-        <div className="sticky top-0 z-10 flex flex-col gap-4 border-b border-[#d7e0ea] bg-[#f5f7fb]/95 px-5 py-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#0f172a]/28 px-4 py-4 backdrop-blur-[8px] sm:px-6 sm:py-6">
+      <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100vh-3rem)]">
+        <div className="sticky top-0 z-10 flex shrink-0 flex-col gap-4 border-b border-[#d7e0ea] bg-[#f5f7fb]/95 px-5 py-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-6">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Ficha del programa</p>
             <h3 className="mt-2 break-words text-3xl font-semibold leading-tight text-[#172033] sm:text-4xl">{course.title}</h3>
@@ -473,6 +482,7 @@ function CourseDetailModal({ course, onClose }) {
           </button>
         </div>
 
+        <div className="min-h-0 overflow-y-auto">
         <div className="grid gap-8 p-5 sm:gap-10 sm:p-8 lg:grid-cols-[minmax(0,1.2fr)_22rem]">
           <div className="space-y-6">
             {course.coverImage && (
@@ -597,6 +607,7 @@ function CourseDetailModal({ course, onClose }) {
             )}
           </div>
         </div>
+        </div>
       </div>
     </div>
   );
@@ -625,12 +636,25 @@ function CourseInterestModal({ course, user, onClose, onSubmit, submitting, mess
     }
   }, [course, user]);
 
+  useEffect(() => {
+    if (!course) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [course]);
+
   if (!course) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-4 py-8 backdrop-blur-[8px]">
-      <div className="w-full max-w-4xl rounded-[24px] border border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.18)]">
-        <div className="flex items-start justify-between gap-4 border-b border-[#e2e0db] p-5 sm:p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#0f172a]/28 px-4 py-4 backdrop-blur-[8px] sm:px-6 sm:py-6">
+      <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[24px] border border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100vh-3rem)]">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e2e0db] p-5 sm:p-8">
           <div className="max-w-md">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Solicitud de apertura</p>
             <h3 className="mt-2 text-3xl font-semibold leading-tight text-[#172033]">{course.title}</h3>
@@ -638,6 +662,7 @@ function CourseInterestModal({ course, user, onClose, onSubmit, submitting, mess
           <button className="rounded-xl border border-[#d7e0ea] bg-white px-4 py-2 text-sm font-medium text-[#172033] transition hover:bg-[#f7f9fc]" onClick={onClose} type="button">Cerrar</button>
         </div>
 
+        <div className="min-h-0 overflow-y-auto">
         <div className="grid gap-8 p-5 sm:gap-10 sm:p-8 md:grid-cols-[minmax(0,1fr)_20rem]">
           <form className="space-y-4" onSubmit={(e) => {
             e.preventDefault();
@@ -689,6 +714,7 @@ function CourseInterestModal({ course, user, onClose, onSubmit, submitting, mess
               ))}
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

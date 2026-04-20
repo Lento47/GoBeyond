@@ -66,6 +66,19 @@ const initialCourseForm = {
   gamificationRules: [],
 };
 
+const initialCohortForm = {
+  id: "",
+  title: "",
+  courseId: "",
+  teacherUserId: "",
+  status: "planned",
+  startDate: "",
+  endDate: "",
+  capacity: "",
+  leaderboardVisibility: "private",
+  description: "",
+};
+
 const initialUserForm = {
   id: "",
   fullName: "",
@@ -255,6 +268,23 @@ function formatDate(value) {
   }
 
   return date.toLocaleDateString();
+}
+
+function formatShortDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString("es-CR", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
 }
 
 function createItemId(prefix) {
@@ -453,6 +483,7 @@ export function AdminWorkspace({
   const [ruleDraft, setRuleDraft] = useState(initialRuleDraft);
   const [userForm, setUserForm] = useState(initialUserForm);
   const [enrollmentForm, setEnrollmentForm] = useState(initialEnrollmentForm);
+  const [cohortForm, setCohortForm] = useState(initialCohortForm);
   const [testimonialForm, setTestimonialForm] = useState(initialTestimonialForm);
   const [newsForm, setNewsForm] = useState(initialNewsForm);
   const [socialSourceForm, setSocialSourceForm] = useState(initialSocialSourceForm);
@@ -478,6 +509,7 @@ export function AdminWorkspace({
     institutions: "",
     media: "",
     courses: "",
+    cohorts: "",
     users: "",
     enrollments: "",
     news: "",
@@ -502,6 +534,10 @@ export function AdminWorkspace({
 
   const studentOptions = useMemo(
     () => users.filter((user) => (user.roles ?? [user.role]).includes("student")),
+    [users]
+  );
+  const teacherOptions = useMemo(
+    () => users.filter((user) => (user.roles ?? [user.role]).includes("teacher")),
     [users]
   );
   const materialTemplates = useMemo(() => content.materialTemplates ?? [], [content.materialTemplates]);
@@ -560,6 +596,33 @@ export function AdminWorkspace({
         includesQuery([item.title, item.audience, item.format, item.duration, item.description, item.outcomes], viewFilters.courses)
       ),
     [content.courses, viewFilters.courses]
+  );
+  const cohorts = useMemo(() => content.cohorts ?? [], [content.cohorts]);
+  const filteredCohorts = useMemo(
+    () =>
+      cohorts
+        .map((item) => {
+          const course = (content.courses ?? []).find((courseItem) => courseItem.id === item.courseId);
+          const teacher = teacherOptions.find((user) => user.id === item.teacherUserId);
+          const capacity = Number.parseInt(String(item.capacity ?? "").trim(), 10);
+
+          return {
+            ...item,
+            courseTitle: course?.title ?? "Curso sin referencia",
+            teacherLabel: teacher?.fullName ?? item.teacherName ?? "Sin docente asignado",
+            statusLabel: item.status || "planned",
+            startDateLabel: formatShortDate(item.startDate),
+            endDateLabel: formatShortDate(item.endDate),
+            capacityLabel: Number.isFinite(capacity) && capacity > 0 ? `${capacity} cupos` : "Cupo abierto",
+          };
+        })
+        .filter((item) =>
+          includesQuery(
+            [item.title, item.courseTitle, item.teacherLabel, item.status, item.description, item.startDate, item.endDate, item.leaderboardVisibility],
+            viewFilters.cohorts
+          )
+        ),
+    [cohorts, content.courses, teacherOptions, viewFilters.cohorts]
   );
   const filteredUsers = useMemo(
     () =>
@@ -1249,6 +1312,11 @@ export function AdminWorkspace({
     openModal("course");
   }
 
+  function startCreateCohort() {
+    setCohortForm(initialCohortForm);
+    openModal("cohort");
+  }
+
   function startEditCourse(item) {
     setCourseForm({
       id: item.id,
@@ -1266,6 +1334,22 @@ export function AdminWorkspace({
     setAssignmentDraft(initialAssignmentDraft);
     setRuleDraft(initialRuleDraft);
     openModal("course");
+  }
+
+  function startEditCohort(item) {
+    setCohortForm({
+      id: item.id,
+      title: item.title ?? "",
+      courseId: item.courseId ?? "",
+      teacherUserId: item.teacherUserId ?? "",
+      status: item.status ?? "planned",
+      startDate: String(item.startDate ?? "").slice(0, 10),
+      endDate: String(item.endDate ?? "").slice(0, 10),
+      capacity: String(item.capacity ?? ""),
+      leaderboardVisibility: item.leaderboardVisibility ?? "private",
+      description: item.description ?? "",
+    });
+    openModal("cohort");
   }
 
   function startEditSupportTicket(item) {
@@ -1616,6 +1700,45 @@ export function AdminWorkspace({
     );
   }
 
+  async function saveCohort(event) {
+    event.preventDefault();
+    if (!cohortForm.title.trim()) {
+      throw new Error("La cohorte necesita un nombre.");
+    }
+
+    if (!cohortForm.courseId) {
+      throw new Error("Selecciona un curso para la cohorte.");
+    }
+
+    const normalizedCapacity = Number.parseInt(String(cohortForm.capacity ?? "").trim(), 10);
+    const selectedTeacher = teacherOptions.find((user) => user.id === cohortForm.teacherUserId);
+    const selectedCourse = (content.courses ?? []).find((course) => course.id === cohortForm.courseId);
+
+    const payload = {
+      id: cohortForm.id || createItemId("cohort"),
+      title: cohortForm.title.trim(),
+      courseId: cohortForm.courseId,
+      courseTitle: selectedCourse?.title ?? "",
+      teacherUserId: cohortForm.teacherUserId || "",
+      teacherName: selectedTeacher?.fullName ?? "",
+      status: cohortForm.status,
+      startDate: cohortForm.startDate || "",
+      endDate: cohortForm.endDate || "",
+      capacity: Number.isFinite(normalizedCapacity) && normalizedCapacity > 0 ? normalizedCapacity : "",
+      leaderboardVisibility: cohortForm.leaderboardVisibility,
+      description: cohortForm.description.trim(),
+    };
+
+    await runAction(
+      () =>
+        cohortForm.id
+          ? updateCollectionItem("cohorts", cohortForm.id, payload)
+          : createCollectionItem("cohorts", payload),
+      cohortForm.id ? "Cohorte actualizada." : "Cohorte creada.",
+      { closeAfter: true }
+    );
+  }
+
   async function saveUser(event) {
     event.preventDefault();
     const normalizedRoles = Array.from(new Set([userForm.role, ...(userForm.roles ?? [])]));
@@ -1878,9 +2001,12 @@ export function AdminWorkspace({
     return (
       <CatalogSection
         courseTemplates={courseTemplates}
+        filteredCohorts={filteredCohorts}
         deleteCollectionItem={deleteCollectionItem}
         filteredCourses={filteredCourses}
+        startCreateCohort={startCreateCohort}
         startCreateCourse={startCreateCourse}
+        startEditCohort={startEditCohort}
         startEditCourse={startEditCourse}
         updateViewFilter={updateViewFilter}
         viewFilters={viewFilters}
@@ -3056,6 +3182,64 @@ export function AdminWorkspace({
               </div>
             </article>
           </div>
+        </ModalShell>
+      );
+    }
+
+    if (modal === "cohort") {
+      return (
+        <ModalShell
+          title={cohortForm.id ? "Editar cohorte" : "Crear cohorte"}
+          subtitle="Define el grupo operativo de entrada para un curso, sus fechas y la visibilidad futura del leaderboard."
+          onClose={closeModal}
+        >
+          <form className="grid gap-4" onSubmit={saveCohort}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input value={cohortForm.title} onChange={(event) => setCohortForm({ ...cohortForm, title: event.target.value })} placeholder="Nombre visible de la cohorte" />
+              <Select value={cohortForm.status} onChange={(event) => setCohortForm({ ...cohortForm, status: event.target.value })}>
+                <option value="planned">Planificada</option>
+                <option value="active">Activa</option>
+                <option value="completed">Completada</option>
+                <option value="archived">Archivada</option>
+              </Select>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Select value={cohortForm.courseId} onChange={(event) => setCohortForm({ ...cohortForm, courseId: event.target.value })}>
+                <option value="">Selecciona un curso</option>
+                {(content.courses ?? []).map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
+                  </option>
+                ))}
+              </Select>
+              <Select value={cohortForm.teacherUserId} onChange={(event) => setCohortForm({ ...cohortForm, teacherUserId: event.target.value })}>
+                <option value="">Sin docente asignado</option>
+                {teacherOptions.map((teacher) => (
+                  <option key={teacher.id} value={teacher.id}>
+                    {teacher.fullName}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Input type="date" value={cohortForm.startDate} onChange={(event) => setCohortForm({ ...cohortForm, startDate: event.target.value })} />
+              <Input type="date" value={cohortForm.endDate} onChange={(event) => setCohortForm({ ...cohortForm, endDate: event.target.value })} />
+              <Input value={cohortForm.capacity} onChange={(event) => setCohortForm({ ...cohortForm, capacity: event.target.value })} placeholder="Cupo maximo" />
+            </div>
+            <Select value={cohortForm.leaderboardVisibility} onChange={(event) => setCohortForm({ ...cohortForm, leaderboardVisibility: event.target.value })}>
+              <option value="private">Leaderboard privado</option>
+              <option value="group-visible">Visible para la cohorte</option>
+              <option value="public-names">Visible con nombres completos</option>
+            </Select>
+            <Textarea value={cohortForm.description} onChange={(event) => setCohortForm({ ...cohortForm, description: event.target.value })} placeholder="Notas operativas, objetivo de la entrada o contexto del grupo" />
+            <div className="rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 text-sm leading-6 text-[#617085]">
+              La cohorte se configura primero a nivel operativo. En el siguiente paso enlazaremos las matriculas individuales a una cohorte especifica sin perder progreso ni tareas por estudiante.
+            </div>
+            <div className="flex gap-3">
+              <ActionButton type="submit">{cohortForm.id ? "Guardar cohorte" : "Crear cohorte"}</ActionButton>
+              <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
+            </div>
+          </form>
         </ModalShell>
       );
     }

@@ -162,6 +162,7 @@ export const defaultContent = {
   socialSources: [],
   supportTickets: [],
   courseInterestRequests: [],
+  cohorts: [],
   testimonialSubmissions: [],
   sops: [],
   sopChangeRequests: [],
