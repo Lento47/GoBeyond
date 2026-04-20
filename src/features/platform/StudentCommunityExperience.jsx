@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { workspaceChrome } from "./workspaceTheme";
 
 const THREAD_TEMPLATE = `Que necesito:
 Que intente:
@@ -44,10 +45,10 @@ function categoryLabel(value) {
 
 function StatTile({ label, value, help }) {
   return (
-    <div className="border border-[#eadfce] bg-white p-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8b6d55]">{label}</p>
-      <p className="mt-4 font-['Georgia'] text-3xl text-[#20181f]">{value}</p>
-      <p className="mt-3 text-sm leading-relaxed text-[#5c4d46]">{help}</p>
+    <div className={`${workspaceChrome.surface} p-6`}>
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7280]">{label}</p>
+      <p className="mt-4 font-['Georgia'] text-3xl font-light italic text-[#1d1d1b]">{value}</p>
+      <p className="mt-3 text-sm leading-relaxed text-[#4b5563]">{help}</p>
     </div>
   );
 }
@@ -55,8 +56,8 @@ function StatTile({ label, value, help }) {
 function FilterPill({ active, children, ...props }) {
   return (
     <button
-      className={`px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition ${
-        active ? "bg-[#20181f] text-white" : "border border-[#d8cdbf] bg-white text-[#5c4d46]"
+      className={`rounded-sm px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition ${
+        active ? "bg-[#1d1d1b] text-white" : "border border-[#e2e0db] bg-white text-[#4b5563] hover:bg-[#f9fafb]"
       }`}
       {...props}
     >
@@ -159,7 +160,7 @@ export function StudentCommunityExperience({
 
   if (dashboardLoading || communityLoading || !dashboard) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f3ede3] font-['Georgia'] text-lg italic text-[#20181f]">
+      <div className={`${workspaceChrome.surface} flex min-h-[60vh] items-center justify-center p-10 text-lg font-semibold text-[#172033]`}>
         Preparando la comunidad estudiantil...
       </div>
     );
@@ -253,240 +254,228 @@ export function StudentCommunityExperience({
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#f3ede3] text-[#20181f]">
-      <div className="border-b border-[#d8cdbf] bg-[#fbf8f2] px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="grid gap-6">
+      <section className={`${workspaceChrome.elevatedSurface} scroll-mt-28 p-5 sm:p-6`} id="community-overview">
+        <div className="grid gap-6 border-b border-[#e7edf5] pb-5 xl:grid-cols-[minmax(0,1.15fr)_20rem]">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-[#8b6d55]">Comunidad GoBeyond</p>
-            <h1 className="font-['Georgia'] text-xl text-[#20181f] sm:text-2xl">Pregunta, responde y avanza con apoyo entre estudiantes</h1>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#c6d4ec] bg-[#eef4ff] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">
+              <span className="h-2 w-2 rounded-full bg-[#1d4ed8]" />
+              Comunidad operativa
+            </div>
+            <h2 className="mt-4 max-w-3xl text-[1.9rem] font-semibold leading-tight text-[#172033] sm:text-[2.3rem]">
+              Preguntas con contexto real, respuestas reutilizables y trazabilidad entre estudiantes.
+            </h2>
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[#536277] sm:text-base">
+              Cada hilo nace mejor estructurado para que la ayuda llegue mas rapido. Autocompletamos curso, autor,
+              categoria y una plantilla de contexto para evitar preguntas vacias.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button className="rounded-xl bg-[#1d4ed8] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#1e40af]" onClick={openComposer} type="button">
+                Hacer una pregunta
+              </button>
+              <button className="rounded-xl border border-[#d7e0ea] bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#435066] transition hover:bg-[#f7f9fc]" onClick={onBack} type="button">
+                Volver al portal
+              </button>
+              <div className="rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">
+                Autor autopoblado: {user.fullName || "Estudiante"}
+              </div>
+            </div>
+            {dashboardError || communityError || workspaceError ? (
+              <p className="mt-5 text-sm text-[#b45309]">{dashboardError || communityError || workspaceError}</p>
+            ) : null}
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button className="border border-[#d8cdbf] px-4 py-2 text-sm" onClick={onBack} type="button">
-              Volver al portal
-            </button>
-            <button className="border border-[#d8cdbf] bg-[#20181f] px-4 py-2 text-sm text-white" onClick={onLogout} type="button">
-              Cerrar sesion
-            </button>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+            <StatTile label="Hilos" value={stats.totalThreads} help="Preguntas activas y resueltas dentro de la comunidad." />
+            <StatTile label="Resueltas" value={stats.resolvedCount} help="Conversaciones con una respuesta clara o mejor respuesta marcada." />
+            <StatTile label="Sin respuesta" value={stats.unansweredCount} help="Hilos que todavia necesitan apoyo de otros estudiantes." />
+            <StatTile label="Aportes" value={stats.totalReplies} help="Respuestas acumuladas para que el conocimiento no se pierda." />
           </div>
         </div>
-      </div>
+      </section>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
-        <section className="border border-[#d8cdbf] bg-white p-5 sm:p-8 lg:p-10">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8b6d55]">Cabina colaborativa</p>
-              <h2 className="mt-5 max-w-3xl font-['Georgia'] text-3xl leading-tight text-[#20181f] sm:text-4xl lg:text-5xl">
-                Un Stack Overflow ligero con tono academico y contexto real de tus cursos.
-              </h2>
-              <p className="mt-5 max-w-2xl text-sm leading-relaxed text-[#5c4d46] sm:text-base">
-                Cada hilo nace mejor estructurado para que la ayuda llegue mas rapido. Autocompletamos curso, autor,
-                categoria y una plantilla de contexto para evitar preguntas vacias.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <button className="bg-[#20181f] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-white" onClick={openComposer} type="button">
-                  Hacer una pregunta
-                </button>
-                <div className="border border-[#d8cdbf] bg-[#fbf8f2] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">
-                  Autor autopoblado: {user.fullName || "Estudiante"}
-                </div>
+      <section className="grid gap-6 scroll-mt-28 xl:grid-cols-[0.95fr_1.05fr]" id="community-threads">
+        <div className="grid gap-6">
+          <div className={`${workspaceChrome.surface} p-5`}>
+            <div className="flex flex-col gap-4">
+              <input
+                className="w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Buscar por tema, curso, categoria o etiqueta"
+                value={searchQuery}
+              />
+              <div className="flex flex-wrap gap-3">
+                <FilterPill active={activeFilter === "recent"} onClick={() => setActiveFilter("recent")} type="button">Recientes</FilterPill>
+                <FilterPill active={activeFilter === "unanswered"} onClick={() => setActiveFilter("unanswered")} type="button">Sin responder</FilterPill>
+                <FilterPill active={activeFilter === "popular"} onClick={() => setActiveFilter("popular")} type="button">Populares</FilterPill>
+                <FilterPill active={activeFilter === "resolved"} onClick={() => setActiveFilter("resolved")} type="button">Resueltas</FilterPill>
               </div>
-              {dashboardError || communityError || workspaceError ? (
-                <p className="mt-5 text-sm italic text-red-800">{dashboardError || communityError || workspaceError}</p>
-              ) : null}
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <StatTile label="Hilos" value={stats.totalThreads} help="Preguntas activas y resueltas dentro de la comunidad." />
-              <StatTile label="Resueltas" value={stats.resolvedCount} help="Conversaciones con una respuesta clara o mejor respuesta marcada." />
-              <StatTile label="Sin respuesta" value={stats.unansweredCount} help="Hilos que todavia necesitan apoyo de otros estudiantes." />
-              <StatTile label="Aportes" value={stats.totalReplies} help="Respuestas acumuladas para que el conocimiento no se pierda." />
-            </div>
-          </div>
-        </section>
-        <section className="mt-10 grid gap-8 xl:grid-cols-[0.94fr_1.06fr]">
-          <div className="grid gap-6">
-            <div className="border border-[#d8cdbf] bg-white p-6">
-              <div className="flex flex-col gap-4">
-                <input
-                  className="w-full border border-[#d8cdbf] bg-[#fbf8f2] px-4 py-3 text-sm text-[#20181f]"
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Buscar por tema, curso, categoria o etiqueta"
-                  value={searchQuery}
-                />
-                <div className="flex flex-wrap gap-3">
-                  <FilterPill active={activeFilter === "recent"} onClick={() => setActiveFilter("recent")} type="button">Recientes</FilterPill>
-                  <FilterPill active={activeFilter === "unanswered"} onClick={() => setActiveFilter("unanswered")} type="button">Sin responder</FilterPill>
-                  <FilterPill active={activeFilter === "popular"} onClick={() => setActiveFilter("popular")} type="button">Populares</FilterPill>
-                  <FilterPill active={activeFilter === "resolved"} onClick={() => setActiveFilter("resolved")} type="button">Resueltas</FilterPill>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4">
-              {filteredThreads.map((thread) => (
-                <button
-                  key={thread.id}
-                  className={`border p-6 text-left transition-all ${
-                    selectedThread?.id === thread.id
-                      ? "border-[#20181f] bg-white shadow-[0_18px_45px_rgba(32,24,31,0.08)]"
-                      : "border-[#d8cdbf] bg-white hover:border-[#8b6d55]"
-                  }`}
-                  onClick={() => setSelectedThreadId(thread.id)}
-                  type="button"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="bg-[#fbf8f2] px-3 py-1 text-[9px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">{categoryLabel(thread.category)}</span>
-                        <span className={`px-3 py-1 text-[9px] font-bold uppercase tracking-[0.24em] ${
-                          thread.status === "resolved" ? "bg-[#e6f1df] text-[#44632b]" : !thread.replies.length ? "bg-[#fff3dd] text-[#8a5b17]" : "bg-[#edf1f4] text-[#475569]"
-                        }`}>
-                          {thread.status === "resolved" ? "Resuelta" : !thread.replies.length ? "Sin respuesta" : "Activa"}
-                        </span>
-                      </div>
-                      <h3 className="mt-4 break-words font-['Georgia'] text-2xl leading-tight text-[#20181f]">{thread.title}</h3>
-                      <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-[#5c4d46]">{thread.body}</p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {(thread.tags ?? []).slice(0, 4).map((tag) => (
-                          <span key={tag} className="border border-[#eadfce] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-[#8b6d55]">{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="grid gap-3 border-t border-[#eadfce] pt-4 sm:grid-cols-2 lg:min-w-[7rem] lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0 lg:grid-cols-1">
-                      <div>
-                        <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">Respuestas</p>
-                        <p className="mt-2 font-['Georgia'] text-3xl text-[#20181f]">{thread.replies.length}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">Curso</p>
-                        <p className="mt-2 text-xs font-medium text-[#5c4d46]">{thread.courseTitle || "Comunidad general"}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-5 border-t border-[#eadfce] pt-4 text-[11px] uppercase tracking-[0.18em] text-[#8b6d55]">
-                    {thread.authorName} · actualizado {formatDate(thread.updatedAt)}
-                  </div>
-                </button>
-              ))}
-
-              {!filteredThreads.length ? (
-                <div className="border border-dashed border-[#cbb8a4] bg-[#fbf8f2] p-10 text-center text-[#8b6d55]">
-                  No encontramos hilos con ese criterio. Prueba otra busqueda o abre una nueva pregunta.
-                </div>
-              ) : null}
             </div>
           </div>
 
-          <div className="grid gap-6">
-            {selectedThread ? (
-              <div className="border border-[#d8cdbf] bg-white p-5 sm:p-8">
+          <div className="grid gap-4">
+            {filteredThreads.map((thread) => (
+              <button
+                key={thread.id}
+                className={`rounded-[18px] border p-5 text-left transition-all ${
+                  selectedThread?.id === thread.id
+                    ? "border-[#c6d4ec] bg-[#eef4ff] shadow-[0_1px_2px_rgba(29,78,216,0.08)]"
+                    : "border-[#d7e0ea] bg-white hover:border-[#1d4ed8] hover:bg-[#fbfcfe]"
+                }`}
+                onClick={() => setSelectedThreadId(thread.id)}
+                type="button"
+              >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap gap-2">
-                      <span className="bg-[#fbf8f2] px-3 py-1 text-[9px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">{selectedThread.courseTitle || "Comunidad general"}</span>
-                      {selectedThread.status === "resolved" ? <span className="bg-[#e6f1df] px-3 py-1 text-[9px] font-bold uppercase tracking-[0.24em] text-[#44632b]">Resuelta</span> : null}
+                      <span className="rounded-full border border-[#d7e0ea] bg-white px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{categoryLabel(thread.category)}</span>
+                      <span className={`rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] ${
+                        thread.status === "resolved" ? "bg-[#dcfce7] text-[#166534]" : !thread.replies.length ? "bg-[#ffedd5] text-[#9a3412]" : "bg-[#f3f4f6] text-[#4b5563]"
+                      }`}>
+                        {thread.status === "resolved" ? "Resuelta" : !thread.replies.length ? "Sin respuesta" : "Activa"}
+                      </span>
                     </div>
-                    <h2 className="mt-5 break-words font-['Georgia'] text-3xl leading-tight text-[#20181f] sm:text-4xl">{selectedThread.title}</h2>
-                    <p className="mt-5 text-base leading-relaxed text-[#5c4d46]">{selectedThread.body}</p>
+                    <h3 className="mt-4 break-words text-xl font-semibold leading-tight text-[#172033]">{thread.title}</h3>
+                    <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-[#536277]">{thread.body}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {(thread.tags ?? []).slice(0, 4).map((tag) => (
+                        <span key={tag} className="rounded-full border border-[#d7e0ea] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-[#6b7a90]">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid gap-3 border-t border-[#d7e0ea] pt-4 sm:grid-cols-2 lg:min-w-[7rem] lg:border-l lg:border-t-0 lg:border-[#d7e0ea] lg:pl-5 lg:pt-0 lg:grid-cols-1">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Respuestas</p>
+                      <p className="mt-2 text-3xl font-semibold text-[#172033]">{thread.replies.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Curso</p>
+                      <p className="mt-2 text-xs font-medium text-[#536277]">{thread.courseTitle || "Comunidad general"}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 border-t border-[#d7e0ea] pt-4 text-[11px] uppercase tracking-[0.18em] text-[#6b7a90]">
+                  {thread.authorName} · actualizado {formatDate(thread.updatedAt)}
+                </div>
+              </button>
+            ))}
+
+            {!filteredThreads.length ? (
+              <div className="rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f7f9fc] p-10 text-center text-[#6b7a90]">
+                No encontramos hilos con ese criterio. Prueba otra busqueda o abre una nueva pregunta.
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid gap-6">
+            {selectedThread ? (
+              <div className={`${workspaceChrome.surface} p-5 sm:p-6`}>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{selectedThread.courseTitle || "Comunidad general"}</span>
+                      {selectedThread.status === "resolved" ? <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#166534]">Resuelta</span> : null}
+                    </div>
+                    <h2 className="mt-5 break-words text-[1.8rem] font-semibold leading-tight text-[#172033] sm:text-[2.2rem]">{selectedThread.title}</h2>
+                    <p className="mt-5 text-base leading-relaxed text-[#536277]">{selectedThread.body}</p>
                   </div>
                   {selectedThread.authorId === user.id ? (
-                    <button className="border border-[#d8cdbf] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#20181f] disabled:opacity-50" disabled={threadUpdating} onClick={() => toggleResolved(selectedThread.id)} type="button">
+                    <button className="rounded-xl border border-[#d7e0ea] bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#172033] disabled:opacity-50" disabled={threadUpdating} onClick={() => toggleResolved(selectedThread.id)} type="button">
                       {selectedThread.status === "resolved" ? "Reabrir hilo" : "Marcar resuelta"}
                     </button>
                   ) : null}
                 </div>
 
-                <div className="mt-6 flex flex-wrap gap-3 border-t border-[#eadfce] pt-5 text-[11px] uppercase tracking-[0.18em] text-[#8b6d55]">
+                <div className="mt-6 flex flex-wrap gap-3 border-t border-[#d7e0ea] pt-5 text-[11px] uppercase tracking-[0.18em] text-[#6b7a90]">
                   <span>{selectedThread.authorName}</span><span>·</span><span>{formatDate(selectedThread.createdAt)}</span><span>·</span><span>{categoryLabel(selectedThread.category)}</span>
                 </div>
 
-                <div className="mt-8 grid gap-4 border-t border-[#eadfce] pt-8">
+                <div className="mt-8 grid gap-4 border-t border-[#d7e0ea] pt-8">
                   <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-['Georgia'] text-xl text-[#20181f] sm:text-2xl">Respuestas</h3>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">{selectedThread.replies.length} aportes</p>
+                    <h3 className="text-xl font-semibold text-[#172033] sm:text-2xl">Respuestas</h3>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{selectedThread.replies.length} aportes</p>
                   </div>
                   {selectedThread.replies.length ? selectedThread.replies.map((reply) => (
-                    <article key={reply.id} className={`border p-5 ${selectedThread.bestReplyId === reply.id ? "border-[#7da05a] bg-[#f4f8ef]" : "border-[#eadfce] bg-[#fbf8f2]"}`}>
+                    <article key={reply.id} className={`rounded-[18px] border p-5 ${selectedThread.bestReplyId === reply.id ? "border-[#bbf7d0] bg-[#f0fdf4]" : "border-[#d7e0ea] bg-[#f7f9fc]"}`}>
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">{reply.authorName}</p>
-                          <p className="mt-2 text-sm leading-relaxed text-[#5c4d46]">{reply.body}</p>
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{reply.authorName}</p>
+                          <p className="mt-2 text-sm leading-relaxed text-[#536277]">{reply.body}</p>
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2">
-                          {selectedThread.bestReplyId === reply.id ? <span className="bg-[#dfeccd] px-3 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-[#44632b]">Mejor respuesta</span> : null}
+                          {selectedThread.bestReplyId === reply.id ? <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#166534]">Mejor respuesta</span> : null}
                           {selectedThread.authorId === user.id ? (
-                            <button className="border border-[#d8cdbf] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-[#20181f] disabled:opacity-50" disabled={threadUpdating} onClick={() => markBestReply(selectedThread.id, reply.id)} type="button">
+                            <button className="rounded-xl border border-[#d7e0ea] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-[#172033] disabled:opacity-50" disabled={threadUpdating} onClick={() => markBestReply(selectedThread.id, reply.id)} type="button">
                               Marcar mejor
                             </button>
                           ) : null}
                         </div>
                       </div>
-                      <p className="mt-4 text-[11px] uppercase tracking-[0.18em] text-[#8b6d55]">{formatDate(reply.createdAt)}</p>
+                      <p className="mt-4 text-[11px] uppercase tracking-[0.18em] text-[#6b7a90]">{formatDate(reply.createdAt)}</p>
                     </article>
                   )) : (
-                    <div className="border border-dashed border-[#cbb8a4] bg-[#fbf8f2] p-8 text-sm text-[#8b6d55]">Este hilo todavia no tiene respuestas. Puedes ser la primera persona en aportar.</div>
+                    <div className="rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f7f9fc] p-8 text-sm text-[#6b7a90]">Este hilo todavia no tiene respuestas. Puedes ser la primera persona en aportar.</div>
                   )}
                 </div>
               </div>
             ) : null}
 
-            <form className="border border-[#d8cdbf] bg-white p-5 sm:p-8" onSubmit={handleReplySubmit}>
+            <form className={`${workspaceChrome.surface} scroll-mt-28 p-5 sm:p-6`} id="community-reply" onSubmit={handleReplySubmit}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8b6d55]">Responder con contexto</p>
-                  <h3 className="mt-3 font-['Georgia'] text-2xl text-[#20181f]">Tu respuesta se firma automaticamente con tu perfil</h3>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Responder con contexto</p>
+                  <h3 className="mt-3 text-2xl font-semibold text-[#172033]">Tu respuesta se firma automaticamente con tu perfil</h3>
                 </div>
-                <div className="border border-[#eadfce] bg-[#fbf8f2] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">{user.fullName || "Estudiante GoBeyond"}</div>
+                <div className="rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{user.fullName || "Estudiante GoBeyond"}</div>
               </div>
-              <textarea className="mt-6 min-h-[180px] w-full border border-[#d8cdbf] bg-[#fbf8f2] px-5 py-4 text-sm leading-7 text-[#20181f]" onChange={(event) => setReplyDraft(event.target.value)} placeholder="Comparte una respuesta clara, aplicable y respetuosa." value={replyDraft} />
+              <textarea className="mt-6 min-h-[180px] w-full rounded-[18px] border border-[#d7e0ea] bg-white px-5 py-4 text-sm leading-7 text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setReplyDraft(event.target.value)} placeholder="Comparte una respuesta clara, aplicable y respetuosa." value={replyDraft} />
               <div className="mt-5 flex flex-wrap gap-3">
-                <button className="bg-[#20181f] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-white disabled:opacity-50" disabled={replySubmitting || !replyDraft.trim()} type="submit">{replySubmitting ? "Publicando..." : "Publicar respuesta"}</button>
-                <button className="border border-[#d8cdbf] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#20181f]" onClick={openComposer} type="button">Abrir nueva pregunta</button>
+                <button className="rounded-xl bg-[#1d4ed8] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#1e40af] disabled:opacity-50" disabled={replySubmitting || !replyDraft.trim()} type="submit">{replySubmitting ? "Publicando..." : "Publicar respuesta"}</button>
+                <button className="rounded-xl border border-[#d7e0ea] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#172033]" onClick={openComposer} type="button">Abrir nueva pregunta</button>
               </div>
             </form>
           </div>
-        </section>
-      </main>
+      </section>
 
       {showComposer ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#20181f]/65 px-4 py-6 backdrop-blur-sm sm:py-8">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto border border-[#d8cdbf] bg-[#f7f1e7] shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
-            <div className="sticky top-0 z-10 border-b border-[#d8cdbf] bg-[#f7f1e7] px-4 py-5 sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-4 py-6 backdrop-blur-[8px] sm:py-8">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[24px] border border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.18)]">
+            <div className="sticky top-0 z-10 border-b border-[#d7e0ea] bg-[#f5f7fb]/96 px-4 py-5 backdrop-blur sm:px-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8b6d55]">Nueva pregunta</p>
-                  <h2 className="mt-3 font-['Georgia'] text-2xl text-[#20181f] sm:text-3xl">Abre un hilo mejor contextualizado desde el inicio</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Nueva pregunta</p>
+                  <h2 className="mt-3 text-2xl font-semibold text-[#172033] sm:text-3xl">Abre un hilo mejor contextualizado desde el inicio</h2>
                 </div>
-                <button className="border border-[#d8cdbf] px-4 py-2 text-sm text-[#20181f]" onClick={() => setShowComposer(false)} type="button">Cerrar</button>
+                <button className="rounded-xl border border-[#d7e0ea] bg-white px-4 py-2 text-sm text-[#172033]" onClick={() => setShowComposer(false)} type="button">Cerrar</button>
               </div>
             </div>
             <div className="grid gap-6 px-4 py-6 sm:px-6 xl:grid-cols-[0.96fr_1.04fr]">
               <form className="grid gap-4" onSubmit={handleCreateThread}>
-                <input className="w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f]" onChange={(event) => setThreadDraft((current) => ({ ...current, title: event.target.value }))} placeholder="Titulo claro de tu pregunta" value={threadDraft.title} />
+                <input className="w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setThreadDraft((current) => ({ ...current, title: event.target.value }))} placeholder="Titulo claro de tu pregunta" value={threadDraft.title} />
                 <div className="grid gap-4 md:grid-cols-2">
-                  <select className="w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f]" onChange={(event) => setThreadDraft((current) => ({ ...current, category: event.target.value }))} value={threadDraft.category}>
+                  <select className="w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setThreadDraft((current) => ({ ...current, category: event.target.value }))} value={threadDraft.category}>
                     <option value="curso">Curso</option><option value="asignacion">Asignacion</option><option value="certificacion">Certificacion</option><option value="acceso">Acceso</option><option value="carrera">Carrera</option><option value="general">General</option>
                   </select>
-                  <select className="w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f]" onChange={(event) => setThreadDraft((current) => ({ ...current, courseId: event.target.value }))} value={threadDraft.courseId}>
+                  <select className="w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setThreadDraft((current) => ({ ...current, courseId: event.target.value }))} value={threadDraft.courseId}>
                     <option value="">Comunidad general</option>
                     {activeCourses.map((course) => <option key={course.id || course.enrollmentId} value={course.id}>{course.title}</option>)}
                   </select>
                 </div>
-                <input className="w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f]" onChange={(event) => setThreadDraft((current) => ({ ...current, tags: event.target.value }))} placeholder="Etiquetas separadas por coma" value={threadDraft.tags} />
-                <textarea className="min-h-[220px] w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm leading-7 text-[#20181f]" onChange={(event) => setThreadDraft((current) => ({ ...current, body: event.target.value }))} value={threadDraft.body} />
+                <input className="w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setThreadDraft((current) => ({ ...current, tags: event.target.value }))} placeholder="Etiquetas separadas por coma" value={threadDraft.tags} />
+                <textarea className="min-h-[220px] w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm leading-7 text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setThreadDraft((current) => ({ ...current, body: event.target.value }))} value={threadDraft.body} />
                 <div className="flex flex-wrap gap-3">
-                  <button className="bg-[#20181f] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-white disabled:opacity-50" disabled={composerSubmitting} type="submit">{composerSubmitting ? "Guardando..." : "Publicar hilo"}</button>
-                  <button className="border border-[#d8cdbf] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#20181f]" onClick={() => setShowComposer(false)} type="button">Cancelar</button>
+                  <button className="rounded-xl bg-[#1d4ed8] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#1e40af] disabled:opacity-50" disabled={composerSubmitting} type="submit">{composerSubmitting ? "Guardando..." : "Publicar hilo"}</button>
+                  <button className="rounded-xl border border-[#d7e0ea] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#172033]" onClick={() => setShowComposer(false)} type="button">Cancelar</button>
                 </div>
               </form>
-              <div className="border border-[#d8cdbf] bg-white p-6">
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8b6d55]">Campos autopoblados</p>
+              <div className={`${workspaceChrome.surface} p-6`}>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Campos autopoblados</p>
                 <div className="mt-5 grid gap-4">
-                  <div className="border border-[#eadfce] bg-[#fbf8f2] p-4"><p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">Autor</p><p className="mt-2 text-sm text-[#20181f]">{user.fullName || "Estudiante"}</p><p className="mt-1 text-xs text-[#5c4d46]">{user.email || "correo@estudiante"}</p></div>
-                  <div className="border border-[#eadfce] bg-[#fbf8f2] p-4"><p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">Curso sugerido</p><p className="mt-2 text-sm text-[#20181f]">{activeCourses.find((course) => course.id === threadDraft.courseId)?.title || "Comunidad general"}</p></div>
-                  <div className="border border-[#eadfce] bg-[#fbf8f2] p-4"><p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8b6d55]">Categoria</p><p className="mt-2 text-sm text-[#20181f]">{categoryLabel(threadDraft.category)}</p></div>
-                  <div className="border border-[#eadfce] bg-[#fbf8f2] p-4 text-sm leading-7 text-[#5c4d46]">La plantilla inicial ayuda a que la comunidad entienda rapido tu contexto y evite respuestas ambiguas.</div>
+                  <div className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Autor</p><p className="mt-2 text-sm font-semibold text-[#172033]">{user.fullName || "Estudiante"}</p><p className="mt-1 text-xs text-[#536277]">{user.email || "correo@estudiante"}</p></div>
+                  <div className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Curso sugerido</p><p className="mt-2 text-sm font-semibold text-[#172033]">{activeCourses.find((course) => course.id === threadDraft.courseId)?.title || "Comunidad general"}</p></div>
+                  <div className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Categoria</p><p className="mt-2 text-sm font-semibold text-[#172033]">{categoryLabel(threadDraft.category)}</p></div>
+                  <div className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4 text-sm leading-7 text-[#536277]">La plantilla inicial ayuda a que la comunidad entienda rapido tu contexto y evite respuestas ambiguas.</div>
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { error } from "../../_lib/response";
+import { applyApiSecurityHeaders, error } from "../../_lib/response";
 
 export async function onRequestGet(context) {
   try {
@@ -13,6 +13,10 @@ export async function onRequestGet(context) {
       return error("Falta la clave del archivo.", 400);
     }
 
+    if (key.startsWith("assignment-file/") || key.startsWith("sop-file/")) {
+      return error("Archivo no disponible en la ruta publica.", 403);
+    }
+
     const object = await context.env.MEDIA_BUCKET.get(key);
     if (!object) {
       return error("Archivo no encontrado.", 404);
@@ -22,7 +26,7 @@ export async function onRequestGet(context) {
     object.writeHttpMetadata(headers);
     headers.set("etag", object.httpEtag);
     headers.set("Cache-Control", "public, max-age=3600");
-    headers.set("X-Content-Type-Options", "nosniff");
+    applyApiSecurityHeaders(headers, { cacheControl: "public, max-age=3600" });
 
     return new Response(object.body, {
       headers,

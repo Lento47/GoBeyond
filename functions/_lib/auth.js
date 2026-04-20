@@ -1,6 +1,18 @@
 import { hashPassword, randomHex, sha256, verifyPassword } from "./crypto";
 import { writeAuditLog } from "./audit";
+import { getAppOrigin, sendTransactionalEmail } from "./email";
+import { countRecentAuditEvents } from "./requestSecurity";
+import {
+  hasUserRolesTable,
+  countUsersWithRole,
+  hasSessionActiveRoleColumn,
+  listUserRoles,
+  replaceUserRoles,
+  resolveRoleSelection,
+  userHasRole,
+} from "./roles";
 import { getPasswordExpiresAt, getSecuritySettings, isPasswordExpired } from "./security";
+import { replaceTeacherCourseAssignments, validateTeacherCourseAssignments } from "./teacher";
 import { createId, getClientIp, nowIso } from "./util";
 import {
   validateAccountStatus,
@@ -11,6 +23,7 @@ import {
 } from "./validation";
 
 const SESSION_HOURS = 12;
+const SESSION_COOKIE_NAME = "gobeyond_session";
 const PASSWORD_RESET_MINUTES = 30;
 const EMAIL_VERIFICATION_MINUTES = 24 * 60;
 const PASSWORD_RESET_MESSAGE =
@@ -19,32 +32,139 @@ const EMAIL_VERIFICATION_MESSAGE =
   "Tu cuenta necesita verificacion. Te enviamos un enlace seguro al correo registrado para activarla.";
 const EMAIL_VERIFICATION_REQUEST_MESSAGE =
   "Si la cuenta existe, esta activa y aun no ha sido verificada, enviaremos un nuevo enlace seguro al correo registrado.";
+const LOGIN_FAILURE_EVENT = "auth.login_failed";
+const LOGIN_FAILURE_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_FAILURE_MAX = 6;
+const LOGIN_FAILURE_COOLDOWN_MS = 15 * 60 * 1000;
+const DUMMY_LOGIN_SALT = "62d95c4f9797d6cf9db46da948de6e47";
 
-function getAppOrigin(request, env) {
-  const fallbackOrigin = new URL(request.url).origin;
-  const configuredOrigin = String(env.APP_ORIGIN ?? fallbackOrigin).trim();
-  return (configuredOrigin || fallbackOrigin).replace(/\/+$/, "");
+function serializeAuthUser(user, { activeRole = "", primaryRole = "", roles = [] } = {}) {
+  const resolvedPrimaryRole = primaryRole || user.primary_role || user.role;
+  const resolvedRoles = roles.length ? roles : resolvedPrimaryRole ? [resolvedPrimaryRole] : [];
+  const resolvedActiveRole = resolvedRoles.includes(activeRole)
+    ? activeRole
+    : resolvedRoles.includes(user.active_role)
+      ? user.active_role
+      : resolvedRoles[0] ?? resolvedPrimaryRole;
+
+  return {
+    id: user.id ?? user.user_id,
+    email: user.email,
+    fullName: user.full_name ?? user.fullName,
+    role: resolvedActiveRole,
+    activeRole: resolvedActiveRole,
+    primaryRole: resolvedPrimaryRole,
+    roles: resolvedRoles,
+    status: user.status ?? "active",
+  };
 }
 
-function isLocalOrigin(origin) {
+function isSecureRequest(request) {
   try {
-    const hostname = new URL(origin).hostname;
-    return hostname === "localhost" || hostname === "127.0.0.1";
+    return new URL(request.url).protocol === "https:";
   } catch {
     return false;
   }
 }
 
-function resolveResendTemplateId(env, type) {
-  if (type === "email-verification") {
-    return String(env.RESEND_TEMPLATE_VERIFY ?? env.RESEND_TEMPLATE_AUTH ?? "").trim();
+function parseCookies(request) {
+  const cookieHeader = request.headers.get("Cookie") ?? "";
+  return cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .reduce((accumulator, part) => {
+      const separatorIndex = part.indexOf("=");
+      if (separatorIndex === -1) {
+        return accumulator;
+      }
+
+      const key = part.slice(0, separatorIndex).trim();
+      const value = part.slice(separatorIndex + 1).trim();
+      if (key) {
+        accumulator[key] = decodeURIComponent(value);
+      }
+      return accumulator;
+    }, {});
+}
+
+export function createSessionCookie(request, token, expiresAt) {
+  const secure = isSecureRequest(request) ? "; Secure" : "";
+  const expires = expiresAt ? `; Expires=${new Date(expiresAt).toUTCString()}` : "";
+  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax${secure}${expires}`;
+}
+
+export function clearSessionCookie(request) {
+  const secure = isSecureRequest(request) ? "; Secure" : "";
+  return `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+}
+
+function getSessionTokenFromRequest(request) {
+  const authorization = request.headers.get("Authorization") ?? "";
+
+  if (authorization.startsWith("Bearer ")) {
+    return authorization.slice("Bearer ".length).trim();
   }
 
-  if (type === "password-reset") {
-    return String(env.RESEND_TEMPLATE_RESET ?? env.RESEND_TEMPLATE_AUTH ?? "").trim();
+  const cookies = parseCookies(request);
+  return String(cookies[SESSION_COOKIE_NAME] ?? "").trim();
+}
+
+function loginFailureEntityId(request) {
+  return `ip:${getClientIp(request)}`;
+}
+
+async function consumePasswordVerificationCost(password) {
+  await hashPassword(password, DUMMY_LOGIN_SALT);
+}
+
+async function ensureLoginThrottleWindow(request, env) {
+  const entityId = loginFailureEntityId(request);
+  const blockedAttempts = await countRecentAuditEvents(
+    env,
+    `${LOGIN_FAILURE_EVENT}.blocked`,
+    entityId,
+    LOGIN_FAILURE_COOLDOWN_MS
+  );
+
+  if (blockedAttempts > 0) {
+    const error = new Error("Demasiados intentos de acceso. Espera unos minutos antes de volver a intentarlo.");
+    error.status = 429;
+    throw error;
   }
 
-  return String(env.RESEND_TEMPLATE_AUTH ?? "").trim();
+  const failedAttempts = await countRecentAuditEvents(env, LOGIN_FAILURE_EVENT, entityId, LOGIN_FAILURE_WINDOW_MS);
+  if (failedAttempts >= LOGIN_FAILURE_MAX) {
+    await writeAuditLog(env, {
+      ipAddress: getClientIp(request),
+      eventType: `${LOGIN_FAILURE_EVENT}.blocked`,
+      entityType: "auth",
+      entityId,
+      detailsJson: {
+        maxAttempts: LOGIN_FAILURE_MAX,
+        windowMs: LOGIN_FAILURE_WINDOW_MS,
+      },
+    });
+
+    const error = new Error("Demasiados intentos de acceso. Espera unos minutos antes de volver a intentarlo.");
+    error.status = 429;
+    throw error;
+  }
+}
+
+async function recordLoginFailure(request, env, email, reason) {
+  const entityId = loginFailureEntityId(request);
+
+  await writeAuditLog(env, {
+    ipAddress: getClientIp(request),
+    eventType: LOGIN_FAILURE_EVENT,
+    entityType: "auth",
+    entityId,
+    detailsJson: {
+      email,
+      reason,
+    },
+  });
 }
 
 async function purgeExpiredPasswordResetTokens(env) {
@@ -64,14 +184,14 @@ async function purgeExpiredEmailVerificationTokens(env) {
 }
 
 function passwordExpiredMessage() {
-  const error = new Error("La contrasena expiro. Solicita un enlace de recuperacion o contacta a administracion.");
+  const error = new Error("La contrasena expiro. Solicita un enlace de recuperacion para crear una nueva clave o contacta a administracion.");
   error.status = 403;
   return error;
 }
 
 function verificationRequiredMessage(supportEmail) {
   const contactHint = supportEmail ? ` Si necesitas ayuda, escribe a ${supportEmail}.` : "";
-  const error = new Error(`Debes verificar tu cuenta desde el enlace enviado a tu correo antes de ingresar.${contactHint}`);
+  const error = new Error(`Debes verificar tu cuenta desde el enlace de activacion enviado a tu correo antes de ingresar.${contactHint}`);
   error.status = 403;
   return error;
 }
@@ -138,117 +258,8 @@ async function validateVerificationState(request, env, user, { sessionId = null,
   throw verificationRequiredMessage(settings.supportEmail);
 }
 
-async function sendTransactionalAuthEmail(request, env, user, payload) {
-  const settings = await getSecuritySettings(env);
-  const resendApiKey = String(env.RESEND_API_KEY ?? "").trim();
-  const resendTemplateId = resolveResendTemplateId(env, payload.type);
-  const webhookUrl = String(env.AUTH_EMAIL_WEBHOOK_URL ?? env.RESET_EMAIL_WEBHOOK_URL ?? "").trim();
-  const fromAddress = String(env.EMAIL_FROM_ADDRESS ?? settings.supportEmail ?? "it@gobeyondcr.org").trim();
-  const fromName = String(env.EMAIL_FROM_NAME ?? "GoBeyond IT").trim();
-  const replyTo = String(env.EMAIL_REPLY_TO ?? settings.supportEmail ?? fromAddress).trim();
-
-  if (!resendApiKey && !webhookUrl) {
-    return {
-      delivered: false,
-      mode: isLocalOrigin(getAppOrigin(request, env)) ? "debug" : "not_configured",
-    };
-  }
-
-  if (resendApiKey) {
-    const resendPayload = resendTemplateId
-      ? {
-          from: `${fromName} <${fromAddress}>`,
-          to: [user.email],
-          reply_to: replyTo,
-          subject: payload.subject,
-          template: {
-            id: resendTemplateId,
-            variables: {
-              RECIPIENT_NAME: user.full_name ?? user.fullName ?? "GoBeyond",
-              ACTION_URL: payload.actionUrl ?? "",
-              ACTION_LABEL: payload.actionLabel ?? "Abrir enlace",
-              SUPPORT_EMAIL: settings.supportEmail ?? replyTo,
-              EXPIRATION_LABEL: payload.expirationLabel ?? "",
-              SUBJECT_LINE: payload.subject,
-              BODY_INTRO: payload.bodyIntro ?? "",
-              BODY_OUTRO: payload.bodyOutro ?? "",
-              COMPANY_NAME: "GoBeyond",
-            },
-          },
-        }
-      : {
-          from: `${fromName} <${fromAddress}>`,
-          reply_to: replyTo,
-          to: [user.email],
-          subject: payload.subject,
-          text: payload.text,
-          html: payload.html,
-        };
-
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(resendPayload),
-    });
-
-    if (!resendResponse.ok) {
-      const resendBody = await resendResponse.text().catch(() => "");
-      const error = new Error(
-        resendBody
-          ? `No se pudo enviar el correo transaccional con Resend: ${resendBody}`
-          : "No se pudo enviar el correo transaccional con Resend."
-      );
-      error.status = 503;
-      throw error;
-    }
-
-    return {
-      delivered: true,
-      mode: "resend",
-    };
-  }
-
-  const webhookSecret = String(env.AUTH_EMAIL_WEBHOOK_SECRET ?? env.RESET_EMAIL_WEBHOOK_SECRET ?? "").trim();
-
-  const response = await fetch(webhookUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(webhookSecret ? { Authorization: `Bearer ${webhookSecret}` } : {}),
-    },
-    body: JSON.stringify({
-      from: `${fromName} <${fromAddress}>`,
-      replyTo,
-      to: user.email,
-      subject: payload.subject,
-      text: payload.text,
-      html: payload.html,
-      metadata: {
-        userId: user.id,
-        role: user.role,
-        appOrigin: getAppOrigin(request, env),
-        type: payload.type,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const error = new Error("No se pudo enviar el correo transaccional.");
-    error.status = 503;
-    throw error;
-  }
-
-  return {
-    delivered: true,
-    mode: "webhook",
-  };
-}
-
 async function sendPasswordResetEmail(request, env, user, resetUrl) {
-  return sendTransactionalAuthEmail(request, env, user, {
+  return sendTransactionalEmail(request, env, user, {
     type: "password-reset",
     subject: "Restablece tu contrasena de GoBeyond",
     actionUrl: resetUrl,
@@ -263,7 +274,7 @@ async function sendPasswordResetEmail(request, env, user, resetUrl) {
       "Si fuiste tu, abre este enlace seguro:",
       resetUrl,
       "",
-      `El enlace expirara en ${PASSWORD_RESET_MINUTES} minutos y solo puede usarse una vez.`,
+      `El enlace de recuperacion expirara en ${PASSWORD_RESET_MINUTES} minutos y solo puede usarse una vez.`,
       "Si no solicitaste este cambio, puedes ignorar este mensaje.",
     ].join("\n"),
     html: `
@@ -271,14 +282,14 @@ async function sendPasswordResetEmail(request, env, user, resetUrl) {
       <p>Recibimos una solicitud para restablecer la contrasena de tu cuenta.</p>
       <p>Si fuiste tu, abre este enlace seguro:</p>
       <p><a href="${resetUrl}">${resetUrl}</a></p>
-      <p>El enlace expirara en ${PASSWORD_RESET_MINUTES} minutos y solo puede usarse una vez.</p>
+      <p>El enlace de recuperacion expirara en ${PASSWORD_RESET_MINUTES} minutos y solo puede usarse una vez.</p>
       <p>Si no solicitaste este cambio, puedes ignorar este mensaje.</p>
     `,
   });
 }
 
 async function sendVerificationEmail(request, env, user, verificationUrl) {
-  return sendTransactionalAuthEmail(request, env, user, {
+  return sendTransactionalEmail(request, env, user, {
     type: "email-verification",
     subject: "Verifica tu cuenta de GoBeyond",
     actionUrl: verificationUrl,
@@ -292,29 +303,45 @@ async function sendVerificationEmail(request, env, user, verificationUrl) {
       "Para activar tu cuenta, abre este enlace de verificacion:",
       verificationUrl,
       "",
-      `El enlace expirara en ${Math.round(EMAIL_VERIFICATION_MINUTES / 60)} horas y solo puede usarse una vez.`,
+      `El enlace de activacion expirara en ${Math.round(EMAIL_VERIFICATION_MINUTES / 60)} horas y solo puede usarse una vez.`,
     ].join("\n"),
     html: `
       <p>Hola ${user.full_name ?? user.fullName ?? "GoBeyond"},</p>
       <p>Para activar tu cuenta, abre este enlace de verificacion:</p>
       <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-      <p>El enlace expirara en ${Math.round(EMAIL_VERIFICATION_MINUTES / 60)} horas y solo puede usarse una vez.</p>
+      <p>El enlace de activacion expirara en ${Math.round(EMAIL_VERIFICATION_MINUTES / 60)} horas y solo puede usarse una vez.</p>
     `,
   });
 }
 
-async function createSessionForUser(request, env, user) {
+async function createSessionForUser(request, env, user, nextActiveRole = "") {
   const token = randomHex(32);
   const tokenHash = await sha256(token);
   const sessionId = createId("session");
   const expiresAt = new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000).toISOString();
+  const primaryRole = user.primaryRole ?? user.primary_role ?? user.role;
+  const roles = user.roles?.length ? user.roles : await listUserRoles(env, user.id, primaryRole);
+  const activeRole = roles.includes(nextActiveRole)
+    ? nextActiveRole
+    : roles.includes(primaryRole)
+      ? primaryRole
+      : roles[0];
 
-  await env.DB.prepare(
-    `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?)`
-  )
-    .bind(sessionId, user.id, tokenHash, expiresAt, nowIso())
-    .run();
+  if (await hasSessionActiveRoleColumn(env)) {
+    await env.DB.prepare(
+      `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at, active_role)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+      .bind(sessionId, user.id, tokenHash, expiresAt, nowIso(), activeRole)
+      .run();
+  } else {
+    await env.DB.prepare(
+      `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+      .bind(sessionId, user.id, tokenHash, expiresAt, nowIso())
+      .run();
+  }
 
   await writeAuditLog(env, {
     actorUserId: user.id,
@@ -327,13 +354,11 @@ async function createSessionForUser(request, env, user) {
   return {
     token,
     expiresAt,
-    user: {
-      id: user.id,
-      email: user.email,
-      fullName: user.full_name ?? user.fullName,
-      role: user.role,
-      status: user.status ?? "active",
-    },
+    user: serializeAuthUser(user, {
+      activeRole,
+      primaryRole,
+      roles,
+    }),
   };
 }
 
@@ -348,11 +373,9 @@ export async function bootstrapAdmin(request, env, body) {
     throw error;
   }
 
-  const existingAdmin = await env.DB.prepare(
-    "SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"
-  ).first();
+  const existingAdminCount = await countUsersWithRole(env, "admin");
 
-  if (Number(existingAdmin?.count ?? 0) > 0) {
+  if (existingAdminCount > 0) {
     const error = new Error("Ya existe un administrador.");
     error.status = 409;
     throw error;
@@ -373,6 +396,8 @@ export async function bootstrapAdmin(request, env, body) {
     .bind(userId, email, passwordData.hash, passwordData.salt, fullName, passwordChangedAt, passwordChangedAt, emailVerifiedAt)
     .run();
 
+  await replaceUserRoles(env, userId, ["admin"]);
+
   await writeAuditLog(env, {
     actorUserId: userId,
     ipAddress: getClientIp(request),
@@ -382,18 +407,27 @@ export async function bootstrapAdmin(request, env, body) {
   });
 
   return {
-    user: {
-      id: userId,
-      email,
-      fullName,
-      role: "admin",
-    },
+    user: serializeAuthUser(
+      {
+        id: userId,
+        email,
+        full_name: fullName,
+        role: "admin",
+        status: "active",
+      },
+      {
+        activeRole: "admin",
+        primaryRole: "admin",
+        roles: ["admin"],
+      }
+    ),
   };
 }
 
 export async function login(request, env, body) {
   const email = validateEmail(body.email);
   const password = validatePassword(body.password);
+  await ensureLoginThrottleWindow(request, env);
   const user = await env.DB.prepare(
     "SELECT id, email, full_name, role, COALESCE(status, 'active') AS status, password_hash, password_salt, COALESCE(password_changed_at, created_at) AS password_changed_at, email_verified_at FROM users WHERE email = ? LIMIT 1"
   )
@@ -401,6 +435,8 @@ export async function login(request, env, body) {
     .first();
 
   if (!user) {
+    await consumePasswordVerificationCost(password);
+    await recordLoginFailure(request, env, email, "user_not_found");
     const error = new Error("Credenciales invalidas.");
     error.status = 401;
     throw error;
@@ -409,12 +445,14 @@ export async function login(request, env, body) {
   const valid = await verifyPassword(password, user.password_salt, user.password_hash);
 
   if (!valid) {
+    await recordLoginFailure(request, env, email, "invalid_password");
     const error = new Error("Credenciales invalidas.");
     error.status = 401;
     throw error;
   }
 
   if (user.status !== "active") {
+    await recordLoginFailure(request, env, email, "disabled_account");
     const error = new Error("La cuenta esta deshabilitada.");
     error.status = 403;
     throw error;
@@ -428,7 +466,8 @@ export async function login(request, env, body) {
     eventType: "auth.password_expired_login_blocked",
   });
 
-  return createSessionForUser(request, env, user);
+  const roles = await listUserRoles(env, user.id, user.role);
+  return createSessionForUser(request, env, { ...user, roles, primaryRole: user.role }, user.role);
 }
 
 export async function registerStudent(request, env, body) {
@@ -469,6 +508,8 @@ export async function registerStudent(request, env, body) {
     .bind(user.id, email, passwordData.hash, passwordData.salt, fullName, passwordChangedAt, passwordChangedAt, emailVerifiedAt)
     .run();
 
+  await replaceUserRoles(env, user.id, ["student"]);
+
   await writeAuditLog(env, {
     actorUserId: user.id,
     ipAddress: getClientIp(request),
@@ -478,7 +519,7 @@ export async function registerStudent(request, env, body) {
   });
 
   if (!settings.requireEmailVerification) {
-    return createSessionForUser(request, env, user);
+    return createSessionForUser(request, env, { ...user, roles: ["student"], primaryRole: "student" }, "student");
   }
 
   try {
@@ -746,14 +787,14 @@ export async function resetPasswordWithToken(request, env, body) {
     .first();
 
   if (!resetRecord || resetRecord.status !== "active") {
-    const error = new Error("El enlace de recuperacion no es valido o ya expiro.");
+    const error = new Error("El enlace de recuperacion no es valido, ya expiro o fue reemplazado por uno mas reciente.");
     error.status = 400;
     throw error;
   }
 
   if (new Date(resetRecord.expires_at).getTime() < Date.now()) {
     await env.DB.prepare("DELETE FROM password_reset_tokens WHERE id = ?").bind(resetRecord.id).run();
-    const error = new Error("El enlace de recuperacion no es valido o ya expiro.");
+    const error = new Error("El enlace de recuperacion no es valido, ya expiro o fue reemplazado por uno mas reciente.");
     error.status = 400;
     throw error;
   }
@@ -815,14 +856,14 @@ export async function verifyEmailWithToken(request, env, body) {
     .first();
 
   if (!verificationRecord || verificationRecord.status !== "active") {
-    const error = new Error("El enlace de verificacion no es valido o ya expiro.");
+    const error = new Error("El enlace de activacion no es valido, ya expiro o fue reemplazado por uno mas reciente.");
     error.status = 400;
     throw error;
   }
 
   if (new Date(verificationRecord.expires_at).getTime() < Date.now()) {
     await env.DB.prepare("DELETE FROM email_verification_tokens WHERE id = ?").bind(verificationRecord.id).run();
-    const error = new Error("El enlace de verificacion no es valido o ya expiro.");
+    const error = new Error("El enlace de activacion no es valido, ya expiro o fue reemplazado por uno mas reciente.");
     error.status = 400;
     throw error;
   }
@@ -859,23 +900,28 @@ export async function verifyEmailWithToken(request, env, body) {
 }
 
 export async function requireAuth(request, env, allowedRoles = []) {
-  const authorization = request.headers.get("Authorization") ?? "";
+  const token = getSessionTokenFromRequest(request);
 
-  if (!authorization.startsWith("Bearer ")) {
+  if (!token) {
     const error = new Error("Autenticacion requerida.");
     error.status = 401;
     throw error;
   }
-
-  const token = authorization.slice("Bearer ".length).trim();
   const tokenHash = await sha256(token);
+  const supportsActiveRole = await hasSessionActiveRoleColumn(env);
 
   const session = await env.DB.prepare(
-    `SELECT s.id, s.user_id, s.expires_at, u.email, u.full_name, u.role, COALESCE(u.status, 'active') AS status, COALESCE(u.password_changed_at, u.created_at) AS password_changed_at, u.email_verified_at
-     FROM sessions s
-     JOIN users u ON u.id = s.user_id
-     WHERE s.token_hash = ?
-     LIMIT 1`
+    supportsActiveRole
+      ? `SELECT s.id, s.user_id, s.expires_at, s.active_role, u.email, u.full_name, u.role AS primary_role, COALESCE(u.status, 'active') AS status, COALESCE(u.password_changed_at, u.created_at) AS password_changed_at, u.email_verified_at
+         FROM sessions s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.token_hash = ?
+         LIMIT 1`
+      : `SELECT s.id, s.user_id, s.expires_at, u.email, u.full_name, u.role AS primary_role, COALESCE(u.status, 'active') AS status, COALESCE(u.password_changed_at, u.created_at) AS password_changed_at, u.email_verified_at
+         FROM sessions s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.token_hash = ?
+         LIMIT 1`
   )
     .bind(tokenHash)
     .first();
@@ -918,7 +964,19 @@ export async function requireAuth(request, env, allowedRoles = []) {
     eventType: "auth.password_expired_session_blocked",
   });
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(session.role)) {
+  const roles = await listUserRoles(env, session.user_id, session.primary_role);
+  const requestedActiveRole = session.active_role ?? session.primary_role;
+  const resolvedActiveRole = roles.includes(requestedActiveRole)
+    ? requestedActiveRole
+    : roles[0] ?? session.primary_role;
+
+  if (supportsActiveRole && resolvedActiveRole !== session.active_role) {
+    await env.DB.prepare("UPDATE sessions SET active_role = ? WHERE id = ?")
+      .bind(resolvedActiveRole, session.id)
+      .run();
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(resolvedActiveRole)) {
     const error = new Error("No autorizado.");
     error.status = 403;
     throw error;
@@ -927,13 +985,71 @@ export async function requireAuth(request, env, allowedRoles = []) {
   return {
     tokenHash,
     sessionId: session.id,
-    user: {
-      id: session.user_id,
-      email: session.email,
-      fullName: session.full_name,
-      role: session.role,
-      status: session.status ?? "active",
+    user: serializeAuthUser(
+      {
+        user_id: session.user_id,
+        email: session.email,
+        full_name: session.full_name,
+        status: session.status,
+        primary_role: session.primary_role,
+      },
+      {
+        activeRole: resolvedActiveRole,
+        primaryRole: session.primary_role,
+        roles,
+      }
+    ),
+  };
+}
+
+export async function switchActiveRole(request, env, auth, body) {
+  const requestedRole = validateRole(body.role);
+
+  if (!userHasRole(auth.user, requestedRole)) {
+    const error = new Error("No puedes activar un contexto que no pertenece a tu cuenta.");
+    error.status = 403;
+    throw error;
+  }
+
+  if (!(await hasSessionActiveRoleColumn(env))) {
+    if (requestedRole !== auth.user.primaryRole) {
+      const error = new Error("La sesion actual no soporta cambio de contexto todavia. Aplica la migracion de acceso multi-rol.");
+      error.status = 409;
+      throw error;
+    }
+
+    return {
+      user: serializeAuthUser(auth.user, {
+        activeRole: auth.user.primaryRole,
+        primaryRole: auth.user.primaryRole,
+        roles: auth.user.roles,
+      }),
+    };
+  }
+
+  await env.DB.prepare("UPDATE sessions SET active_role = ? WHERE id = ?")
+    .bind(requestedRole, auth.sessionId)
+    .run();
+
+  await writeAuditLog(env, {
+    actorUserId: auth.user.id,
+    ipAddress: getClientIp(request),
+    eventType: "auth.role_switch",
+    entityType: "session",
+    entityId: auth.sessionId,
+    detailsJson: {
+      fromRole: auth.user.role,
+      toRole: requestedRole,
+      availableRoles: auth.user.roles,
     },
+  });
+
+  return {
+    user: serializeAuthUser(auth.user, {
+      activeRole: requestedRole,
+      primaryRole: auth.user.primaryRole,
+      roles: auth.user.roles,
+    }),
   };
 }
 
@@ -954,7 +1070,20 @@ export async function createManagedUser(request, env, auth, body) {
   const email = validateEmail(body.email);
   const password = validatePassword(body.password);
   const fullName = validateRequiredString(body.fullName, "Nombre completo", 255);
-  const role = validateRole(body.role);
+  const { primaryRole, roles } = resolveRoleSelection(body, {
+    fallbackRole: "student",
+  });
+
+  if (roles.length > 1 && !(await hasUserRolesTable(env))) {
+    const error = new Error("El acceso multi-rol aun no esta habilitado en esta base. Aplica la migracion 0006_multi_role_access.sql.");
+    error.status = 409;
+    throw error;
+  }
+
+  const assignedCourseIds = roles.includes("teacher")
+    ? await validateTeacherCourseAssignments(env, body.assignedCourseIds)
+    : [];
+
   const status = validateAccountStatus(body.status ?? "active");
 
   const existingUser = await env.DB.prepare(
@@ -972,14 +1101,19 @@ export async function createManagedUser(request, env, auth, body) {
   const passwordData = await hashPassword(password);
   const userId = createId("user");
   const passwordChangedAt = nowIso();
-  const emailVerifiedAt = settings.requireEmailVerification && role === "student" ? null : nowIso();
+  const emailVerifiedAt = settings.requireEmailVerification && roles.includes("student") ? null : nowIso();
 
   await env.DB.prepare(
     `INSERT INTO users (id, email, password_hash, password_salt, full_name, role, status, created_at, password_changed_at, email_verified_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(userId, email, passwordData.hash, passwordData.salt, fullName, role, status, passwordChangedAt, passwordChangedAt, emailVerifiedAt)
+    .bind(userId, email, passwordData.hash, passwordData.salt, fullName, primaryRole, status, passwordChangedAt, passwordChangedAt, emailVerifiedAt)
     .run();
+
+  await replaceUserRoles(env, userId, roles);
+  if (assignedCourseIds.length || roles.includes("teacher")) {
+    await replaceTeacherCourseAssignments(env, userId, assignedCourseIds);
+  }
 
   await writeAuditLog(env, {
     actorUserId: auth.user.id,
@@ -987,15 +1121,25 @@ export async function createManagedUser(request, env, auth, body) {
     eventType: "admin.user_create",
     entityType: "user",
     entityId: userId,
-    detailsJson: { role, status },
+    detailsJson: { role: primaryRole, roles, status, assignedCourseIds },
   });
 
   return {
-    id: userId,
-    email,
-    fullName,
-    role,
-    status,
+    ...serializeAuthUser(
+      {
+        id: userId,
+        email,
+        full_name: fullName,
+        role: primaryRole,
+        status,
+      },
+      {
+        activeRole: primaryRole,
+        primaryRole,
+        roles,
+      }
+    ),
+    assignedCourseIds,
   };
 }
 

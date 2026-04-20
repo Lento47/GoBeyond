@@ -1,4 +1,6 @@
 import { defaultContent } from "../../src/data/defaultContent";
+import { validateEmbedValue } from "../../src/shared/embedPolicy";
+import { normalizePublicMediaUrl } from "../../src/shared/publicMedia";
 import { purgeExpiredCommunityThreads } from "./community";
 import { parseJsonOrNull } from "./util";
 
@@ -13,10 +15,13 @@ const collectionSections = [
   "materialTemplates",
   "mediaLibrary",
   "news",
+  "socialSources",
   "supportTickets",
   "courseInterestRequests",
   "enrollmentEnhancements",
   "communityThreads",
+  "sops",
+  "sopChangeRequests",
 ];
 
 async function purgeExpiredClosedItems(env) {
@@ -100,9 +105,28 @@ export async function getContent(env) {
 }
 
 export function getPublicContentView(content) {
+  const normalizeMediaItem = (item) => {
+    if (!item || typeof item !== "object") {
+      return item;
+    }
+
+    return {
+      ...item,
+      image: normalizePublicMediaUrl(item.image),
+      coverImage: normalizePublicMediaUrl(item.coverImage),
+    };
+  };
+
   return {
     ...content,
-    testimonials: (content.testimonials ?? []).filter((item) => item.status !== "pending"),
+    testimonials: (content.testimonials ?? [])
+      .filter((item) => item.status !== "pending")
+      .map(normalizeMediaItem),
+    courses: (content.courses ?? []).map(normalizeMediaItem),
+    institutions: (content.institutions ?? []).map(normalizeMediaItem),
+    liveSessions: (content.liveSessions ?? []).map(normalizeMediaItem),
+    news: (content.news ?? []).map(normalizeMediaItem),
+    socialSources: undefined,
     testimonialSubmissions: undefined,
     materialTemplates: undefined,
     mediaLibrary: undefined,
@@ -110,8 +134,32 @@ export function getPublicContentView(content) {
     courseInterestRequests: undefined,
     enrollmentEnhancements: undefined,
     communityThreads: undefined,
+    sops: undefined,
+    sopChangeRequests: undefined,
     securitySettings: undefined,
   };
+}
+
+function sanitizeCollectionItemForStorage(section, item) {
+  if (!item || typeof item !== "object") {
+    return item;
+  }
+
+  if (section === "news") {
+    return {
+      ...item,
+      embed: validateEmbedValue(item.embed, "Embed de noticia"),
+    };
+  }
+
+  if (section === "institutions") {
+    return {
+      ...item,
+      embed: validateEmbedValue(item.embed, "Embed de institucion"),
+    };
+  }
+
+  return item;
 }
 
 export async function saveBlock(env, section, value, userId) {
@@ -149,13 +197,14 @@ export async function createCollectionItem(env, section, item) {
     .first();
 
   const nextPosition = Number(positionRow?.maxPosition ?? -1) + 1;
+  const sanitizedItem = sanitizeCollectionItemForStorage(section, item);
 
   try {
     await env.DB.prepare(
       `INSERT INTO collection_items (id, section, value_json, position, created_at, updated_at)
        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
     )
-      .bind(item.id, section, JSON.stringify(item), nextPosition)
+      .bind(sanitizedItem.id, section, JSON.stringify(sanitizedItem), nextPosition)
       .run();
   } catch (dbError) {
     if (String(dbError?.message ?? "").includes("SQLITE_TOOBIG")) {
@@ -191,13 +240,15 @@ export async function updateCollectionItem(env, section, item) {
     throw error;
   }
 
+  const sanitizedItem = sanitizeCollectionItemForStorage(section, item);
+
   try {
     await env.DB.prepare(
       `UPDATE collection_items
        SET value_json = ?, updated_at = CURRENT_TIMESTAMP
        WHERE section = ? AND id = ?`
     )
-      .bind(JSON.stringify(item), section, item.id)
+      .bind(JSON.stringify(sanitizedItem), section, sanitizedItem.id)
       .run();
   } catch (dbError) {
     if (String(dbError?.message ?? "").includes("SQLITE_TOOBIG")) {

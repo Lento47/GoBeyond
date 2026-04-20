@@ -1,6 +1,7 @@
 import { requireAuth } from "../../_lib/auth";
 import { createCollectionItem } from "../../_lib/content";
 import { listStudentEnrollments } from "../../_lib/enrollments";
+import { assertTrustedOrigin, readJsonBody } from "../../_lib/requestSecurity";
 import { error, json, options } from "../../_lib/response";
 import { createId } from "../../_lib/util";
 
@@ -23,7 +24,8 @@ export function onRequestOptions() {
 export async function onRequestPost(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["student"]);
-    const body = await context.request.json().catch(() => ({}));
+    assertTrustedOrigin(context.request, context.env);
+    const body = await readJsonBody(context.request, { maxBytes: 24_000 });
 
     const courseId = clean(body.courseId, 120);
     const courseTitle = clean(body.courseTitle, 160);

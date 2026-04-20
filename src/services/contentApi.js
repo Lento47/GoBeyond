@@ -2,6 +2,7 @@ const API_BASE_URL = "/api";
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
@@ -35,6 +36,10 @@ export async function fetchPublicContent() {
   return request("/public/content");
 }
 
+export async function fetchSocialNews() {
+  return request("/noticias");
+}
+
 export async function submitPublicTestimonial(payload) {
   return request("/public/testimonials", {
     method: "POST",
@@ -44,6 +49,33 @@ export async function submitPublicTestimonial(payload) {
 
 export async function fetchAdminContent(token) {
   return request("/admin/content", { token });
+}
+
+export async function fetchAdminSocialSources(token) {
+  return request("/admin/social-sources", { token });
+}
+
+export async function createAdminSocialSource(token, payload) {
+  return request("/admin/social-sources", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function updateAdminSocialSource(token, id, payload) {
+  return request(`/admin/social-sources?id=${encodeURIComponent(id)}`, {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteAdminSocialSource(token, id) {
+  return request(`/admin/social-sources?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    token,
+  });
 }
 
 export async function updateAdminSection(token, section, value) {
@@ -68,6 +100,7 @@ export async function uploadAdminAsset(token, file, purpose) {
   formData.append("purpose", purpose);
 
   const response = await fetch(`${API_BASE_URL}/admin/uploads`, {
+    credentials: "same-origin",
     method: "POST",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -161,6 +194,13 @@ export async function fetchCurrentUser(token) {
   });
 }
 
+export async function switchCurrentRole(payload) {
+  return request("/auth/switch-role", {
+    method: "POST",
+    body: payload,
+  });
+}
+
 export async function logoutAdmin(token) {
   return request("/auth/logout", {
     method: "POST",
@@ -170,6 +210,13 @@ export async function logoutAdmin(token) {
 
 export async function fetchStudentDashboard(token) {
   return request("/student/dashboard", {
+    token,
+  });
+}
+
+export async function ackStudentNotification(token, notificationId) {
+  return request(`/student/notifications/${encodeURIComponent(notificationId)}/ack`, {
+    method: "POST",
     token,
   });
 }
@@ -228,6 +275,135 @@ export async function createStudentCommunityReply(token, threadId, payload) {
       ...payload,
       action: "reply",
     },
+  });
+}
+
+export async function fetchTeacherDashboard(token) {
+  return request("/teacher/dashboard", { token });
+}
+
+export async function fetchTeacherCourses(token) {
+  return request("/teacher/courses", { token });
+}
+
+export async function fetchTeacherEnrollments(token) {
+  return request("/teacher/enrollments", { token });
+}
+
+export async function createTeacherEnrollment(token, payload) {
+  return request("/teacher/enrollments", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function updateTeacherEnrollment(token, enrollmentId, payload) {
+  return request(`/teacher/enrollments/${encodeURIComponent(enrollmentId)}`, {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteTeacherEnrollment(token, enrollmentId) {
+  return request(`/teacher/enrollments/${encodeURIComponent(enrollmentId)}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export async function createTeacherAssignment(token, payload) {
+  return request("/teacher/assignments", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function updateTeacherAssignment(token, payload) {
+  return request("/teacher/assignments", {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteTeacherAssignment(token, payload) {
+  return request("/teacher/assignments", {
+    method: "DELETE",
+    token,
+    body: payload,
+  });
+}
+
+export async function fetchTeacherSupport(token) {
+  return request("/teacher/support", { token });
+}
+
+export async function updateTeacherSupportItem(token, payload) {
+  return request("/teacher/support", {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function fetchTeacherSops(token) {
+  return request("/teacher/sops", { token });
+}
+
+export async function createTeacherSopChangeRequest(token, payload) {
+  return request("/teacher/sops/change-requests", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function ackTeacherNotification(token, notificationId) {
+  return request(`/teacher/notifications/${encodeURIComponent(notificationId)}/ack`, {
+    method: "POST",
+    token,
+  });
+}
+
+export async function fetchAdminSops(token) {
+  return request("/admin/sops", { token });
+}
+
+export async function createAdminSop(token, payload) {
+  return request("/admin/sops", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function updateAdminSop(token, sopId, payload) {
+  return request(`/admin/sops?id=${encodeURIComponent(sopId)}`, {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteAdminSop(token, sopId) {
+  return request(`/admin/sops?id=${encodeURIComponent(sopId)}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export async function fetchAdminSopChangeRequests(token) {
+  return request("/admin/sops/change-requests", { token });
+}
+
+export async function updateAdminSopChangeRequest(token, requestId, payload) {
+  return request(`/admin/sops/change-requests?id=${encodeURIComponent(requestId)}`, {
+    method: "PUT",
+    token,
+    body: payload,
   });
 }
 

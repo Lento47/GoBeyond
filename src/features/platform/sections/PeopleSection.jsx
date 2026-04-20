@@ -33,6 +33,10 @@ export function PeopleSection({
   usersLoading,
   viewFilters,
 }) {
+  function formatRoles(user) {
+    return (user.roles ?? [user.role]).join(" / ");
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
       <div className="xl:col-span-2">
@@ -49,8 +53,8 @@ export function PeopleSection({
             helper={`${expiredUsersCount} contrasenas vencidas · ${usersWithPasswordScheduleCount} cuentas con fecha proyectada de expiracion.`}
           >
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Expiracion automatica</p>
+              <div className="grid gap-2 rounded-[1rem] border border-[#dde5ee] bg-[#f8fafc] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Expiracion automatica</p>
                 <Select
                   value={securitySettingsForm.passwordExpirationEnabled ? "enabled" : "disabled"}
                   onChange={(event) =>
@@ -65,8 +69,8 @@ export function PeopleSection({
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Dias para expirar</p>
+              <div className="grid gap-2 rounded-[1rem] border border-[#dde5ee] bg-[#f8fafc] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Dias para expirar</p>
                 <Input
                   value={securitySettingsForm.passwordExpirationDays}
                   onChange={(event) =>
@@ -79,8 +83,8 @@ export function PeopleSection({
                 />
               </div>
 
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Cambio manual por admin</p>
+              <div className="grid gap-2 rounded-[1rem] border border-[#dde5ee] bg-[#f8fafc] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Cambio manual por admin</p>
                 <Select
                   value={securitySettingsForm.allowAdminPasswordChange ? "enabled" : "disabled"}
                   onChange={(event) =>
@@ -95,8 +99,8 @@ export function PeopleSection({
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Enlace de recuperacion por admin</p>
+              <div className="grid gap-2 rounded-[1rem] border border-[#dde5ee] bg-[#f8fafc] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Enlace de recuperacion por admin</p>
                 <Select
                   value={securitySettingsForm.allowAdminResetNotification ? "enabled" : "disabled"}
                   onChange={(event) =>
@@ -111,8 +115,8 @@ export function PeopleSection({
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Verificacion obligatoria</p>
+              <div className="grid gap-2 rounded-[1rem] border border-[#dde5ee] bg-[#f8fafc] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Verificacion obligatoria</p>
                 <Select
                   value={securitySettingsForm.requireEmailVerification ? "enabled" : "disabled"}
                   onChange={(event) =>
@@ -127,8 +131,8 @@ export function PeopleSection({
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Enlace de verificacion por admin</p>
+              <div className="grid gap-2 rounded-[1rem] border border-[#dde5ee] bg-[#f8fafc] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Enlace de verificacion por admin</p>
                 <Select
                   value={securitySettingsForm.allowAdminVerificationNotification ? "enabled" : "disabled"}
                   onChange={(event) =>
@@ -143,8 +147,8 @@ export function PeopleSection({
                 </Select>
               </div>
 
-              <div className="grid gap-2 md:col-span-2 xl:col-span-3">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Correo visible de soporte</p>
+              <div className="grid gap-2 rounded-[1rem] border border-[#dde5ee] bg-[#f8fafc] p-4 md:col-span-2 xl:col-span-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Correo visible de soporte</p>
                 <Input
                   value={securitySettingsForm.supportEmail}
                   onChange={(event) =>
@@ -180,12 +184,12 @@ export function PeopleSection({
         </SectionToolbar>
         <ScrollArea>
           <div className="grid gap-4">
-            {usersLoading ? <p className="text-sm text-[#6d5a51]">Cargando usuarios...</p> : null}
+            {usersLoading ? <p className="text-sm text-[#617085]">Cargando usuarios...</p> : null}
             {filteredUsers.length ? (
               filteredUsers.map((user) => (
                 <RowCard
                   key={user.id}
-                  eyebrow={`${user.role} · ${user.status} · ${user.emailVerified ? "correo verificado" : "correo pendiente"} · ${user.passwordExpired ? "contrasena expirada" : "contrasena vigente"}`}
+                  eyebrow={`${formatRoles(user)} · ${user.status} · ${user.emailVerified ? "correo verificado" : "correo pendiente"} · ${user.passwordExpired ? "contrasena expirada" : "contrasena vigente"}`}
                   title={user.fullName}
                   meta={user.email}
                   body={`Creado el ${formatDate(user.createdAt)}${user.emailVerifiedAt ? ` · verificado ${formatDate(user.emailVerifiedAt)}` : " · sin verificacion aun"}${user.passwordExpiresAt ? ` · expira ${formatDate(user.passwordExpiresAt)}` : " · sin expiracion automatica"}`}
@@ -221,17 +225,20 @@ export function PeopleSection({
         </SectionToolbar>
         <ScrollArea>
           <div className="grid gap-4">
-            {enrollmentsLoading ? <p className="text-sm text-[#6d5a51]">Cargando matriculas...</p> : null}
+            {enrollmentsLoading ? <p className="text-sm text-[#617085]">Cargando matriculas...</p> : null}
             {filteredEnrollmentsByStudent.length ? (
               filteredEnrollmentsByStudent.map((group) => (
-                <div key={group.student.id} className="border border-[#eadfce] bg-[#fbf8f2] p-5">
+                <div
+                  key={group.student.id}
+                  className="rounded-[1.15rem] border border-[#dfe6ee] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_12px_28px_rgba(15,23,42,0.04)]"
+                >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">
                         {group.items.length} {group.items.length === 1 ? "matricula" : "matriculas"}
                       </p>
-                      <h4 className="mt-2 text-xl font-medium text-[#20181f]">{group.student.fullName}</h4>
-                      <p className="mt-2 text-sm text-[#6d5a51]">{group.student.email}</p>
+                      <h4 className="mt-2 text-xl font-medium text-[#172033]">{group.student.fullName}</h4>
+                      <p className="mt-2 text-sm text-[#617085]">{group.student.email}</p>
                     </div>
                     <ActionButton onClick={() => startCreateEnrollmentForStudent(group.student.id)} type="button">
                       Agregar curso
@@ -240,11 +247,11 @@ export function PeopleSection({
 
                   <div className="mt-5 grid gap-3">
                     {group.items.map((item) => (
-                      <div key={item.id} className="border border-[#d8cdbf] bg-white p-4">
+                      <div key={item.id} className="rounded-[1rem] border border-[#dbe3ec] bg-white p-4 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                            <p className="font-medium text-[#20181f]">{item.course?.title ?? item.courseId}</p>
-                            <p className="mt-1 text-sm text-[#6d5a51]">
+                            <p className="font-medium text-[#172033]">{item.course?.title ?? item.courseId}</p>
+                            <p className="mt-1 text-sm text-[#617085]">
                               {item.status} · vence {formatDate(item.accessExpiresAt)}
                             </p>
                           </div>

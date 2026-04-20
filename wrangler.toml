@@ -1,11 +1,15 @@
+# Pages project config for the integrated app build.
+# The noticias endpoints in this repo run through Pages Functions and share the `DB` binding.
 name = "gobeyond"
-compatibility_date = "2024-12-01"
+compatibility_date = "2024-01-01"
 pages_build_output_dir = "./dist"
 
 [ai]
 binding = "AI"
 
 [[d1_databases]]
+# The integrated app keeps using the main project D1 binding.
+# For a standalone Worker deployment, point this block at `gobeyond-noticias`.
 binding = "DB"
 database_name = "gobeyond-db"
 database_id = "c2df3df4-4112-4e86-8846-e5814e956f3a"
@@ -17,6 +21,10 @@ EMAIL_FROM_NAME = "GoBeyond IT"
 EMAIL_REPLY_TO = "it@gobeyondcr.org"
 RESEND_TEMPLATE_AUTH = "gobeyondtemplateresend"
 RESEND_TEMPLATE_RESET = "gobeyondtemplatereset"
+RESEND_TEMPLATE_ENROLLMENT = "gobeyondtemplateenrrollment"
+TURNSTILE_SITE_KEY = ""
+# Webhook secret used by Make.com when POSTing social posts into `/webhook`.
+WEBHOOK_SECRET = "replace-with-a-strong-secret-token"
 
 [[r2_buckets]]
 binding = "MEDIA_BUCKET"

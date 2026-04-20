@@ -1,5 +1,6 @@
 import { requireAuth } from "../../_lib/auth";
 import { createCommunityThread, listCommunityThreads } from "../../_lib/community";
+import { assertTrustedOrigin, readJsonBody } from "../../_lib/requestSecurity";
 import { error, json, options } from "../../_lib/response";
 
 export function onRequestOptions() {
@@ -19,7 +20,8 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["student"]);
-    const body = await context.request.json().catch(() => ({}));
+    assertTrustedOrigin(context.request, context.env);
+    const body = await readJsonBody(context.request, { maxBytes: 24_000 });
     const thread = await createCommunityThread(context.request, context.env, auth, body);
     const threads = await listCommunityThreads(context.env);
     return json({ thread, threads }, { status: 201 });

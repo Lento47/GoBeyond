@@ -1,11 +1,22 @@
+const apiContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
+export function applyApiSecurityHeaders(headers, { cacheControl = "no-store" } = {}) {
+  headers.set("Cache-Control", cacheControl);
+  headers.set("Content-Security-Policy", apiContentSecurityPolicy);
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  headers.set("Cross-Origin-Resource-Policy", "same-site");
+}
+
 export function json(data, init = {}) {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json; charset=utf-8");
-  headers.set("Cache-Control", "no-store");
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("Referrer-Policy", "no-referrer");
-  headers.set("X-Frame-Options", "DENY");
-
+  headers.set("Access-Control-Allow-Origin", "https://gobeyondcr.org");
+  applyApiSecurityHeaders(headers);
   return new Response(JSON.stringify(data), {
     ...init,
     headers,
@@ -17,11 +28,15 @@ export function error(message, status = 400) {
 }
 
 export function options() {
+  const headers = new Headers({
+    "Access-Control-Allow-Origin": "https://gobeyondcr.org",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+  });
+  applyApiSecurityHeaders(headers);
   return new Response(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
+    headers,
   });
 }

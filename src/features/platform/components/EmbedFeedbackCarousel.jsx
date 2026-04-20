@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from "react";
+import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX } from "../../../shared/embedPolicy";
+import { normalizePublicMediaUrl } from "../embedUtils";
 
 function EmbedFrame({ src, title }) {
   return (
     <iframe
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allow={EMBED_IFRAME_ALLOW}
       allowFullScreen
       className="h-full w-full border-0"
       height="100%"
       loading="lazy"
       referrerPolicy="strict-origin-when-cross-origin"
+      sandbox={EMBED_IFRAME_SANDBOX}
       src={src}
       title={title}
       width="100%"
@@ -25,11 +28,16 @@ function FeedbackCard({ item }) {
         </div>
       ) : item.image ? (
         <div className="aspect-[16/10] overflow-hidden bg-[#0b0f17]">
-          <img alt={item.title} className="h-full w-full object-cover" src={item.image} />
+          <img alt={item.title} className="h-full w-full object-cover" src={normalizePublicMediaUrl(item.image)} />
         </div>
       ) : (
-        <div className="flex aspect-[16/10] items-center justify-center bg-white/[0.03] px-6 text-center text-sm text-gray-500">
-          {item.fallbackBody}
+        <div className="flex aspect-[16/10] flex-col items-center justify-center bg-[linear-gradient(135deg,rgba(37,99,235,0.12),rgba(8,8,8,0.92))] px-6 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">
+            {item.domainLabel || "Referencia externa"}
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-gray-300">
+            {item.fallbackBody}
+          </p>
         </div>
       )}
       <div className="flex items-center justify-between gap-4 p-5">
@@ -49,7 +57,7 @@ function FeedbackCard({ item }) {
   );
 }
 
-export function EmbedFeedbackCarousel({ items, title = "Feedback visual", speedMs = 28000 }) {
+export function EmbedFeedbackCarousel({ items, speedMs = 28000 }) {
   const groupRef = useRef(null);
   const [scrollDistance, setScrollDistance] = useState(0);
 
@@ -84,11 +92,7 @@ export function EmbedFeedbackCarousel({ items, title = "Feedback visual", speedM
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-center justify-between gap-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-blue-400">{title}</p>
-        <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Se desplaza automaticamente</p>
-      </div>
+    <div className="grid">
       <div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
         <div
           className="embed-feedback-track flex w-max gap-5"

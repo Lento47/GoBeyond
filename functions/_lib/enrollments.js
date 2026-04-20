@@ -1,5 +1,7 @@
 import { defaultContent } from "../../src/data/defaultContent";
+import { listUserRoles } from "./roles";
 import { writeAuditLog } from "./audit";
+import { notifyStudentEnrollment } from "./notifications";
 import { getClientIp, nowIso, parseJsonOrNull, createId } from "./util";
 import { validateEnrollmentStatus, validatePositiveInteger, validateRequiredString } from "./validation";
 
@@ -103,7 +105,9 @@ async function ensureStudentExists(env, userId) {
     .bind(userId)
     .first();
 
-  if (!user || user.role !== "student") {
+  const roles = user ? await listUserRoles(env, user.id, user.role) : [];
+
+  if (!user || !roles.includes("student")) {
     const error = new Error("Estudiante no encontrado.");
     error.status = 404;
     throw error;
@@ -153,7 +157,40 @@ async function ensureCourseExists(env, courseId) {
   };
 }
 
-export async function createEnrollment(request, env, auth, body) {
+async function triggerEnrollmentActivationNotification(request, env, auth, { student, course, enrollmentId, accessExpiresAt }) {
+  const courseValue = course?.value && typeof course.value === "object" ? course.value : {};
+
+  try {
+    await notifyStudentEnrollment(request, env, auth, {
+      user: student,
+      course: {
+        id: course?.id ?? null,
+        ...courseValue,
+      },
+      enrollmentId,
+      accessExpiresAt,
+    });
+  } catch (requestError) {
+    await writeAuditLog(env, {
+      actorUserId: auth.user.id,
+      ipAddress: getClientIp(request),
+      eventType: "student.notification_enqueue_failed",
+      entityType: "enrollment",
+      entityId: enrollmentId,
+      detailsJson: {
+        userId: student.id,
+        courseId: course?.id ?? null,
+        error: requestError.message,
+      },
+    });
+  }
+}
+
+function resolveAuditNamespace(options = {}) {
+  return String(options.auditNamespace ?? "admin").trim().toLowerCase() || "admin";
+}
+
+export async function createEnrollment(request, env, auth, body, options = {}) {
   const userId = validateRequiredString(body.userId, "Estudiante", 255);
   const courseId = validateRequiredString(body.courseId, "Curso", 255);
   const status = validateEnrollmentStatus(body.status ?? "active");
@@ -162,8 +199,8 @@ export async function createEnrollment(request, env, auth, body) {
     max: 365,
   });
 
-  await ensureStudentExists(env, userId);
-  await ensureCourseExists(env, courseId);
+  const student = await ensureStudentExists(env, userId);
+  const course = await ensureCourseExists(env, courseId);
 
   const existingEnrollment = await env.DB.prepare(
     "SELECT id FROM enrollments WHERE user_id = ? AND course_id = ? LIMIT 1"
@@ -195,17 +232,28 @@ export async function createEnrollment(request, env, auth, body) {
 
   await upsertEnrollmentEnhancement(env, enrollmentId, enhancement);
 
+  const auditNamespace = resolveAuditNamespace(options);
+
   await writeAuditLog(env, {
     actorUserId: auth.user.id,
     ipAddress: getClientIp(request),
-    eventType: "admin.enrollment_create",
+    eventType: `${auditNamespace}.enrollment_create`,
     entityType: "enrollment",
     entityId: enrollmentId,
     detailsJson: { userId, courseId, status, accessDays, enhancement },
   });
+
+  if (status === "active") {
+    await triggerEnrollmentActivationNotification(request, env, auth, {
+      student,
+      course,
+      enrollmentId,
+      accessExpiresAt,
+    });
+  }
 }
 
-export async function updateEnrollment(request, env, auth, enrollmentId, body) {
+export async function updateEnrollment(request, env, auth, enrollmentId, body, options = {}) {
   const existingEnrollment = await env.DB.prepare(
     "SELECT id, user_id, course_id, status, access_expires_at FROM enrollments WHERE id = ? LIMIT 1"
   )
@@ -237,26 +285,44 @@ export async function updateEnrollment(request, env, auth, enrollmentId, body) {
 
   await upsertEnrollmentEnhancement(env, enrollmentId, enhancement);
 
+  const auditNamespace = resolveAuditNamespace(options);
+
   await writeAuditLog(env, {
     actorUserId: auth.user.id,
     ipAddress: getClientIp(request),
-    eventType: "admin.enrollment_update",
+    eventType: `${auditNamespace}.enrollment_update`,
     entityType: "enrollment",
     entityId: enrollmentId,
     detailsJson: { status, accessExpiresAt, enhancement },
   });
+
+  if (existingEnrollment.status !== "active" && status === "active") {
+    const [student, course] = await Promise.all([
+      ensureStudentExists(env, existingEnrollment.user_id),
+      ensureCourseExists(env, existingEnrollment.course_id),
+    ]);
+
+    await triggerEnrollmentActivationNotification(request, env, auth, {
+      student,
+      course,
+      enrollmentId,
+      accessExpiresAt,
+    });
+  }
 }
 
-export async function deleteEnrollment(request, env, auth, enrollmentId) {
+export async function deleteEnrollment(request, env, auth, enrollmentId, options = {}) {
   await env.DB.prepare("DELETE FROM enrollments WHERE id = ?").bind(enrollmentId).run();
   await env.DB.prepare("DELETE FROM collection_items WHERE section = 'enrollmentEnhancements' AND id = ?")
     .bind(enrollmentId)
     .run();
 
+  const auditNamespace = resolveAuditNamespace(options);
+
   await writeAuditLog(env, {
     actorUserId: auth.user.id,
     ipAddress: getClientIp(request),
-    eventType: "admin.enrollment_delete",
+    eventType: `${auditNamespace}.enrollment_delete`,
     entityType: "enrollment",
     entityId: enrollmentId,
   });

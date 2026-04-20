@@ -29,6 +29,7 @@ export function CatalogSection({
             Crear curso
           </ActionButton>
         }
+        helper={`${filteredCourses.length} cursos visibles con el filtro actual · ${courseTemplates.length} plantillas disponibles para acelerar carga editorial.`}
       >
         <FilterInput
           onChange={(event) => updateViewFilter("courses", event.target.value)}

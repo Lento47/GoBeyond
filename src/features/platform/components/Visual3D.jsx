@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Environment, ContactShadows, Torus, Float } from "@react-three/drei";
+import { ContactShadows, Torus, Float } from "@react-three/drei";
 
 export default function Visual3D() {
   const [lowPowerMode, setLowPowerMode] = useState(false);
@@ -31,8 +31,11 @@ export default function Visual3D() {
         performance={{ min: 0.6 }}
         style={{ background: "transparent" }}
       >
-        <ambientLight intensity={lowPowerMode ? 0.34 : 0.4} />
-        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={lowPowerMode ? 1.35 : 2} />
+        <ambientLight intensity={lowPowerMode ? 0.44 : 0.52} />
+        <hemisphereLight args={["#9ec5ff", "#05070c", lowPowerMode ? 0.85 : 1.05]} />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={lowPowerMode ? 1.1 : 1.7} />
+        <pointLight color="#2563eb" intensity={lowPowerMode ? 5 : 7} position={[-3, 2, 4]} />
+        <pointLight color="#60a5fa" intensity={lowPowerMode ? 2.5 : 3.5} position={[3, -1, 3]} />
         <Float speed={lowPowerMode ? 1 : 1.5} rotationIntensity={lowPowerMode ? 0.3 : 0.5} floatIntensity={lowPowerMode ? 0.25 : 0.5}>
           <Torus args={lowPowerMode ? [1, 0.4, 64, 96] : [1, 0.4, 96, 128]} rotation={[0.3, 0.4, 0.1]}>
             <meshPhysicalMaterial
@@ -53,7 +56,6 @@ export default function Visual3D() {
           position={[0, -2.4, 0]}
           scale={lowPowerMode ? 10 : 12}
         />
-        <Environment preset="city" resolution={lowPowerMode ? 128 : 256} />
       </Canvas>
     </div>
   );

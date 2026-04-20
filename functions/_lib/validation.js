@@ -49,6 +49,25 @@ export function validateRole(value) {
   return normalized;
 }
 
+export function validateRoles(value) {
+  const entries = Array.isArray(value) ? value : value == null ? [] : [value];
+  const roles = Array.from(
+    new Set(
+      entries
+        .flatMap((entry) => (typeof entry === "string" ? entry.split(",") : [entry]))
+        .map((entry) => String(entry ?? "").trim().toLowerCase())
+        .filter(Boolean)
+        .map((entry) => validateRole(entry))
+    )
+  );
+
+  if (!roles.length) {
+    throw badRequest("Debes asignar al menos un rol.");
+  }
+
+  return roles;
+}
+
 export function validateAccountStatus(value) {
   const normalized = String(value ?? "").trim().toLowerCase();
   const allowedStatuses = new Set(["active", "disabled"]);

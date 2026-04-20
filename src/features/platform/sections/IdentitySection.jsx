@@ -34,7 +34,7 @@ export function IdentitySection({
         title="Identidad y narrativa"
         description="Todo el contenido institucional vive aqui, pero ya no te obliga a convivir con formularios abiertos todo el tiempo."
       >
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-4">
           <RowCard eyebrow="Marca" title={content.brand.name} meta={content.brand.tagline} body={content.brand.description}>
             <ActionButton onClick={() => openModal("brand")} type="button">
               Editar marca
@@ -53,6 +53,20 @@ export function IdentitySection({
           >
             <ActionButton onClick={() => openModal("landing")} type="button">
               Editar narrativa
+            </ActionButton>
+          </RowCard>
+          <RowCard
+            eyebrow="Redes sociales"
+            title="Facebook, LinkedIn e Instagram"
+            meta="Links publicos visibles en el landing"
+            body={[
+              `Facebook: ${content.landing?.socialLinks?.facebook || "Sin enlace configurado"}`,
+              `LinkedIn: ${content.landing?.socialLinks?.linkedin || "Sin enlace configurado"}`,
+              `Instagram: ${content.landing?.socialLinks?.instagram || "Sin enlace configurado"}`,
+            ].join("\n")}
+          >
+            <ActionButton onClick={() => openModal("landing")} type="button">
+              Editar redes
             </ActionButton>
           </RowCard>
         </div>
@@ -80,21 +94,24 @@ export function IdentitySection({
           <div className="grid gap-4 lg:grid-cols-2">
             {filteredInstitutions.length ? (
               filteredInstitutions.map((item) => (
-                <div key={item.id} className="overflow-hidden border border-[#eadfce] bg-[#fbf8f2]">
+                <div
+                  key={item.id}
+                  className="overflow-hidden rounded-[1.15rem] border border-[#dfe6ee] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_12px_28px_rgba(15,23,42,0.04)]"
+                >
                   <div className="grid gap-0 sm:grid-cols-[180px_minmax(0,1fr)]">
-                    <div className="aspect-[4/3] bg-[#edf1f4]">
+                    <div className="aspect-[4/3] bg-[#edf2f7]">
                       {item.image ? (
                         <img alt={item.name} className="h-full w-full object-cover" src={item.image} />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-[#8b6d55]">Sin imagen</div>
+                        <div className="flex h-full items-center justify-center text-sm text-[#708198]">Sin imagen</div>
                       )}
                     </div>
                     <div className="p-5">
-                      <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">
                         {item.featured ? "Visible en landing" : "Archivada de landing"}
                       </p>
-                      <h4 className="mt-2 text-xl font-medium text-[#20181f]">{item.name}</h4>
-                      <p className="mt-2 text-sm text-[#6d5a51]">{item.link || "Sin enlace de referencia"}</p>
+                      <h4 className="mt-2 text-xl font-medium text-[#172033]">{item.name}</h4>
+                      <p className="mt-2 text-sm leading-relaxed text-[#617085]">{item.link || "Sin enlace de referencia"}</p>
                       <div className="mt-4 flex flex-wrap gap-3">
                         <SecondaryButton onClick={() => startEditInstitution(item)} type="button">
                           Editar
@@ -132,22 +149,25 @@ export function IdentitySection({
           <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {filteredMediaLibrary.length ? (
               filteredMediaLibrary.map((item) => (
-                <div key={item.id} className="overflow-hidden border border-[#eadfce] bg-[#fbf8f2]">
+                <div
+                  key={item.id}
+                  className="overflow-hidden rounded-[1rem] border border-[#dfe6ee] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_10px_22px_rgba(15,23,42,0.04)]"
+                >
                   <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-0">
                     {String(item.contentType ?? "").startsWith("image/") ? (
-                      <div className="h-20 w-20 bg-[#edf1f4]">
+                      <div className="h-20 w-20 bg-[#edf2f7]">
                         <img alt={item.fileName} className="h-full w-full object-cover" src={item.url} />
                       </div>
                     ) : (
-                      <div className="flex h-20 w-20 items-center justify-center bg-[#efe4d6] text-[10px] uppercase tracking-[0.2em] text-[#8b6d55]">
+                      <div className="flex h-20 w-20 items-center justify-center bg-[#e8eef6] text-[10px] uppercase tracking-[0.2em] text-[#708198]">
                         File
                       </div>
                     )}
                     <div className="p-4">
-                      <p className="text-[10px] uppercase tracking-[0.22em] text-[#8b6d55]">{item.purpose}</p>
-                      <h4 className="mt-1 truncate text-sm font-medium text-[#20181f]">{item.fileName}</h4>
-                      <p className="mt-2 text-xs text-[#6d5a51]">{Math.round(Number(item.size ?? 0) / 1024)} KB</p>
-                      <p className="mt-1 truncate text-[11px] text-[#8b6d55]">{item.hash?.slice(0, 16)}...</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#748197]">{item.purpose}</p>
+                      <h4 className="mt-1 truncate text-sm font-medium text-[#172033]">{item.fileName}</h4>
+                      <p className="mt-2 text-xs text-[#617085]">{Math.round(Number(item.size ?? 0) / 1024)} KB</p>
+                      <p className="mt-1 truncate text-[11px] text-[#748197]">{item.hash?.slice(0, 16)}...</p>
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,7 @@
 import { createCollectionItem } from "../../_lib/content";
+import { assertTrustedOrigin, enforceRequestThrottle, readJsonBody, recordRequestAttempt, throttlePolicies } from "../../_lib/requestSecurity";
 import { error, json, options } from "../../_lib/response";
+import { verifyTurnstileToken } from "../../_lib/turnstile";
 import { createId } from "../../_lib/util";
 import { validateRequiredString } from "../../_lib/validation";
 
@@ -9,7 +11,15 @@ export async function onRequestOptions() {
 
 export async function onRequestPost(context) {
   try {
-    const body = await context.request.json();
+    assertTrustedOrigin(context.request, context.env);
+    await enforceRequestThrottle(context.env, context.request, throttlePolicies.publicTestimonial);
+    await recordRequestAttempt(context.env, context.request, throttlePolicies.publicTestimonial, {
+      detailsJson: {
+        route: "public.testimonials",
+      },
+    });
+    const body = await readJsonBody(context.request, { maxBytes: 8_192 });
+    await verifyTurnstileToken(context.request, context.env, body.turnstileToken, { action: "public-testimonial" });
     const item = {
       id: createId("testimonial"),
       quote: validateRequiredString(body.quote, "Testimonio", 2400),

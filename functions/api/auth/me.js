@@ -6,6 +6,9 @@ export async function onRequestGet(context) {
     const auth = await requireAuth(context.request, context.env);
     return json({ user: auth.user });
   } catch (requestError) {
+    if (requestError.status === 401) {
+      return json({ user: null });
+    }
     return error(requestError.message, requestError.status ?? 500);
   }
 }
