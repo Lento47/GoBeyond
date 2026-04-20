@@ -107,6 +107,36 @@ export const defaultContent = {
       status: "approved",
     },
   ],
+  institutions: [
+    {
+      id: "institution-1",
+      name: "Colegio de Limon Diurno",
+      image: "/institutions/colegio-limon-diurno.jpg",
+      link: "",
+      embed: "",
+      featured: true,
+    },
+    {
+      id: "institution-2",
+      name: "LLMBB",
+      image: "/institutions/llmbb-liceo.jpg",
+      link: "",
+      embed: "",
+      featured: true,
+    },
+    {
+      id: "institution-3",
+      name: "ASOIC",
+      image: "/institutions/asoic.jpg",
+      link: "",
+      embed: "",
+      featured: true,
+    },
+  ],
+  mediaLibrary: [],
+  news: [],
+  supportTickets: [],
+  courseInterestRequests: [],
   testimonialSubmissions: [],
   accessTimeline: [
     {
@@ -160,6 +190,15 @@ export const defaultContent = {
       description: "Mas oportunidades dentro y fuera de Limon con formacion de alto impacto.",
     },
   ],
+  securitySettings: {
+    allowAdminPasswordChange: true,
+    allowAdminResetNotification: true,
+    allowAdminVerificationNotification: true,
+    passwordExpirationEnabled: false,
+    passwordExpirationDays: 90,
+    requireEmailVerification: true,
+    supportEmail: "it@gobeyondcr.org",
+  },
   landing: {
     nav: ["Inicio", "Sobre nosotros", "Servicios", "Impacto", "Testimonios", "Contacto"],
     aboutTitle: "Sobre nosotros",
@@ -179,5 +218,9 @@ export const defaultContent = {
     contactBody:
       "Ponte en contacto con Go Beyond para abrir oportunidades de formacion de alto impacto para tu institucion, organizacion o comunidad.",
     contactActions: ["Contacto", "Noticias", "Facebook", "LinkedIn"],
+    socialLinks: {
+      facebook: "https://www.facebook.com/profile.php?id=61588185384903",
+      linkedin: "https://www.linkedin.com/company/go-beyondcri",
+    },
   },
 };

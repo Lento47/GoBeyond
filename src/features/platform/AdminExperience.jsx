@@ -128,10 +128,24 @@ function AdminAuthPanel({ onLogin, authLoading, authError }) {
 }
 
 export function AdminExperience(props) {
-  const { currentUser, authError, authLoading, loading, content, onLogin } = props;
+  const { currentUser, authError, authLoading, loading, content, onRequestLogin } = props;
 
   if (!currentUser) {
-    return <AdminAuthPanel authError={authError} authLoading={authLoading} onLogin={onLogin} />;
+    return (
+      <SectionCard
+        title="Area restringida"
+        description="Esta superficie no se anuncia publicamente y requiere una sesion valida. Si tienes acceso, usa el ingreso general."
+        accent="dark"
+      >
+        <div className="flex flex-wrap gap-3">
+          <button className="bg-[#d6a46e] px-5 py-3 text-sm font-medium text-[#20181f]" onClick={onRequestLogin} type="button">
+            Ir a ingresar
+          </button>
+        </div>
+        {authLoading ? <p className="mt-4 text-sm text-[#d8cdc5]">Validando sesion...</p> : null}
+        {authError ? <p className="mt-4 text-sm text-[#ffb8a6]">{authError}</p> : null}
+      </SectionCard>
+    );
   }
 
   if (loading || !content) {

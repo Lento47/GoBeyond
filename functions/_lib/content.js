@@ -1,10 +1,59 @@
 import { defaultContent } from "../../src/data/defaultContent";
+import { purgeExpiredCommunityThreads } from "./community";
 import { parseJsonOrNull } from "./util";
 
-const blockSections = ["brand", "hero", "benefits", "accessTimeline", "subscription", "communityStats", "landing"];
-const collectionSections = ["liveSessions", "learningPath", "testimonials", "testimonialSubmissions", "courses"];
+const blockSections = ["brand", "hero", "benefits", "accessTimeline", "subscription", "communityStats", "landing", "securitySettings"];
+const collectionSections = [
+  "liveSessions",
+  "learningPath",
+  "testimonials",
+  "testimonialSubmissions",
+  "courses",
+  "institutions",
+  "materialTemplates",
+  "mediaLibrary",
+  "news",
+  "supportTickets",
+  "courseInterestRequests",
+  "enrollmentEnhancements",
+  "communityThreads",
+];
+
+async function purgeExpiredClosedItems(env) {
+  const oneDayAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const sectionsToClean = ["supportTickets", "courseInterestRequests"];
+
+  for (const section of sectionsToClean) {
+    const result = await env.DB.prepare(
+      "SELECT id, value_json FROM collection_items WHERE section = ?"
+    )
+      .bind(section)
+      .all();
+
+    const expiredIds = (result.results ?? [])
+      .map((row) => ({
+        id: row.id,
+        value: parseJsonOrNull(row.value_json),
+      }))
+      .filter(({ value }) => {
+        if (!value || value.status !== "closed") {
+          return false;
+        }
+
+        const referenceDate = String(value.closedAt || value.updatedAt || value.createdAt || "").trim();
+        return referenceDate && referenceDate <= oneDayAgoIso;
+      })
+      .map(({ id }) => id);
+
+    for (const id of expiredIds) {
+      await deleteCollectionItem(env, section, id);
+    }
+  }
+}
 
 export async function getContent(env) {
+  await purgeExpiredClosedItems(env);
+  await purgeExpiredCommunityThreads(env);
   const content = structuredClone(defaultContent);
 
   const blockResult = await env.DB.prepare(
@@ -26,9 +75,24 @@ export async function getContent(env) {
       .all();
 
     if ((result.results ?? []).length > 0) {
-      content[section] = result.results
+      const databaseItems = result.results
         .map((row) => parseJsonOrNull(row.value_json))
-        .filter(Boolean);
+        .filter((item) => item && String(item.id ?? "").trim());
+
+      const defaultItems = Array.isArray(content[section]) ? content[section] : [];
+      const mergedById = new Map();
+
+      for (const item of defaultItems) {
+        const key = item?.id ?? JSON.stringify(item);
+        mergedById.set(key, item);
+      }
+
+      for (const item of databaseItems) {
+        const key = item?.id ?? JSON.stringify(item);
+        mergedById.set(key, item);
+      }
+
+      content[section] = Array.from(mergedById.values());
     }
   }
 
@@ -40,6 +104,13 @@ export function getPublicContentView(content) {
     ...content,
     testimonials: (content.testimonials ?? []).filter((item) => item.status !== "pending"),
     testimonialSubmissions: undefined,
+    materialTemplates: undefined,
+    mediaLibrary: undefined,
+    supportTickets: undefined,
+    courseInterestRequests: undefined,
+    enrollmentEnhancements: undefined,
+    communityThreads: undefined,
+    securitySettings: undefined,
   };
 }
 
@@ -65,6 +136,12 @@ export async function createCollectionItem(env, section, item) {
     throw new Error("Coleccion no permitida.");
   }
 
+  if (!String(item?.id ?? "").trim()) {
+    const error = new Error("El elemento necesita un id valido.");
+    error.status = 400;
+    throw error;
+  }
+
   const positionRow = await env.DB.prepare(
     "SELECT COALESCE(MAX(position), -1) AS maxPosition FROM collection_items WHERE section = ?"
   )
@@ -73,17 +150,33 @@ export async function createCollectionItem(env, section, item) {
 
   const nextPosition = Number(positionRow?.maxPosition ?? -1) + 1;
 
-  await env.DB.prepare(
-    `INSERT INTO collection_items (id, section, value_json, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-  )
-    .bind(item.id, section, JSON.stringify(item), nextPosition)
-    .run();
+  try {
+    await env.DB.prepare(
+      `INSERT INTO collection_items (id, section, value_json, position, created_at, updated_at)
+       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+    )
+      .bind(item.id, section, JSON.stringify(item), nextPosition)
+      .run();
+  } catch (dbError) {
+    if (String(dbError?.message ?? "").includes("SQLITE_TOOBIG")) {
+      const error = new Error("El contenido incluye un archivo o imagen demasiado grande para guardarse en la plataforma. Usa una imagen mas ligera o un enlace externo.");
+      error.status = 400;
+      throw error;
+    }
+
+    throw dbError;
+  }
 }
 
 export async function updateCollectionItem(env, section, item) {
   if (!collectionSections.includes(section)) {
     throw new Error("Coleccion no permitida.");
+  }
+
+  if (!String(item?.id ?? "").trim()) {
+    const error = new Error("El elemento necesita un id valido.");
+    error.status = 400;
+    throw error;
   }
 
   const existing = await env.DB.prepare(
@@ -98,13 +191,23 @@ export async function updateCollectionItem(env, section, item) {
     throw error;
   }
 
-  await env.DB.prepare(
-    `UPDATE collection_items
-     SET value_json = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE section = ? AND id = ?`
-  )
-    .bind(JSON.stringify(item), section, item.id)
-    .run();
+  try {
+    await env.DB.prepare(
+      `UPDATE collection_items
+       SET value_json = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE section = ? AND id = ?`
+    )
+      .bind(JSON.stringify(item), section, item.id)
+      .run();
+  } catch (dbError) {
+    if (String(dbError?.message ?? "").includes("SQLITE_TOOBIG")) {
+      const error = new Error("El contenido incluye un archivo o imagen demasiado grande para guardarse en la plataforma. Usa una imagen mas ligera o un enlace externo.");
+      error.status = 400;
+      throw error;
+    }
+
+    throw dbError;
+  }
 }
 
 export async function deleteCollectionItem(env, section, id) {

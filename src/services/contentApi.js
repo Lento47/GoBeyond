@@ -11,10 +11,21 @@ async function request(path, options = {}) {
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  const payload = await response.json().catch(() => ({}));
+  const responseText = await response.text();
+  let payload = {};
+
+  try {
+    payload = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    payload = {};
+  }
 
   if (!response.ok) {
-    throw new Error(payload.error || "Error de red.");
+    const fallbackMessage =
+      responseText && !responseText.trim().startsWith("<")
+        ? responseText
+        : `Error de red (${response.status}).`;
+    throw new Error(payload.error || fallbackMessage);
   }
 
   return payload;
@@ -49,6 +60,28 @@ export async function createAdminCollectionItem(token, section, item) {
     token,
     body: item,
   });
+}
+
+export async function uploadAdminAsset(token, file, purpose) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("purpose", purpose);
+
+  const response = await fetch(`${API_BASE_URL}/admin/uploads`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload.error || "No se pudo subir el archivo.");
+  }
+
+  return payload;
 }
 
 export async function deleteAdminCollectionItem(token, section, id) {
@@ -94,6 +127,34 @@ export async function registerStudent(payload) {
   });
 }
 
+export async function requestPasswordReset(payload) {
+  return request("/auth/forgot-password", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function requestEmailVerification(payload) {
+  return request("/auth/send-verification", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function resetPassword(payload) {
+  return request("/auth/reset-password", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function verifyEmail(payload) {
+  return request("/auth/verify-email", {
+    method: "POST",
+    body: payload,
+  });
+}
+
 export async function fetchCurrentUser(token) {
   return request("/auth/me", {
     token,
@@ -110,6 +171,63 @@ export async function logoutAdmin(token) {
 export async function fetchStudentDashboard(token) {
   return request("/student/dashboard", {
     token,
+  });
+}
+
+export async function askStudentAssistant(token, payload) {
+  return request("/student/chat", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function createStudentTicket(token, payload) {
+  return request("/student/tickets", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function createStudentCourseRequest(token, payload) {
+  return request("/student/course-requests", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function fetchStudentCommunity(token) {
+  return request("/student/community", {
+    token,
+  });
+}
+
+export async function createStudentCommunityThread(token, payload) {
+  return request("/student/community", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function updateStudentCommunityThread(token, threadId, payload) {
+  return request(`/student/community/${encodeURIComponent(threadId)}`, {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function createStudentCommunityReply(token, threadId, payload) {
+  return request(`/student/community/${encodeURIComponent(threadId)}`, {
+    method: "PUT",
+    token,
+    body: {
+      ...payload,
+      action: "reply",
+    },
   });
 }
 
@@ -130,6 +248,35 @@ export async function updateAdminUser(token, userId, payload) {
     method: "PUT",
     token,
     body: payload,
+  });
+}
+
+export async function deleteAdminUser(token, userId) {
+  return request(`/admin/users/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export async function setAdminUserPassword(token, userId, payload) {
+  return request(`/admin/users/${encodeURIComponent(userId)}/password`, {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function sendAdminUserPasswordReset(token, userId) {
+  return request(`/admin/users/${encodeURIComponent(userId)}/password-reset`, {
+    method: "POST",
+    token,
+  });
+}
+
+export async function sendAdminUserVerification(token, userId) {
+  return request(`/admin/users/${encodeURIComponent(userId)}/verification`, {
+    method: "POST",
+    token,
   });
 }
 

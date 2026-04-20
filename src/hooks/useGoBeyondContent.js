@@ -3,18 +3,27 @@ import {
   createAdminEnrollment,
   createAdminCollectionItem,
   createAdminUser,
+  deleteAdminUser,
   deleteAdminEnrollment,
   deleteAdminCollectionItem,
   fetchAdminEnrollments,
   fetchAdminContent,
   fetchAdminUsers,
   fetchPublicContent,
+  fetchStudentCommunity,
   fetchStudentDashboard,
+  sendAdminUserPasswordReset,
+  sendAdminUserVerification,
+  setAdminUserPassword,
   submitPublicTestimonial,
+  createStudentCommunityReply,
+  createStudentCommunityThread,
   updateAdminCollectionItem,
   updateAdminEnrollment,
   updateAdminSection,
   updateAdminUser,
+  updateStudentCommunityThread,
+  uploadAdminAsset,
 } from "../services/contentApi";
 
 export function usePublicContent() {
@@ -125,13 +134,30 @@ export function useAdminContent(token) {
   }
 
   async function updateCollectionItem(section, id, item) {
-    const nextContent = await updateAdminCollectionItem(token, section, id, item);
-    setContent(nextContent);
+    try {
+      const nextContent = await updateAdminCollectionItem(token, section, id, item);
+      setContent(nextContent);
+    } catch (updateError) {
+      if (String(updateError?.message ?? "").includes("Elemento no encontrado")) {
+        await createAdminCollectionItem(token, section, {
+          ...item,
+          id,
+        });
+        await refresh();
+        return;
+      }
+
+      throw updateError;
+    }
   }
 
   async function deleteCollectionItem(section, id) {
     await deleteAdminCollectionItem(token, section, id);
     await refresh();
+  }
+
+  async function uploadAsset(file, purpose) {
+    return uploadAdminAsset(token, file, purpose);
   }
 
   return {
@@ -141,6 +167,7 @@ export function useAdminContent(token) {
     createCollectionItem,
     deleteCollectionItem,
     refresh,
+    uploadAsset,
     updateCollectionItem,
     updateSection,
   };
@@ -192,6 +219,76 @@ export function useStudentDashboard(token) {
     dashboard,
     error,
     loading,
+  };
+}
+
+export function useStudentCommunity(token) {
+  const [threads, setThreads] = useState([]);
+  const [loading, setLoading] = useState(Boolean(token));
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function load() {
+      if (!token) {
+        setThreads([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const data = await fetchStudentCommunity(token);
+        if (!mounted) {
+          return;
+        }
+        setThreads(data.threads ?? []);
+        setError("");
+      } catch (loadError) {
+        if (!mounted) {
+          return;
+        }
+        setError(loadError.message);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
+
+  async function createThread(payload) {
+    const data = await createStudentCommunityThread(token, payload);
+    setThreads(data.threads ?? []);
+    return data.thread;
+  }
+
+  async function reply(threadId, payload) {
+    const data = await createStudentCommunityReply(token, threadId, payload);
+    setThreads(data.threads ?? []);
+    return data.thread;
+  }
+
+  async function updateThread(threadId, payload) {
+    const data = await updateStudentCommunityThread(token, threadId, payload);
+    setThreads(data.threads ?? []);
+    return data.thread;
+  }
+
+  return {
+    threads,
+    loading,
+    error,
+    createThread,
+    reply,
+    updateThread,
   };
 }
 
@@ -247,11 +344,39 @@ export function useAdminUsers(token) {
     setUsers(data.users ?? []);
   }
 
+  async function removeUser(userId) {
+    const data = await deleteAdminUser(token, userId);
+    setUsers(data.users ?? []);
+    return data.user;
+  }
+
+  async function changeUserPassword(userId, payload) {
+    const data = await setAdminUserPassword(token, userId, payload);
+    setUsers(data.users ?? []);
+    return data.user;
+  }
+
+  async function notifyUserPasswordReset(userId) {
+    return sendAdminUserPasswordReset(token, userId);
+  }
+
+  async function notifyUserVerification(userId) {
+    const data = await sendAdminUserVerification(token, userId);
+    if (data.users) {
+      setUsers(data.users ?? []);
+    }
+    return data;
+  }
+
   return {
     users,
     loading,
     error,
     createUser,
+    changeUserPassword,
+    notifyUserPasswordReset,
+    notifyUserVerification,
+    removeUser,
     updateUser,
   };
 }
