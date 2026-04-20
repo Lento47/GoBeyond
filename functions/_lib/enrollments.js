@@ -22,11 +22,14 @@ function normalizeDate(value) {
 }
 
 function mapEnrollment(row) {
+  const rawEnhancement = row.enhancement_json ? parseJsonOrNull(row.enhancement_json) : null;
   return {
     id: row.id,
     userId: row.user_id,
     courseId: row.course_id,
     status: row.status,
+    completionStatus: row.completion_status ?? "in_progress",
+    completedAt: row.completed_at ?? null,
     accessExpiresAt: row.access_expires_at,
     createdAt: row.created_at,
     student: {
@@ -36,20 +39,46 @@ function mapEnrollment(row) {
       status: row.user_status ?? "active",
     },
     course: row.course_json ? parseJsonOrNull(row.course_json) : null,
-    enhancement: row.enhancement_json
-      ? parseJsonOrNull(row.enhancement_json)
-      : {
-          gamificationEnabled: false,
-          progressPercent: 0,
-          points: 0,
-          streakDays: 0,
-        },
+    enhancement: rawEnhancement ?? {
+      gamificationEnabled: false,
+      progressPercent: 0,
+      points: 0,
+      streakDays: 0,
+      passingThreshold: 80,
+    },
   };
+}
+
+function resolveCompletion({ progressPercent, passingThreshold, completionStatusOverride, existingCompletionStatus, existingCompletedAt }) {
+  if (completionStatusOverride === "failed") {
+    return { completionStatus: "failed", completedAt: existingCompletedAt ?? nowIso() };
+  }
+
+  if (completionStatusOverride === "passed") {
+    return { completionStatus: "passed", completedAt: existingCompletedAt ?? nowIso() };
+  }
+
+  if (completionStatusOverride === "in_progress") {
+    return { completionStatus: "in_progress", completedAt: null };
+  }
+
+  if (existingCompletionStatus === "passed" || existingCompletionStatus === "failed") {
+    return { completionStatus: existingCompletionStatus, completedAt: existingCompletedAt };
+  }
+
+  const threshold = Number(passingThreshold ?? 80);
+  const progress = Number(progressPercent ?? 0);
+
+  if (progress >= threshold) {
+    return { completionStatus: "passed", completedAt: existingCompletedAt ?? nowIso() };
+  }
+
+  return { completionStatus: "in_progress", completedAt: null };
 }
 
 export async function listEnrollments(env) {
   const result = await env.DB.prepare(
-    `SELECT e.id, e.user_id, e.course_id, e.status, e.access_expires_at, e.created_at,
+    `SELECT e.id, e.user_id, e.course_id, e.status, e.completion_status, e.completed_at, e.access_expires_at, e.created_at,
             u.full_name, u.email, COALESCE(u.status, 'active') AS user_status,
             c.value_json AS course_json,
             ee.value_json AS enhancement_json
@@ -216,18 +245,28 @@ export async function createEnrollment(request, env, auth, body, options = {}) {
 
   const enrollmentId = createId("enrollment");
   const accessExpiresAt = addDays(new Date(), accessDays).toISOString();
+  const passingThreshold = Math.min(100, Math.max(1, Number(body.passingThreshold ?? 80)));
+  const progressPercent = Number(body.progressPercent ?? 0);
   const enhancement = {
     gamificationEnabled: Boolean(body.gamificationEnabled),
-    progressPercent: Number(body.progressPercent ?? 0),
+    progressPercent,
     points: Number(body.points ?? 0),
     streakDays: Number(body.streakDays ?? 0),
+    passingThreshold,
   };
+  const { completionStatus, completedAt } = resolveCompletion({
+    progressPercent,
+    passingThreshold,
+    completionStatusOverride: body.completionStatus ?? null,
+    existingCompletionStatus: "in_progress",
+    existingCompletedAt: null,
+  });
 
   await env.DB.prepare(
-    `INSERT INTO enrollments (id, user_id, course_id, status, access_expires_at, created_by, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO enrollments (id, user_id, course_id, status, completion_status, completed_at, access_expires_at, created_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(enrollmentId, userId, courseId, status, accessExpiresAt, auth.user.id, nowIso())
+    .bind(enrollmentId, userId, courseId, status, completionStatus, completedAt, accessExpiresAt, auth.user.id, nowIso())
     .run();
 
   await upsertEnrollmentEnhancement(env, enrollmentId, enhancement);
@@ -255,7 +294,7 @@ export async function createEnrollment(request, env, auth, body, options = {}) {
 
 export async function updateEnrollment(request, env, auth, enrollmentId, body, options = {}) {
   const existingEnrollment = await env.DB.prepare(
-    "SELECT id, user_id, course_id, status, access_expires_at FROM enrollments WHERE id = ? LIMIT 1"
+    "SELECT id, user_id, course_id, status, completion_status, completed_at, access_expires_at FROM enrollments WHERE id = ? LIMIT 1"
   )
     .bind(enrollmentId)
     .first();
@@ -270,17 +309,28 @@ export async function updateEnrollment(request, env, auth, enrollmentId, body, o
   const accessExpiresAt = body.accessExpiresAt
     ? normalizeDate(body.accessExpiresAt)
     : existingEnrollment.access_expires_at;
+  const passingThreshold = Math.min(100, Math.max(1, Number(body.passingThreshold ?? 80)));
+  const progressPercent = Number(body.progressPercent ?? 0);
   const enhancement = {
     gamificationEnabled: Boolean(body.gamificationEnabled),
-    progressPercent: Number(body.progressPercent ?? 0),
+    progressPercent,
     points: Number(body.points ?? 0),
     streakDays: Number(body.streakDays ?? 0),
+    passingThreshold,
   };
+  const { completionStatus, completedAt } = resolveCompletion({
+    progressPercent,
+    passingThreshold,
+    completionStatusOverride: body.completionStatus ?? null,
+    existingCompletionStatus: existingEnrollment.completion_status ?? "in_progress",
+    existingCompletedAt: existingEnrollment.completed_at ?? null,
+  });
+  const resolvedStatus = completionStatus === "in_progress" ? status : "completed";
 
   await env.DB.prepare(
-    "UPDATE enrollments SET status = ?, access_expires_at = ? WHERE id = ?"
+    "UPDATE enrollments SET status = ?, completion_status = ?, completed_at = ?, access_expires_at = ? WHERE id = ?"
   )
-    .bind(status, accessExpiresAt, enrollmentId)
+    .bind(resolvedStatus, completionStatus, completedAt, accessExpiresAt, enrollmentId)
     .run();
 
   await upsertEnrollmentEnhancement(env, enrollmentId, enhancement);
@@ -293,7 +343,7 @@ export async function updateEnrollment(request, env, auth, enrollmentId, body, o
     eventType: `${auditNamespace}.enrollment_update`,
     entityType: "enrollment",
     entityId: enrollmentId,
-    detailsJson: { status, accessExpiresAt, enhancement },
+    detailsJson: { status: resolvedStatus, completionStatus, completedAt, accessExpiresAt, enhancement },
   });
 
   if (existingEnrollment.status !== "active" && status === "active") {
@@ -330,7 +380,7 @@ export async function deleteEnrollment(request, env, auth, enrollmentId, options
 
 export async function listStudentEnrollments(env, userId) {
   const result = await env.DB.prepare(
-    `SELECT e.id, e.user_id, e.course_id, e.status, e.access_expires_at, e.created_at,
+    `SELECT e.id, e.user_id, e.course_id, e.status, e.completion_status, e.completed_at, e.access_expires_at, e.created_at,
             u.full_name, u.email, COALESCE(u.status, 'active') AS user_status,
             c.value_json AS course_json,
             ee.value_json AS enhancement_json

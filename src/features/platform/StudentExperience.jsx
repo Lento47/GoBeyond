@@ -478,10 +478,31 @@ function CourseDetailModal({ course, onClose }) {
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Progreso</p>
               <p className="mt-3 text-[2rem] font-semibold leading-none text-[#172033]">{course.enhancement?.progressPercent ?? 0}%</p>
               <div className="mt-4 h-2 w-full rounded-full bg-white/80">
-                <div className="h-2 rounded-full bg-[#1d4ed8]" style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }} />
+                <div
+                  className={`h-2 rounded-full transition-all ${course.completionStatus === "passed" ? "bg-[#15803d]" : course.completionStatus === "failed" ? "bg-[#9a3412]" : "bg-[#1d4ed8]"}`}
+                  style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }}
+                />
               </div>
+              {course.enhancement?.passingThreshold ? (
+                <p className="mt-2 text-xs text-[#66758c]">Umbral de aprobacion: {course.enhancement.passingThreshold}%</p>
+              ) : null}
               <p className="mt-3 text-sm text-[#435066]">Expiracion de acceso: {formatDisplayDate(course.accessExpiresAt)}</p>
             </div>
+
+            {course.completionStatus === "passed" && (
+              <div className="rounded-[var(--radius-md)] border border-[#bbf7d0] bg-[#dcfce7] p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#15803d]">Resultado</p>
+                <p className="mt-2 text-lg font-semibold text-[#15803d]">Aprobado ✓</p>
+                {course.completedAt ? <p className="mt-1 text-xs text-[#166534]">{formatDisplayDate(course.completedAt)}</p> : null}
+              </div>
+            )}
+            {course.completionStatus === "failed" && (
+              <div className="rounded-[var(--radius-md)] border border-[#fecaca] bg-[#fff7ed] p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#9a3412]">Resultado</p>
+                <p className="mt-2 text-lg font-semibold text-[#9a3412]">No aprobado</p>
+                {course.completedAt ? <p className="mt-1 text-xs text-[#9a3412]">{formatDisplayDate(course.completedAt)}</p> : null}
+              </div>
+            )}
 
             {course.enhancement?.gamificationEnabled && (
               <div className={`${workspaceChrome.surface} p-5`}>
@@ -795,6 +816,12 @@ export function StudentExperience({ dashboard, dashboardLoading, dashboardError,
                       <div className="flex flex-wrap gap-2">
                         <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.format}</span>
                         <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.duration}</span>
+                        {course.completionStatus === "passed" && (
+                          <span className="rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#15803d]">Aprobado ✓</span>
+                        )}
+                        {course.completionStatus === "failed" && (
+                          <span className="rounded-full border border-[#fecaca] bg-[#fff7ed] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#9a3412]">No aprobado</span>
+                        )}
                       </div>
                       <h3 className="mt-4 break-words text-[1.4rem] font-semibold leading-tight text-[#172033]">{course.title}</h3>
                       <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">{course.description}</MarkdownContent>
@@ -811,8 +838,22 @@ export function StudentExperience({ dashboard, dashboardLoading, dashboardError,
                       </div>
 
                       <div className="mt-5 h-2 w-full rounded-full bg-[#e7edf5]">
-                        <div className="h-2 rounded-full bg-[#1d4ed8]" style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }} />
+                        <div
+                          className={`h-2 rounded-full transition-all ${course.completionStatus === "passed" ? "bg-[#15803d]" : course.completionStatus === "failed" ? "bg-[#9a3412]" : "bg-[#1d4ed8]"}`}
+                          style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }}
+                        />
                       </div>
+
+                      {course.completionStatus === "passed" && (
+                        <div className="mt-4 rounded-xl border border-[#bbf7d0] bg-[#dcfce7] px-4 py-3 text-sm font-semibold text-[#15803d]">
+                          Curso completado exitosamente{course.completedAt ? ` · ${formatDisplayDate(course.completedAt)}` : ""}
+                        </div>
+                      )}
+                      {course.completionStatus === "failed" && (
+                        <div className="mt-4 rounded-xl border border-[#fecaca] bg-[#fff7ed] px-4 py-3 text-sm font-semibold text-[#9a3412]">
+                          Curso no aprobado{course.completedAt ? ` · ${formatDisplayDate(course.completedAt)}` : ""}
+                        </div>
+                      )}
 
                       <button className="mt-5 w-full rounded-xl bg-[#1d4ed8] py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]" onClick={() => handleOpenCourse(course)} type="button">
                         Entrar al aula virtual

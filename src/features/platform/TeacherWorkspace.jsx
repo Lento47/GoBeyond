@@ -33,6 +33,8 @@ const initialEnrollmentForm = {
   progressPercent: "0",
   points: "0",
   streakDays: "0",
+  passingThreshold: "80",
+  completionStatus: "in_progress",
 };
 
 const initialSupportForm = {
@@ -269,6 +271,8 @@ export function TeacherExperience(props) {
       progressPercent: String(enrollment.enhancement?.progressPercent ?? 0),
       points: String(enrollment.enhancement?.points ?? 0),
       streakDays: String(enrollment.enhancement?.streakDays ?? 0),
+      passingThreshold: String(enrollment.enhancement?.passingThreshold ?? 80),
+      completionStatus: enrollment.completionStatus ?? "in_progress",
     });
     setModal("enrollment");
   }
@@ -353,6 +357,8 @@ export function TeacherExperience(props) {
       progressPercent: Number(enrollmentForm.progressPercent || 0),
       points: Number(enrollmentForm.points || 0),
       streakDays: Number(enrollmentForm.streakDays || 0),
+      passingThreshold: Number(enrollmentForm.passingThreshold || 80),
+      completionStatus: enrollmentForm.completionStatus,
     };
 
     try {
@@ -732,6 +738,21 @@ export function TeacherExperience(props) {
               <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, progressPercent: event.target.value }))} placeholder="Progreso %" value={enrollmentForm.progressPercent} />
               <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, points: event.target.value }))} placeholder="Puntos" value={enrollmentForm.points} />
               <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, streakDays: event.target.value }))} placeholder="Racha" value={enrollmentForm.streakDays} />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, passingThreshold: event.target.value }))} placeholder="Umbral de aprobacion % (ej. 80)" value={enrollmentForm.passingThreshold} />
+              {enrollmentForm.id ? (
+                <select
+                  className="rounded-[var(--radius-input)] border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#dbeafe]"
+                  value={enrollmentForm.completionStatus}
+                  onChange={(event) => setEnrollmentForm((current) => ({ ...current, completionStatus: event.target.value }))}
+                >
+                  <option value="in_progress">En progreso</option>
+                  <option value="passed">Aprobado</option>
+                  <option value="failed">No aprobado</option>
+                </select>
+              ) : null}
             </div>
 
             <label className="flex items-center gap-3 text-sm text-[#172033]">

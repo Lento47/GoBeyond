@@ -35,12 +35,15 @@ export async function onRequestGet(context) {
                 ...nextCourse,
                 enrollmentId: item.id,
                 enrollmentStatus: item.status,
+                completionStatus: item.completionStatus ?? "in_progress",
+                completedAt: item.completedAt ?? null,
                 accessExpiresAt: item.accessExpiresAt,
                 enhancement: item.enhancement ?? {
                   gamificationEnabled: false,
                   progressPercent: 0,
                   points: 0,
                   streakDays: 0,
+                  passingThreshold: 80,
                 },
               };
             })
