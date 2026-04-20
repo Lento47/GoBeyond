@@ -841,70 +841,6 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
           </div>
         </div>
 
-<<<<<<< Updated upstream
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
-            {dashboard.dashboard.courses.length ? (
-              dashboard.dashboard.courses.map((course) => (
-                <article key={course.enrollmentId} className="rounded-[20px] border border-[#d7e0ea] bg-white p-5">
-                  <div className="grid gap-5 md:grid-cols-[13rem_minmax(0,1fr)]">
-                    <div className="overflow-hidden rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc]">
-                      {course.coverImage ? (
-                        <img alt={course.title} className="h-full min-h-[180px] w-full object-cover" src={course.coverImage} />
-                      ) : (
-                        <div className="flex min-h-[180px] items-center justify-center px-6 text-center text-sm font-semibold text-[#6b7a90]">
-                          Programa sin imagen destacada
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.format}</span>
-                        <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.duration}</span>
-                        {course.completionStatus === "passed" && (
-                          <span className="rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#15803d]">Aprobado ✓</span>
-                        )}
-                        {course.completionStatus === "failed" && (
-                          <span className="rounded-full border border-[#fecaca] bg-[#fff7ed] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#9a3412]">No aprobado</span>
-                        )}
-                      </div>
-                      <h3 className="mt-4 break-words text-[1.4rem] font-semibold leading-tight text-[#172033]">{course.title}</h3>
-                      <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">{course.description}</MarkdownContent>
-
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Vencimiento</p>
-                          <p className="mt-2 text-sm font-semibold text-[#172033]">{formatDisplayDate(course.accessExpiresAt)}</p>
-                        </div>
-                        <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Avance</p>
-                          <p className="mt-2 text-sm font-semibold text-[#172033]">{course.enhancement?.progressPercent ?? 0}% completado</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 h-2 w-full rounded-full bg-[#e7edf5]">
-                        <div
-                          className={`h-2 rounded-full transition-all ${course.completionStatus === "passed" ? "bg-[#15803d]" : course.completionStatus === "failed" ? "bg-[#9a3412]" : "bg-[#1d4ed8]"}`}
-                          style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }}
-                        />
-                      </div>
-
-                      {course.completionStatus === "passed" && (
-                        <div className="mt-4 rounded-xl border border-[#bbf7d0] bg-[#dcfce7] px-4 py-3 text-sm font-semibold text-[#15803d]">
-                          Curso completado exitosamente{course.completedAt ? ` · ${formatDisplayDate(course.completedAt)}` : ""}
-                        </div>
-                      )}
-                      {course.completionStatus === "failed" && (
-                        <div className="mt-4 rounded-xl border border-[#fecaca] bg-[#fff7ed] px-4 py-3 text-sm font-semibold text-[#9a3412]">
-                          Curso no aprobado{course.completedAt ? ` · ${formatDisplayDate(course.completedAt)}` : ""}
-                        </div>
-                      )}
-
-                      <button className="mt-5 w-full rounded-xl bg-[#1d4ed8] py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]" onClick={() => handleOpenCourse(course)} type="button">
-                        Entrar al aula virtual
-                      </button>
-                    </div>
-=======
         <div className="mt-5 grid gap-4 xl:grid-cols-2">
           {dashboard.dashboard.courses.length ? (
             dashboard.dashboard.courses.map((course) => (
@@ -918,13 +854,18 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
                         Programa sin imagen destacada
                       </div>
                     )}
->>>>>>> Stashed changes
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex flex-wrap gap-2">
                       <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.format}</span>
                       <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.duration}</span>
+                      {course.completionStatus === "passed" && (
+                        <span className="rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#15803d]">Aprobado ✓</span>
+                      )}
+                      {course.completionStatus === "failed" && (
+                        <span className="rounded-full border border-[#fecaca] bg-[#fff7ed] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#9a3412]">No aprobado</span>
+                      )}
                     </div>
                     <h3 className="mt-4 break-words text-[1.4rem] font-semibold leading-tight text-[#172033]">{course.title}</h3>
                     <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">{course.description}</MarkdownContent>
@@ -941,8 +882,22 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
                     </div>
 
                     <div className="mt-5 h-2 w-full rounded-full bg-[#e7edf5]">
-                      <div className="h-2 rounded-full bg-[#1d4ed8]" style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }} />
+                      <div
+                        className={`h-2 rounded-full transition-all ${course.completionStatus === "passed" ? "bg-[#15803d]" : course.completionStatus === "failed" ? "bg-[#9a3412]" : "bg-[#1d4ed8]"}`}
+                        style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }}
+                      />
                     </div>
+
+                    {course.completionStatus === "passed" && (
+                      <div className="mt-4 rounded-xl border border-[#bbf7d0] bg-[#dcfce7] px-4 py-3 text-sm font-semibold text-[#15803d]">
+                        Curso completado exitosamente{course.completedAt ? ` · ${formatDisplayDate(course.completedAt)}` : ""}
+                      </div>
+                    )}
+                    {course.completionStatus === "failed" && (
+                      <div className="mt-4 rounded-xl border border-[#fecaca] bg-[#fff7ed] px-4 py-3 text-sm font-semibold text-[#9a3412]">
+                        Curso no aprobado{course.completedAt ? ` · ${formatDisplayDate(course.completedAt)}` : ""}
+                      </div>
+                    )}
 
                     <button className="mt-5 w-full rounded-xl bg-[#1d4ed8] py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]" onClick={() => handleOpenCourse(course)} type="button">
                       Entrar al aula virtual
