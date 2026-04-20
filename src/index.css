@@ -4,9 +4,138 @@
   --font-sans: "Inter", sans-serif;
 }
 
+/* ─────────────────────────────────────────
+   GOBEYOND DESIGN SYSTEM — CSS TOKENS
+   Light Workspace (default) / Dark Public
+───────────────────────────────────────── */
 :root {
   background-color: #050505;
   color: #ffffff;
+
+  /* Canvas */
+  --color-canvas:          #f5f7fb;
+  --color-canvas-alt:      #eef3f8;
+  --color-sidebar:         #fbfcfe;
+  --color-panel:           #ffffff;
+  --color-panel-muted:     #f7f9fc;
+  --color-panel-strong:    #eef4ff;
+  --color-panel-warm:      #fff8f1;
+  --color-panel-dark:      #111827;
+
+  /* Borders */
+  --color-border:          #d7e0ea;
+  --color-border-strong:   #bbc8d9;
+  --color-border-accent:   #c6d4ec;
+
+  /* Ink & Text */
+  --color-ink:             #172033;
+  --color-text:            #435066;
+  --color-text-muted:      #66758c;
+  --color-text-subtle:     #6b7a90;
+  --color-text-placeholder:#94a3b8;
+
+  /* Blue Accent */
+  --color-blue:            #1d4ed8;
+  --color-blue-hover:      #1e40af;
+  --color-blue-soft:       #dbeafe;
+  --color-blue-strong:     #eef4ff;
+  --color-blue-border:     #c6d4ec;
+
+  /* Gold / Warm */
+  --color-gold:            #d6a46e;
+  --color-gold-mid:        #c07d36;
+  --color-gold-deep:       #b66e2a;
+  --color-gold-soft:       #f3e2cf;
+  --color-gold-border:     #e8d4bf;
+
+  /* Semantic */
+  --color-success:         #15803d;
+  --color-success-soft:    #dcfce7;
+  --color-success-border:  #bbf7d0;
+  --color-warning:         #b45309;
+  --color-warning-soft:    #ffedd5;
+  --color-warning-border:  #fed7aa;
+  --color-error:           #9a3412;
+  --color-error-soft:      #fff7ed;
+  --color-error-border:    #fecaca;
+
+  /* Shadows */
+  --shadow-surface:        0 1px 2px rgba(15,23,42,0.05);
+  --shadow-elevated:       0 12px 32px rgba(15,23,42,0.08);
+  --shadow-button-primary: 0 14px 32px rgba(29,78,216,0.18);
+  --shadow-modal:          0 28px 90px rgba(15,23,42,0.18);
+  --shadow-auth-card:      0 20px 60px rgba(15,23,42,0.08);
+  --shadow-dark-panel:     0 18px 44px rgba(15,23,42,0.18);
+
+  /* Border Radius */
+  --radius-pill:           9999px;
+  --radius-sm:             12px;
+  --radius-input:          1.15rem;
+  --radius-tag:            1.35rem;
+  --radius-md:             18px;
+  --radius-panel:          20px;
+  --radius-lg:             22px;
+  --radius-modal:          24px;
+  --radius-xl:             32px;
+  --radius-2xl:            40px;
+
+  /* Typography */
+  --font-sans:             'Inter', sans-serif;
+  --font-serif:            Georgia, 'Times New Roman', serif;
+  --font-mono:             ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  /* Type Scale */
+  --text-hero:             clamp(3rem, 8vw, 6.2rem);
+  --text-display:          clamp(2rem, 4vw, 3rem);
+  --text-section:          clamp(1.5rem, 3vw, 2.5rem);
+  --text-heading:          1.45rem;
+  --text-body:             0.875rem;
+  --text-sm:               0.8125rem;
+  --text-label:            0.625rem;
+  --text-caption:          0.6875rem;
+
+  /* Letter Spacing */
+  --tracking-tight:        -0.06em;
+  --tracking-label:        0.22em;
+  --tracking-label-wide:   0.32em;
+  --tracking-label-xl:     0.45em;
+
+  /* Line Heights */
+  --leading-hero:          0.9;
+  --leading-display:       0.95;
+  --leading-heading:       1.2;
+  --leading-body:          1.625;
+  --leading-relaxed:       1.75;
+
+  /* Spacing (4px base) */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px; --space-20: 80px; --space-24: 96px;
+
+  /* Layout */
+  --max-width:             1280px;
+  --page-padding-x:        clamp(20px, 4vw, 40px);
+  --section-padding-y:     clamp(80px, 8vw, 128px);
+  --panel-padding:         24px;
+}
+
+/* Dark mode overrides (public marketing surfaces) */
+.mode-dark,
+[data-theme="dark"] {
+  --color-canvas:          #050505;
+  --color-canvas-alt:      #080808;
+  --color-panel:           rgba(255,255,255,0.03);
+  --color-panel-muted:     rgba(255,255,255,0.02);
+  --color-border:          rgba(255,255,255,0.08);
+  --color-border-strong:   rgba(255,255,255,0.12);
+  --color-ink:             #ffffff;
+  --color-text:            rgba(255,255,255,0.65);
+  --color-text-muted:      rgba(255,255,255,0.4);
+  --color-blue:            #2563eb;
+  --color-blue-hover:      #1d4ed8;
+  --color-blue-soft:       rgba(37,99,235,0.10);
+  --color-blue-strong:     rgba(37,99,235,0.16);
+  --color-blue-border:     rgba(37,99,235,0.20);
 }
 
 body {

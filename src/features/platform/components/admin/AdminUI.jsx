@@ -7,6 +7,7 @@ const focusRing =
 export function SectionCard({
   title,
   description,
+  eyebrow = "Workspace",
   children,
   accent = "soft",
   variant = "default",
@@ -29,7 +30,7 @@ export function SectionCard({
             accent === "dark" ? "text-[#9fb0c9]" : "text-[#6b7a90]"
           }`}
         >
-          Workspace
+          {eyebrow}
         </p>
         <h3 className={`mt-2 text-[1.2rem] font-semibold leading-tight sm:text-[1.45rem] ${accent === "dark" ? "text-white" : "text-[#172033]"}`}>
           {title}
