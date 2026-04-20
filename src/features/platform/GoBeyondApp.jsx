@@ -37,7 +37,7 @@ import { StudentCommunityExperience } from "./StudentCommunityExperience";
 import { PublicExperience } from "./PublicExperience";
 import { StudentExperience } from "./StudentExperience";
 import { TeacherExperience } from "./TeacherWorkspace";
-import { adminNavigationGroups, adminViewLabels } from "./AdminWorkspace";
+import { adminNavigationGroups, adminViewLabels, adminViewIcons } from "./AdminWorkspace";
 import { workspaceChrome } from "./workspaceTheme";
 
 const authSyncChannelName = "gobeyond-auth";
@@ -171,13 +171,45 @@ function ShellMenuIcon({ open }) {
   );
 }
 
+const NAV_ICON_PATHS = {
+  home: <><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></>,
+  book: <><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /></>,
+  "book-open": <><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>,
+  compass: <><circle cx="12" cy="12" r="10" /><polygon points="16.24,7.76 14.12,14.12 7.76,16.24 9.88,9.88 16.24,7.76" /></>,
+  "plus-circle": <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></>,
+  "help-circle": <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
+  "message-square": <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />,
+  "message-circle": <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />,
+  "arrow-left": <><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12,19 5,12 12,5" /></>,
+  "bar-chart-2": <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>,
+  layers: <><polygon points="12,2 2,7 12,12 22,7 12,2" /><polyline points="2,17 12,22 22,17" /><polyline points="2,12 12,17 22,12" /></>,
+  clipboard: <><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><line x1="9" y1="12" x2="15" y2="12" /><line x1="9" y1="16" x2="13" y2="16" /></>,
+  users: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></>,
+  "file-text": <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" /></>,
+  search: <><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>,
+  tag: <><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></>,
+  grid: <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></>,
+  inbox: <><polyline points="22,12 16,12 14,15 10,15 8,12 2,12" /><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" /></>,
+  "user-check": <><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><polyline points="17,11 19,13 23,9" /></>,
+  "corner-down-left": <><polyline points="9,10 4,15 9,20" /><path d="M20 4v7a4 4 0 01-4 4H4" /></>,
+};
+
+function NavIcon({ name, className = "h-[1.05rem] w-[1.05rem]" }) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" viewBox="0 0 24 24">
+      {NAV_ICON_PATHS[name] ?? null}
+    </svg>
+  );
+}
+
 function WorkspaceSidebarButton({ item, onSelect, variant = "default" }) {
   const isAdminVariant = variant === "admin";
   const isTeacherVariant = variant === "teacher";
   const isStudentVariant = variant === "student";
+  const isRoleVariant = isAdminVariant || isTeacherVariant || isStudentVariant;
   return (
     <button
-      className={`w-full text-left transition ${
+      className={`group relative w-full text-left transition active:scale-[0.98] ${
         isAdminVariant
           ? item.active
             ? "rounded-[12px] bg-[#111827] px-3 py-2.5 text-[11px] font-semibold text-[#c2cfdf]"
@@ -186,26 +218,37 @@ function WorkspaceSidebarButton({ item, onSelect, variant = "default" }) {
             ? item.active
               ? "rounded-[12px] bg-[#eef4ff] px-3 py-2.5 text-[11px] font-semibold text-[#1d4ed8]"
               : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
-          : isStudentVariant
-            ? item.active
-              ? "rounded-[12px] bg-[#eef4ff] px-3 py-2.5 text-[11px] font-semibold text-[#1d4ed8]"
-              : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
-          : item.active
-            ? "rounded-2xl border border-[#c6d4ec] bg-[#eef4ff] px-4 py-3 text-[#172033] shadow-[0_1px_2px_rgba(29,78,216,0.06)]"
-            : "rounded-2xl border border-transparent bg-transparent px-4 py-3 text-[#536277] hover:border-[#d7e0ea] hover:bg-white"
+            : isStudentVariant
+              ? item.active
+                ? "rounded-[12px] bg-[#eef4ff] px-3 py-2.5 text-[11px] font-semibold text-[#1d4ed8]"
+                : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
+              : item.active
+                ? "rounded-2xl border border-[#c6d4ec] bg-[#eef4ff] px-3 py-2.5 text-[#172033] shadow-[0_1px_2px_rgba(29,78,216,0.06)]"
+                : "rounded-2xl border border-transparent bg-transparent px-3 py-2.5 text-[#536277] hover:border-[#d7e0ea] hover:bg-white"
       }`}
       onClick={() => onSelect(item)}
       type="button"
     >
-      <div className="flex items-center gap-3">
-        {isAdminVariant || isTeacherVariant || isStudentVariant ? (
-          <span className={`h-2.5 w-2.5 rounded-full ${
-            item.active ? (isTeacherVariant ? "bg-[#d6a46e]" : "bg-[#60a5fa]") : "bg-[#d7e0ea]"
-          }`} />
+      {!isRoleVariant && item.active && (
+        <span className="absolute inset-y-2.5 left-0 w-[3px] rounded-full bg-[#1d4ed8]" />
+      )}
+      <div className="flex items-center gap-2.5">
+        {item.icon ? (
+          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition ${
+            isAdminVariant
+              ? item.active ? "text-[#93c5fd]" : "text-[#4b5563] group-hover:text-[#172033]"
+              : item.active
+                ? "bg-white text-[#1d4ed8] shadow-[0_1px_4px_rgba(29,78,216,0.12)]"
+                : "bg-transparent text-[#8a97ab] group-hover:bg-white group-hover:text-[#435066]"
+          }`}>
+            <NavIcon name={item.icon} />
+          </span>
         ) : null}
         <div className="min-w-0 flex-1">
-          <p className={`${isAdminVariant || isTeacherVariant || isStudentVariant ? "truncate" : ""} text-sm font-semibold leading-none`}>{item.label}</p>
-          {item.caption && !isAdminVariant && !isTeacherVariant && !isStudentVariant ? <p className="mt-1 text-xs leading-relaxed text-inherit/80">{item.caption}</p> : null}
+          <p className={`truncate font-semibold leading-none ${isRoleVariant ? "text-[11px]" : "text-sm"}`}>{item.label}</p>
+          {item.caption && !isRoleVariant ? (
+            <p className="mt-0.5 hidden text-xs leading-relaxed text-inherit/70 lg:block">{item.caption}</p>
+          ) : null}
         </div>
       </div>
     </button>
@@ -493,6 +536,14 @@ function WorkspaceShell({
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join("") || "GB";
 
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape" && sidebarOpen) setSidebarOpen(false);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
+
   function handleNavigation(item) {
     setSidebarOpen(false);
     item.onClick?.();
@@ -558,7 +609,7 @@ function WorkspaceShell({
               </div>
             </nav>
 
-            <div className={`${sessionPanelClass} mt-auto min-w-0 overflow-visible`}>
+            <div className={`${sessionPanelClass} mt-auto min-w-0 overflow-visible safe-bottom`}>
               {currentUser ? (
                 <>
                   <div className="flex items-center gap-3">
@@ -596,7 +647,8 @@ function WorkspaceShell({
           <header className={topbarClass}>
             <div className="flex min-h-[4.6rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
               <button
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#d7e0ea] bg-white text-[#172033] lg:hidden"
+                aria-label={sidebarOpen ? "Cerrar menu" : "Abrir menu"}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#d7e0ea] bg-white text-[#172033] transition active:scale-95 lg:hidden"
                 onClick={() => setSidebarOpen((current) => !current)}
                 type="button"
               >
@@ -1251,36 +1303,42 @@ export default function GoBeyondApp() {
           navigationItems={[
             {
               label: "Resumen",
+              icon: "home",
               caption: "Vista general de tu cuenta",
               active: activeWorkspaceSection === "portal-overview",
               onClick: () => navigateToWorkspaceSection("portal", "portal-overview"),
             },
             {
               label: "Cursos",
+              icon: "book-open",
               caption: "Programas activos y progreso",
               active: activeWorkspaceSection === "portal-courses",
               onClick: () => navigateToWorkspaceSection("portal", "portal-courses"),
             },
             {
               label: "Trayectoria",
+              icon: "compass",
               caption: "Ruta academica y seguimiento",
               active: activeWorkspaceSection === "portal-path",
               onClick: () => navigateToWorkspaceSection("portal", "portal-path"),
             },
             {
               label: "Aperturas",
+              icon: "plus-circle",
               caption: "Programas disponibles para aplicar",
               active: activeWorkspaceSection === "portal-openings",
               onClick: () => navigateToWorkspaceSection("portal", "portal-openings"),
             },
             {
               label: "Soporte",
+              icon: "help-circle",
               caption: "Consultas y tickets formales",
               active: activeWorkspaceSection === "portal-support",
               onClick: () => navigateToWorkspaceSection("portal", "portal-support"),
             },
             {
               label: "Comunidad",
+              icon: "message-circle",
               caption: "Preguntas y respuestas entre estudiantes",
               active: viewMode === "comunidad",
               onClick: () => navigateTo("comunidad"),
@@ -1318,24 +1376,28 @@ export default function GoBeyondApp() {
           navigationItems={[
             {
               label: "Comunidad",
+              icon: "message-square",
               caption: "Vista general y estadisticas",
               active: activeWorkspaceSection === "community-overview",
               onClick: () => navigateToWorkspaceSection("comunidad", "community-overview"),
             },
             {
               label: "Hilos",
+              icon: "message-circle",
               caption: "Listado principal de conversaciones",
               active: activeWorkspaceSection === "community-threads",
               onClick: () => navigateToWorkspaceSection("comunidad", "community-threads"),
             },
             {
               label: "Responder",
+              icon: "corner-down-left",
               caption: "Zona de respuesta contextual",
               active: activeWorkspaceSection === "community-reply",
               onClick: () => navigateToWorkspaceSection("comunidad", "community-reply"),
             },
             {
               label: "Portal",
+              icon: "arrow-left",
               caption: "Volver al portal del estudiante",
               active: viewMode === "portal",
               onClick: () => navigateTo("portal"),
@@ -1376,30 +1438,35 @@ export default function GoBeyondApp() {
           navigationItems={[
             {
               label: "Resumen",
+              icon: "bar-chart-2",
               caption: "Metricas operativas y casos recientes",
               active: activeWorkspaceSection === "teacher-overview",
               onClick: () => navigateToWorkspaceSection("teacher", "teacher-overview"),
             },
             {
               label: "Cursos y grupos",
+              icon: "layers",
               caption: "Cursos asignados y cohortes activas",
               active: activeWorkspaceSection === "teacher-courses",
               onClick: () => navigateToWorkspaceSection("teacher", "teacher-courses"),
             },
             {
               label: "Tareas y evaluaciones",
+              icon: "clipboard",
               caption: "Asignaciones y entregables docentes",
               active: activeWorkspaceSection === "teacher-assignments",
               onClick: () => navigateToWorkspaceSection("teacher", "teacher-assignments"),
             },
             {
               label: "Matriculas y soporte",
+              icon: "users",
               caption: "Altas, incidencias y comunidad ligada a tus cursos",
               active: activeWorkspaceSection === "teacher-operations",
               onClick: () => navigateToWorkspaceSection("teacher", "teacher-operations"),
             },
             {
               label: "SOPs",
+              icon: "file-text",
               caption: "Procedimientos y solicitudes de cambio",
               active: activeWorkspaceSection === "teacher-sops",
               onClick: () => navigateToWorkspaceSection("teacher", "teacher-sops"),
@@ -1459,6 +1526,7 @@ export default function GoBeyondApp() {
           navigationItems={adminNavigationGroups.flatMap((group) =>
             group.items.map((view) => ({
               label: adminViewLabels[view],
+              icon: adminViewIcons[view],
               active: adminView === view,
               group: group.label,
               onClick: () => setAdminView(view),
