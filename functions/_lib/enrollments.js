@@ -1,3 +1,4 @@
+import { defaultContent } from "../../src/data/defaultContent";
 import { writeAuditLog } from "./audit";
 import { getClientIp, nowIso, parseJsonOrNull, createId } from "./util";
 import { validateEnrollmentStatus, validatePositiveInteger, validateRequiredString } from "./validation";
@@ -33,6 +34,14 @@ function mapEnrollment(row) {
       status: row.user_status ?? "active",
     },
     course: row.course_json ? parseJsonOrNull(row.course_json) : null,
+    enhancement: row.enhancement_json
+      ? parseJsonOrNull(row.enhancement_json)
+      : {
+          gamificationEnabled: false,
+          progressPercent: 0,
+          points: 0,
+          streakDays: 0,
+        },
   };
 }
 
@@ -40,14 +49,48 @@ export async function listEnrollments(env) {
   const result = await env.DB.prepare(
     `SELECT e.id, e.user_id, e.course_id, e.status, e.access_expires_at, e.created_at,
             u.full_name, u.email, COALESCE(u.status, 'active') AS user_status,
-            c.value_json AS course_json
+            c.value_json AS course_json,
+            ee.value_json AS enhancement_json
      FROM enrollments e
      JOIN users u ON u.id = e.user_id
      LEFT JOIN collection_items c ON c.id = e.course_id AND c.section = 'courses'
+     LEFT JOIN collection_items ee ON ee.id = e.id AND ee.section = 'enrollmentEnhancements'
      ORDER BY e.created_at DESC`
   ).all();
 
   return (result.results ?? []).map(mapEnrollment);
+}
+
+async function upsertEnrollmentEnhancement(env, enrollmentId, enhancement) {
+  const existing = await env.DB.prepare(
+    "SELECT id, position FROM collection_items WHERE section = 'enrollmentEnhancements' AND id = ? LIMIT 1"
+  )
+    .bind(enrollmentId)
+    .first();
+
+  if (existing) {
+    await env.DB.prepare(
+      `UPDATE collection_items
+       SET value_json = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE section = 'enrollmentEnhancements' AND id = ?`
+    )
+      .bind(JSON.stringify(enhancement), enrollmentId)
+      .run();
+    return;
+  }
+
+  const positionRow = await env.DB.prepare(
+    "SELECT COALESCE(MAX(position), -1) AS maxPosition FROM collection_items WHERE section = 'enrollmentEnhancements'"
+  ).first();
+
+  const nextPosition = Number(positionRow?.maxPosition ?? -1) + 1;
+
+  await env.DB.prepare(
+    `INSERT INTO collection_items (id, section, value_json, position, created_at, updated_at)
+     VALUES (?, 'enrollmentEnhancements', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+  )
+    .bind(enrollmentId, JSON.stringify(enhancement), nextPosition)
+    .run();
 }
 
 async function ensureStudentExists(env, userId) {
@@ -77,9 +120,31 @@ async function ensureCourseExists(env, courseId) {
     .first();
 
   if (!course) {
-    const error = new Error("Curso no encontrado.");
-    error.status = 404;
-    throw error;
+    const fallbackCourse = (defaultContent.courses ?? []).find((item) => item.id === courseId);
+
+    if (!fallbackCourse) {
+      const error = new Error("Curso no encontrado.");
+      error.status = 404;
+      throw error;
+    }
+
+    const positionRow = await env.DB.prepare(
+      "SELECT COALESCE(MAX(position), -1) AS maxPosition FROM collection_items WHERE section = 'courses'"
+    ).first();
+
+    const nextPosition = Number(positionRow?.maxPosition ?? -1) + 1;
+
+    await env.DB.prepare(
+      `INSERT INTO collection_items (id, section, value_json, position, created_at, updated_at)
+       VALUES (?, 'courses', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+    )
+      .bind(fallbackCourse.id, JSON.stringify(fallbackCourse), nextPosition)
+      .run();
+
+    return {
+      id: fallbackCourse.id,
+      value: fallbackCourse,
+    };
   }
 
   return {
@@ -114,6 +179,12 @@ export async function createEnrollment(request, env, auth, body) {
 
   const enrollmentId = createId("enrollment");
   const accessExpiresAt = addDays(new Date(), accessDays).toISOString();
+  const enhancement = {
+    gamificationEnabled: Boolean(body.gamificationEnabled),
+    progressPercent: Number(body.progressPercent ?? 0),
+    points: Number(body.points ?? 0),
+    streakDays: Number(body.streakDays ?? 0),
+  };
 
   await env.DB.prepare(
     `INSERT INTO enrollments (id, user_id, course_id, status, access_expires_at, created_by, created_at)
@@ -122,13 +193,15 @@ export async function createEnrollment(request, env, auth, body) {
     .bind(enrollmentId, userId, courseId, status, accessExpiresAt, auth.user.id, nowIso())
     .run();
 
+  await upsertEnrollmentEnhancement(env, enrollmentId, enhancement);
+
   await writeAuditLog(env, {
     actorUserId: auth.user.id,
     ipAddress: getClientIp(request),
     eventType: "admin.enrollment_create",
     entityType: "enrollment",
     entityId: enrollmentId,
-    detailsJson: { userId, courseId, status, accessDays },
+    detailsJson: { userId, courseId, status, accessDays, enhancement },
   });
 }
 
@@ -149,6 +222,12 @@ export async function updateEnrollment(request, env, auth, enrollmentId, body) {
   const accessExpiresAt = body.accessExpiresAt
     ? normalizeDate(body.accessExpiresAt)
     : existingEnrollment.access_expires_at;
+  const enhancement = {
+    gamificationEnabled: Boolean(body.gamificationEnabled),
+    progressPercent: Number(body.progressPercent ?? 0),
+    points: Number(body.points ?? 0),
+    streakDays: Number(body.streakDays ?? 0),
+  };
 
   await env.DB.prepare(
     "UPDATE enrollments SET status = ?, access_expires_at = ? WHERE id = ?"
@@ -156,18 +235,23 @@ export async function updateEnrollment(request, env, auth, enrollmentId, body) {
     .bind(status, accessExpiresAt, enrollmentId)
     .run();
 
+  await upsertEnrollmentEnhancement(env, enrollmentId, enhancement);
+
   await writeAuditLog(env, {
     actorUserId: auth.user.id,
     ipAddress: getClientIp(request),
     eventType: "admin.enrollment_update",
     entityType: "enrollment",
     entityId: enrollmentId,
-    detailsJson: { status, accessExpiresAt },
+    detailsJson: { status, accessExpiresAt, enhancement },
   });
 }
 
 export async function deleteEnrollment(request, env, auth, enrollmentId) {
   await env.DB.prepare("DELETE FROM enrollments WHERE id = ?").bind(enrollmentId).run();
+  await env.DB.prepare("DELETE FROM collection_items WHERE section = 'enrollmentEnhancements' AND id = ?")
+    .bind(enrollmentId)
+    .run();
 
   await writeAuditLog(env, {
     actorUserId: auth.user.id,
@@ -182,10 +266,12 @@ export async function listStudentEnrollments(env, userId) {
   const result = await env.DB.prepare(
     `SELECT e.id, e.user_id, e.course_id, e.status, e.access_expires_at, e.created_at,
             u.full_name, u.email, COALESCE(u.status, 'active') AS user_status,
-            c.value_json AS course_json
+            c.value_json AS course_json,
+            ee.value_json AS enhancement_json
      FROM enrollments e
      JOIN users u ON u.id = e.user_id
      LEFT JOIN collection_items c ON c.id = e.course_id AND c.section = 'courses'
+     LEFT JOIN collection_items ee ON ee.id = e.id AND ee.section = 'enrollmentEnhancements'
      WHERE e.user_id = ?
      ORDER BY e.created_at DESC`
   )

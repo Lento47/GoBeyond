@@ -12,9 +12,13 @@ export async function onRequestPost(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["admin"]);
     const body = await context.request.json();
+    const normalizedId =
+      typeof body.id === "string" && body.id.trim()
+        ? body.id.trim()
+        : createId(context.params.section);
     const item = {
-      id: body.id ?? createId(context.params.section),
       ...body,
+      id: normalizedId,
     };
 
     await createCollectionItem(context.env, context.params.section, item);

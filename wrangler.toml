@@ -2,10 +2,23 @@ name = "gobeyond"
 compatibility_date = "2024-12-01"
 pages_build_output_dir = "./dist"
 
+[ai]
+binding = "AI"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "gobeyond-db"
 database_id = "c2df3df4-4112-4e86-8846-e5814e956f3a"
 
 [vars]
-APP_ORIGIN = "https://main.gobeyond.pages.dev"
+APP_ORIGIN = "https://gobeyondcr.org"
+EMAIL_FROM_ADDRESS = "it@gobeyondcr.org"
+EMAIL_FROM_NAME = "GoBeyond IT"
+EMAIL_REPLY_TO = "it@gobeyondcr.org"
+RESEND_TEMPLATE_AUTH = "gobeyondtemplateresend"
+RESEND_TEMPLATE_RESET = "gobeyondtemplatereset"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "gobeyond-media"
+preview_bucket_name = "gobeyond-media"

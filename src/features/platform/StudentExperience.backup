@@ -1,0 +1,715 @@
+import { useEffect, useState } from "react";
+import { askStudentAssistant, createStudentCourseRequest, createStudentTicket } from "../../services/contentApi";
+
+function DashboardCard({ eyebrow, title, body }) {
+  return (
+    <div className="border border-[#d8cdbf] bg-white p-6">
+      <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">{eyebrow}</p>
+      <h3 className="mt-3 font-['Georgia'] text-2xl">{title}</h3>
+      <p className="mt-3 text-[#5c4d46]">{body}</p>
+    </div>
+  );
+}
+
+function ChatBubble({ role, content }) {
+  const isAssistant = role === "assistant";
+
+  return (
+    <div className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}>
+      <div
+        className={`max-w-[85%] border px-4 py-3 text-sm leading-7 ${
+          isAssistant
+            ? "border-[#d8cdbf] bg-[#fbf8f2] text-[#5c4d46]"
+            : "border-[#d6a46e] bg-[#d6a46e] text-[#20181f]"
+        }`}
+      >
+        <p className="text-[10px] uppercase tracking-[0.25em] opacity-70">
+          {isAssistant ? "Asistente GoBeyond" : "Tu pregunta"}
+        </p>
+        <p className="mt-2 whitespace-pre-wrap">{content}</p>
+      </div>
+    </div>
+  );
+}
+
+const initialTicketForm = {
+  subject: "",
+  description: "",
+  category: "soporte",
+  courseId: "",
+};
+
+const initialCourseRequestForm = {
+  courseId: "",
+  courseTitle: "",
+  contactChannel: "whatsapp",
+  contactValue: "",
+  note: "",
+};
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value ?? "").trim());
+}
+
+function isValidNumericContact(value) {
+  return /^\d{8,20}$/.test(String(value ?? "").trim());
+}
+
+function StudentAssistant({ token, courseCount, availableCount, activeCourses }) {
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content:
+        "Puedo ayudarte con dudas puntuales sobre tus cursos, progreso, asignaciones y acceso dentro de GoBeyond.",
+    },
+  ]);
+  const [draft, setDraft] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [showTicketForm, setShowTicketForm] = useState(false);
+  const [ticketForm, setTicketForm] = useState(initialTicketForm);
+  const [ticketMessage, setTicketMessage] = useState("");
+  const [ticketSubmitting, setTicketSubmitting] = useState(false);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    const message = draft.trim();
+
+    if (!message || submitting) {
+      return;
+    }
+
+    const nextMessages = [...messages, { role: "user", content: message }];
+    setMessages(nextMessages);
+    setDraft("");
+    setError("");
+    setSubmitting(true);
+
+    try {
+      const response = await askStudentAssistant(token, {
+        message,
+        history: nextMessages.slice(-6),
+      });
+
+      if (response.suggestedTicket) {
+        setTicketForm((current) => ({
+          ...current,
+          subject: response.suggestedTicket.subject || current.subject,
+          description: response.suggestedTicket.description || current.description,
+          category: response.suggestedTicket.category || current.category,
+          courseId: response.suggestedTicket.courseId || current.courseId,
+        }));
+      }
+
+      if (response.suggestTicket) {
+        setShowTicketForm(true);
+      }
+
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content: response.answer,
+        },
+      ]);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleTicketSubmit(event) {
+    event.preventDefault();
+    setTicketMessage("");
+    setError("");
+    setTicketSubmitting(true);
+
+    try {
+      const response = await createStudentTicket(token, ticketForm);
+      setTicketMessage(response.message);
+      setShowTicketForm(false);
+      setTicketForm(initialTicketForm);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content: "Ya deje un mini-ticket enviado al equipo administrativo para que puedan ayudarte.",
+        },
+      ]);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setTicketSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="mt-10 border border-[#d8cdbf] bg-white p-7">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Asistente contextual</p>
+          <h2 className="mt-2 font-['Georgia'] text-3xl text-[#20181f]">Preguntale a GoBeyond</h2>
+          <p className="mt-3 max-w-2xl text-sm text-[#5c4d46]">
+            Responde de forma puntual sobre tus {courseCount} cursos activos, las {availableCount} opciones visibles y
+            el material que ya tienes habilitado en la plataforma.
+          </p>
+        </div>
+
+        <div className="border border-[#eadfce] bg-[#fbf8f2] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#8b6d55]">
+          Respuestas breves
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="border border-[#eadfce] bg-[#fdfbf7] p-4">
+          <div className="max-h-[360px] overflow-y-auto pr-2">
+            <div className="grid gap-4">
+              {messages.map((message, index) => (
+                <ChatBubble key={`${message.role}-${index}`} content={message.content} role={message.role} />
+              ))}
+            </div>
+          </div>
+
+          <form className="mt-4 grid gap-3 border-t border-[#eadfce] pt-4" onSubmit={handleSubmit}>
+            <textarea
+              className="min-h-[110px] border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f] outline-none transition focus:border-[#d6a46e]"
+              maxLength={1000}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Ejemplo: ¿qué asignaciones tengo pendientes en mis cursos activos?"
+              value={draft}
+            />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-[#8b6d55]">Haz preguntas concretas para ahorrar consumo y recibir respuestas mas precisas.</p>
+              <button
+                className="border border-[#d8cdbf] bg-[#20181f] px-4 py-2 text-sm text-white transition hover:bg-[#2f2430] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={submitting || !draft.trim()}
+                type="submit"
+              >
+                {submitting ? "Consultando..." : "Enviar pregunta"}
+              </button>
+            </div>
+            {error ? <p className="text-sm text-[#8a3d31]">{error}</p> : null}
+            {ticketMessage ? <p className="text-sm text-[#5a7d3d]">{ticketMessage}</p> : null}
+          </form>
+
+          {showTicketForm ? (
+            <form className="mt-4 grid gap-3 border-t border-[#eadfce] pt-4" onSubmit={handleTicketSubmit}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Mini-ticket al administrador</p>
+                <button
+                  className="text-xs text-[#8b6d55] underline"
+                  onClick={() => setShowTicketForm(false)}
+                  type="button"
+                >
+                  Ocultar
+                </button>
+              </div>
+              <input
+                className="border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f] outline-none transition focus:border-[#d6a46e]"
+                onChange={(event) => setTicketForm((current) => ({ ...current, subject: event.target.value }))}
+                placeholder="Asunto del problema"
+                value={ticketForm.subject}
+              />
+              <select
+                className="border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f] outline-none transition focus:border-[#d6a46e]"
+                onChange={(event) => setTicketForm((current) => ({ ...current, category: event.target.value }))}
+                value={ticketForm.category}
+              >
+                <option value="soporte">Soporte</option>
+                <option value="acceso">Acceso</option>
+                <option value="curso">Curso</option>
+                <option value="asignacion">Asignacion</option>
+              </select>
+              <select
+                className="border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f] outline-none transition focus:border-[#d6a46e]"
+                onChange={(event) => setTicketForm((current) => ({ ...current, courseId: event.target.value }))}
+                value={ticketForm.courseId}
+              >
+                <option value="">Sin curso especifico</option>
+                {activeCourses.map((course) => (
+                  <option key={course.id || course.enrollmentId} value={course.id}>
+                    {course.title}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                className="min-h-[120px] border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f] outline-none transition focus:border-[#d6a46e]"
+                onChange={(event) => setTicketForm((current) => ({ ...current, description: event.target.value }))}
+                placeholder="Describe brevemente el problema para que el equipo pueda ayudarte."
+                value={ticketForm.description}
+              />
+              <div className="flex gap-3">
+                <button
+                  className="border border-[#d8cdbf] bg-[#20181f] px-4 py-2 text-sm text-white transition hover:bg-[#2f2430] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={ticketSubmitting}
+                  type="submit"
+                >
+                  {ticketSubmitting ? "Enviando ticket..." : "Enviar ticket"}
+                </button>
+                <button
+                  className="border border-[#d8cdbf] px-4 py-2 text-sm text-[#20181f]"
+                  onClick={() => {
+                    setTicketForm(initialTicketForm);
+                    setShowTicketForm(false);
+                  }}
+                  type="button"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : null}
+        </div>
+
+        <div className="grid gap-4">
+          <div className="border border-[#eadfce] bg-[#fbf8f2] p-5">
+            <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Preguntas utiles</p>
+            <div className="mt-4 grid gap-3">
+              {[
+                "Que cursos tengo activos y cuando vencen.",
+                "Que asignaciones visibles tengo en este momento.",
+                "Que progreso llevo en mis cursos habilitados.",
+                "Que otro programa de GoBeyond puedo explorar despues.",
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  className="border border-[#d8cdbf] bg-white px-4 py-3 text-left text-sm text-[#5c4d46] transition hover:border-[#d6a46e] hover:text-[#20181f]"
+                  onClick={() => setDraft(suggestion)}
+                  type="button"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-[#eadfce] bg-white p-5 text-sm leading-7 text-[#5c4d46]">
+            <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Alcance actual</p>
+            <p className="mt-3">
+              Este primer asistente responde solo con el contexto visible de tu programa, tus cursos y la oferta de
+              GoBeyond. Si necesitas soporte administrativo o algo fuera de ese contexto, te lo indicara claramente.
+            </p>
+            <button
+              className="mt-4 border border-[#d8cdbf] bg-[#fbf8f2] px-4 py-2 text-sm text-[#20181f] transition hover:border-[#d6a46e]"
+              onClick={() => setShowTicketForm(true)}
+              type="button"
+            >
+              Contactar al administrador
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CourseDetailModal({ course, onClose }) {
+  if (!course) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#20181f]/60 px-4 py-8 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-5xl overflow-auto border border-[#d8cdbf] bg-[#f7f1e7] shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
+        <div className="sticky top-0 z-10 border-b border-[#d8cdbf] bg-[#f7f1e7] px-6 py-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Curso activo</p>
+              <h3 className="mt-2 font-['Georgia'] text-3xl text-[#20181f]">{course.title}</h3>
+              <p className="mt-2 text-sm text-[#6d5a51]">{course.detailSummary || course.description}</p>
+            </div>
+            <button className="border border-[#d8cdbf] px-4 py-2 text-sm" onClick={onClose} type="button">
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 px-6 py-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid gap-6">
+            {course.coverImage ? (
+              <div className="overflow-hidden border border-[#d8cdbf] bg-white">
+                <img alt={course.title} className="h-full max-h-[360px] w-full object-cover" src={course.coverImage} />
+              </div>
+            ) : null}
+
+            <div className="border border-[#d8cdbf] bg-white p-6">
+              <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">{course.format} · {course.duration}</p>
+              <p className="mt-4 text-[#5c4d46]">{course.description}</p>
+              <p className="mt-4 border-t border-[#eadfce] pt-4 text-sm text-[#5c4d46]">
+                <strong className="text-[#20181f]">Resultados esperados:</strong> {course.outcomes}
+              </p>
+            </div>
+
+            <div className="border border-[#d8cdbf] bg-white p-6">
+              <h4 className="font-['Georgia'] text-2xl text-[#20181f]">Asignaciones</h4>
+              <div className="mt-4 grid gap-4">
+                {(course.assignments ?? []).length ? (
+                  course.assignments.map((assignment) => (
+                    <div key={assignment.id} className="border border-[#eadfce] bg-[#fbf8f2] p-4">
+                      <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">{assignment.dueLabel || "Asignacion"}</p>
+                      <h5 className="mt-2 text-xl text-[#20181f]">{assignment.title}</h5>
+                      <p className="mt-2 text-sm text-[#5c4d46]">{assignment.instruction}</p>
+                      {assignment.fileName && (assignment.fileUrl || assignment.fileData) ? (
+                        <a
+                          className="mt-3 inline-flex text-sm font-medium text-[#b06d38]"
+                          download={assignment.fileName}
+                          href={assignment.fileUrl || assignment.fileData}
+                        >
+                          Descargar {assignment.fileName}
+                        </a>
+                      ) : assignment.fileExpired ? (
+                        <p className="mt-3 text-sm text-[#8a3d31]">El archivo de esta tarea ya fue eliminado tras 5 dias habiles.</p>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[#5c4d46]">Este curso aun no tiene asignaciones publicadas.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6">
+            <div className="border border-[#d8cdbf] bg-white p-6">
+              <h4 className="font-['Georgia'] text-2xl text-[#20181f]">Progreso</h4>
+              <div className="mt-5 h-3 overflow-hidden rounded-full bg-[#eadfce]">
+                <div className="h-full bg-[#d6a46e]" style={{ width: `${Math.max(0, Math.min(100, Number(course.enhancement?.progressPercent ?? 0)))}%` }} />
+              </div>
+              <p className="mt-3 text-sm text-[#5c4d46]">{course.enhancement?.progressPercent ?? 0}% completado</p>
+              <p className="mt-3 text-sm text-[#5c4d46]">
+                <strong className="text-[#20181f]">Vence:</strong> {new Date(course.accessExpiresAt).toLocaleDateString()}
+              </p>
+            </div>
+
+            {course.enhancement?.gamificationEnabled ? (
+              <div className="border border-[#d8cdbf] bg-white p-6">
+                <h4 className="font-['Georgia'] text-2xl text-[#20181f]">Gamificacion</h4>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <DashboardCard eyebrow="Puntos" title={`${course.enhancement?.points ?? 0}`} body="Puntos acumulados en este curso." />
+                  <DashboardCard eyebrow="Racha" title={`${course.enhancement?.streakDays ?? 0} dias`} body="Constancia seguida registrada por el equipo." />
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {(course.gamificationRules ?? []).length ? (
+                    course.gamificationRules.map((rule) => (
+                      <div key={rule.id} className="border border-[#eadfce] bg-[#fbf8f2] p-4">
+                        <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">{rule.points} pts</p>
+                        <h5 className="mt-2 text-lg text-[#20181f]">{rule.title}</h5>
+                        <p className="mt-2 text-sm text-[#5c4d46]">{rule.condition}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-[#5c4d46]">Tu grupo tiene gamificacion activa, pero aun no hay reglas visibles en este curso.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="border border-[#d8cdbf] bg-white p-6 text-sm text-[#5c4d46]">
+                La gamificacion no esta activa para tu matricula en este curso.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CourseInterestModal({ course, user, onClose, onSubmit, submitting, message, error }) {
+  const [localError, setLocalError] = useState("");
+  const [form, setForm] = useState({
+    ...initialCourseRequestForm,
+    courseId: course?.id ?? "",
+    courseTitle: course?.title ?? "",
+    contactValue: user?.email ?? "",
+  });
+
+  useEffect(() => {
+    if (!course) {
+      return;
+    }
+
+    setForm({
+      ...initialCourseRequestForm,
+      courseId: course.id ?? "",
+      courseTitle: course.title ?? "",
+      contactValue: user?.email ?? "",
+    });
+    setLocalError("");
+  }, [course, user]);
+
+  if (!course) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#20181f]/60 px-4 py-8 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-auto border border-[#d8cdbf] bg-[#f7f1e7] shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
+        <div className="sticky top-0 z-10 border-b border-[#d8cdbf] bg-[#f7f1e7] px-6 py-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Solicitud de apertura</p>
+              <h3 className="mt-2 font-['Georgia'] text-3xl text-[#20181f]">{course.title}</h3>
+              <p className="mt-2 text-sm text-[#6d5a51]">
+                Este curso se abre siempre y cuando exista el grupo necesario. Cuando haya viabilidad, GoBeyond se
+                pondra en contacto contigo por correo, WhatsApp o mensaje de texto.
+              </p>
+            </div>
+            <button className="border border-[#d8cdbf] px-4 py-2 text-sm" onClick={onClose} type="button">
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 px-6 py-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const normalizedValue = String(form.contactValue ?? "").trim();
+
+              if (form.contactChannel === "correo" && !isValidEmail(normalizedValue)) {
+                setLocalError("Si eliges correo, debes escribir un correo valido.");
+                return;
+              }
+
+              if (["whatsapp", "texto", "llamada"].includes(form.contactChannel) && !isValidNumericContact(normalizedValue)) {
+                setLocalError("Si eliges contacto por numero, solo se aceptan digitos validos.");
+                return;
+              }
+
+              setLocalError("");
+              onSubmit({
+                ...form,
+                courseId: course.id ?? "",
+                courseTitle: course.title ?? "",
+                contactValue: normalizedValue,
+              });
+            }}
+          >
+            <input className="w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f]" disabled value={course.title} />
+            <select
+              className="w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f]"
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  contactChannel: event.target.value,
+                  contactValue: event.target.value === "correo" ? user?.email ?? "" : String(current.contactValue ?? "").replace(/\D/g, ""),
+                }))
+              }
+              value={form.contactChannel}
+            >
+              <option value="whatsapp">WhatsApp</option>
+              <option value="correo">Correo</option>
+              <option value="texto">Mensaje de texto</option>
+              <option value="llamada">Llamada</option>
+            </select>
+            <input
+              className="w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f]"
+              inputMode={form.contactChannel === "correo" ? "email" : "numeric"}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  contactValue:
+                    current.contactChannel === "correo"
+                      ? event.target.value
+                      : event.target.value.replace(/\D/g, ""),
+                }))
+              }
+              placeholder={form.contactChannel === "correo" ? "correo@ejemplo.com" : "Numero para contactarte"}
+              type={form.contactChannel === "correo" ? "email" : "tel"}
+              value={form.contactValue}
+            />
+            <textarea
+              className="min-h-[140px] w-full border border-[#d8cdbf] bg-white px-4 py-3 text-sm text-[#20181f]"
+              onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
+              placeholder="Cuéntanos por que te interesa este curso o cualquier detalle util para contactarte."
+              value={form.note}
+            />
+            <button className="w-fit border border-[#d8cdbf] bg-[#20181f] px-4 py-3 text-sm text-white" disabled={submitting} type="submit">
+              {submitting ? "Enviando..." : "Enviar solicitud"}
+            </button>
+            {message ? <p className="text-sm text-[#5a7d3d]">{message}</p> : null}
+            {localError ? <p className="text-sm text-[#8a3d31]">{localError}</p> : null}
+            {error ? <p className="text-sm text-[#8a3d31]">{error}</p> : null}
+          </form>
+
+          <div className="border border-[#d8cdbf] bg-white p-6">
+            <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">Lo que ocurrira despues</p>
+            <h4 className="mt-3 font-['Georgia'] text-2xl text-[#20181f]">Seguimiento administrativo</h4>
+            <ul className="mt-4 grid gap-3 text-sm leading-7 text-[#5c4d46]">
+              <li>Tu solicitud se registra en la cabina administrativa de GoBeyond.</li>
+              <li>El equipo revisa el interes general del curso antes de abrir el grupo.</li>
+              <li>No se muestra publicamente el minimo necesario de estudiantes.</li>
+              <li>Si el curso puede abrirse, te contactaran por el medio que indicaste.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StudentExperience({ dashboard, dashboardLoading, dashboardError, onLogout, token }) {
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [requestedCourse, setRequestedCourse] = useState(null);
+  const [courseRequestMessage, setCourseRequestMessage] = useState("");
+  const [courseRequestError, setCourseRequestError] = useState("");
+  const [courseRequestSubmitting, setCourseRequestSubmitting] = useState(false);
+  if (dashboardLoading || !dashboard) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#f3ede3] text-[#20181f]">Cargando portal estudiantil...</div>;
+  }
+
+  async function handleCourseRequest(payload) {
+    try {
+      setCourseRequestMessage("");
+      setCourseRequestError("");
+      setCourseRequestSubmitting(true);
+      const response = await createStudentCourseRequest(token, payload);
+      setCourseRequestMessage(response.message);
+      setRequestedCourse(null);
+    } catch (requestError) {
+      setCourseRequestError(requestError.message);
+    } finally {
+      setCourseRequestSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f3ede3]">
+      <div className="border-b border-[#d8cdbf] bg-[#fbf8f2] px-6 py-4">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-[#8b6d55]">Portal estudiantil</p>
+            <h1 className="font-['Georgia'] text-2xl text-[#20181f]">{dashboard.dashboard.welcomeTitle}</h1>
+          </div>
+
+          <button className="border border-[#d8cdbf] px-4 py-2 text-sm" onClick={onLogout} type="button">
+            Cerrar sesion
+          </button>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        <p className="max-w-3xl text-lg text-[#5c4d46]">{dashboard.dashboard.summary}</p>
+        {dashboardError ? <p className="mt-4 text-sm text-[#8a3d31]">{dashboardError}</p> : null}
+
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
+          <DashboardCard eyebrow="Acceso" title={`${dashboard.dashboard.enrollments.length} activos`} body="Tus matriculas definen el contenido privado y el tiempo de acceso que tienes habilitado." />
+          <DashboardCard eyebrow="Programas" title={`${dashboard.dashboard.courses.length} asignados`} body="Aqui aparecen solo los cursos que GoBeyond ha activado para tu cuenta." />
+          <DashboardCard eyebrow="Descubrir" title={`${dashboard.dashboard.availableCourses.length} por explorar`} body="Si ves un programa interesante pero no esta habilitado, puedes solicitarlo al equipo administrativo." />
+        </div>
+
+        <section className="mt-10">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-['Georgia'] text-3xl text-[#20181f]">Mis cursos activos</h2>
+              <p className="mt-2 text-[#6d5a51]">Cada tarjeta refleja una matricula real con fecha de expiracion.</p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            {dashboard.dashboard.courses.length ? (
+              dashboard.dashboard.courses.map((course) => (
+                <article key={course.enrollmentId} className="border border-[#d8cdbf] bg-white p-7">
+                  {course.coverImage ? (
+                    <div className="mb-5 overflow-hidden border border-[#eadfce] bg-[#f3ede3]">
+                      <img alt={course.title} className="h-48 w-full object-cover" src={course.coverImage} />
+                    </div>
+                  ) : null}
+                  <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">{course.format} · {course.duration}</p>
+                  <h3 className="mt-3 font-['Georgia'] text-3xl">{course.title}</h3>
+                  <p className="mt-3 text-sm uppercase tracking-[0.2em] text-[#8b6d55]">{course.audience}</p>
+                  {course.detailSummary ? <p className="mt-4 text-sm text-[#8b6d55]">{course.detailSummary}</p> : null}
+                  <p className="mt-4 text-[#5c4d46]">{course.description}</p>
+                  <p className="mt-4 text-sm text-[#5c4d46]">
+                    <strong className="text-[#20181f]">Vence:</strong> {new Date(course.accessExpiresAt).toLocaleDateString()}
+                  </p>
+                  <p className="mt-2 text-sm text-[#5c4d46]">
+                    <strong className="text-[#20181f]">Progreso:</strong> {course.enhancement?.progressPercent ?? 0}%
+                  </p>
+                  {course.enhancement?.gamificationEnabled ? (
+                    <p className="mt-2 text-sm text-[#5c4d46]">
+                      <strong className="text-[#20181f]">Puntos:</strong> {course.enhancement?.points ?? 0}
+                    </p>
+                  ) : null}
+                  <p className="mt-4 border-t border-[#eadfce] pt-4 text-sm text-[#5c4d46]">
+                    <strong className="text-[#20181f]">Resultados esperados:</strong> {course.outcomes}
+                  </p>
+                  <button className="mt-5 border border-[#d8cdbf] px-4 py-2 text-sm" onClick={() => setSelectedCourse(course)} type="button">
+                    Abrir curso
+                  </button>
+                </article>
+              ))
+            ) : (
+              <div className="border border-dashed border-[#cbb8a4] bg-[#fbf8f2] p-7 text-[#5c4d46]">
+                Aun no tienes cursos asignados. Cuando el equipo admin te matricule, los veras aqui.
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="mt-10 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="border border-[#d8cdbf] bg-white p-7">
+            <h2 className="font-['Georgia'] text-3xl text-[#20181f]">Ruta de desarrollo</h2>
+            <div className="mt-5 grid gap-4">
+              {dashboard.dashboard.learningPath.map((item) => (
+                <div key={item.id} className="border border-[#eadfce] bg-[#fbf8f2] p-4">
+                  <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">{item.type}</p>
+                  <h3 className="mt-2 text-xl text-[#20181f]">{item.title}</h3>
+                  <p className="mt-2 text-sm text-[#5c4d46]">{item.status}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-[#d8cdbf] bg-white p-7">
+            <h2 className="font-['Georgia'] text-3xl text-[#20181f]">Tambien puedes explorar</h2>
+            <div className="mt-5 grid gap-4">
+              {dashboard.dashboard.availableCourses.length ? (
+                dashboard.dashboard.availableCourses.map((course) => (
+                  <div key={course.id} className="border border-[#eadfce] bg-[#fbf8f2] p-4">
+                    <p className="text-xs uppercase tracking-[0.25em] text-[#8b6d55]">{course.format} · {course.duration}</p>
+                    <h3 className="mt-2 text-xl text-[#20181f]">{course.title}</h3>
+                    <p className="mt-2 text-sm text-[#5c4d46]">{course.description}</p>
+                    <button
+                      className="mt-4 border border-[#d8cdbf] px-4 py-2 text-sm text-[#20181f] transition hover:bg-white"
+                      onClick={() => {
+                        setCourseRequestMessage("");
+                        setCourseRequestError("");
+                        setRequestedCourse(course);
+                      }}
+                      type="button"
+                    >
+                      Solicitar apertura
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-[#5c4d46]">Por ahora no hay mas cursos por descubrir fuera de tus matriculas activas.</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <StudentAssistant
+          availableCount={dashboard.dashboard.availableCourses.length}
+          activeCourses={dashboard.dashboard.courses}
+          courseCount={dashboard.dashboard.courses.length}
+          token={token}
+        />
+      </div>
+
+      <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
+      <CourseInterestModal
+        course={requestedCourse}
+        error={courseRequestError}
+        message={courseRequestMessage}
+        onClose={() => setRequestedCourse(null)}
+        onSubmit={handleCourseRequest}
+        submitting={courseRequestSubmitting}
+        user={dashboard.user}
+      />
+    </div>
+  );
+}

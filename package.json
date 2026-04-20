@@ -6,14 +6,18 @@
     "dev": "vite --config vite.config.mjs",
     "build": "vite build --config vite.config.mjs",
     "preview": "vite preview --config vite.config.mjs",
-    "cf:dev": "wrangler pages dev dist --d1=DB",
+    "cf:dev": "wrangler pages dev dist --d1=DB --ai=AI",
     "cf:deploy": "wrangler pages deploy dist",
     "cf:migrate:local": "wrangler d1 migrations apply gobeyond-db --local",
     "cf:migrate:remote": "wrangler d1 migrations apply gobeyond-db --remote"
   },
   "dependencies": {
+    "@react-three/drei": "^9.121.4",
+    "@react-three/fiber": "^8.17.10",
+    "@types/three": "^0.183.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
