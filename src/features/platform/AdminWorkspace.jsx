@@ -19,6 +19,7 @@ import {
 } from "./components/admin/AdminUI";
 import { getEmbedDescriptor } from "./embedUtils";
 import { CatalogSection } from "./sections/CatalogSection";
+import { getLearningPathThemeClasses, normalizeLearningPathItem } from "./learningPath";
 import { IdentitySection } from "./sections/IdentitySection";
 import { PeopleSection } from "./sections/PeopleSection";
 import { AdminSopsSection } from "./SopsWorkspaceV2";
@@ -39,8 +40,16 @@ const initialSessionForm = {
 const initialLearningForm = {
   id: "",
   title: "",
-  type: "Asincronico",
+  stageLabel: "Trayectoria",
+  track: "Empleabilidad",
+  type: "Empleabilidad",
+  description: "",
   status: "",
+  duration: "",
+  outcome: "",
+  progressState: "Disponible",
+  theme: "blue",
+  order: "1",
 };
 
 const initialCourseForm = {
@@ -511,7 +520,10 @@ export function AdminWorkspace({
   const filteredLearning = useMemo(
     () =>
       (content.learningPath ?? []).filter((item) =>
-        includesQuery([item.title, item.type, item.status], viewFilters.learning)
+        includesQuery(
+          [item.title, item.type, item.track, item.stageLabel, item.status, item.description, item.duration, item.outcome, item.progressState],
+          viewFilters.learning
+        )
       ),
     [content.learningPath, viewFilters.learning]
   );
@@ -867,8 +879,28 @@ export function AdminWorkspace({
       }
     }
     for (const item of content.learningPath ?? []) {
-      if (includesQuery([item.title, item.type, item.status], query)) {
-        results.push({ id: item.id, type: "Modulo", title: item.title, subtitle: `${item.type} · ${item.status}`, view: "identity" });
+      const roadmapItem = normalizeLearningPathItem(item);
+      if (
+        includesQuery(
+          [
+            roadmapItem.title,
+            roadmapItem.track,
+            roadmapItem.stageLabel,
+            roadmapItem.description,
+            roadmapItem.duration,
+            roadmapItem.outcome,
+            roadmapItem.progressState,
+          ],
+          query
+        )
+      ) {
+        results.push({
+          id: roadmapItem.id,
+          type: "Roadmap",
+          title: roadmapItem.title,
+          subtitle: [roadmapItem.stageLabel, roadmapItem.track, roadmapItem.progressState].filter(Boolean).join(" · "),
+          view: "identity",
+        });
       }
     }
     for (const item of institutions) {
@@ -1179,11 +1211,20 @@ export function AdminWorkspace({
   }
 
   function startEditLearning(item) {
+    const roadmapItem = normalizeLearningPathItem(item);
     setLearningForm({
-      id: item.id,
-      title: item.title,
-      type: item.type,
-      status: item.status,
+      id: roadmapItem.id,
+      title: roadmapItem.title,
+      stageLabel: roadmapItem.stageLabel,
+      track: roadmapItem.track,
+      type: roadmapItem.track,
+      description: roadmapItem.description,
+      status: roadmapItem.description,
+      duration: roadmapItem.duration,
+      outcome: roadmapItem.outcome,
+      progressState: roadmapItem.progressState,
+      theme: roadmapItem.theme,
+      order: String(roadmapItem.order ?? ""),
     });
     openModal("learning");
   }
@@ -1505,9 +1546,20 @@ export function AdminWorkspace({
       throw new Error("El modulo necesita un titulo.");
     }
 
+    const normalizedOrder = Number.parseInt(String(learningForm.order ?? "").trim(), 10);
     const payload = {
-      ...learningForm,
       id: learningForm.id || createItemId("learning"),
+      title: learningForm.title.trim(),
+      stageLabel: learningForm.stageLabel.trim() || "Trayectoria",
+      track: learningForm.track.trim() || "Ruta academica",
+      type: learningForm.track.trim() || "Ruta academica",
+      description: learningForm.description.trim(),
+      status: learningForm.description.trim(),
+      duration: learningForm.duration.trim(),
+      outcome: learningForm.outcome.trim(),
+      progressState: learningForm.progressState.trim() || "Disponible",
+      theme: learningForm.theme,
+      order: Number.isFinite(normalizedOrder) ? normalizedOrder : 1,
     };
     await runAction(
       () =>
@@ -2077,7 +2129,7 @@ export function AdminWorkspace({
               value={viewFilters.communityThreads}
             />
           </SectionToolbar>
-          <ScrollArea>
+          <ScrollArea className="max-h-none pr-0 lg:max-h-[32rem]">
             <div className="grid gap-4 lg:grid-cols-2">
               {filteredCommunityThreads.length ? (
                 filteredCommunityThreads.map((item) => (
@@ -2085,13 +2137,20 @@ export function AdminWorkspace({
                     key={item.id}
                     eyebrow={`${item.category || "general"} · ${item.visibility === "hidden" ? "oculto" : item.status || "open"}`}
                     title={item.title}
-                    meta={`${item.authorName || "Sin autor"}${item.courseTitle ? ` · ${item.courseTitle}` : ""} · ${(item.replies ?? []).length} respuestas · expira ${formatDate(item.expiresAt)}`}
+                    meta={[
+                      item.authorName || "Sin autor",
+                      item.courseTitle || null,
+                      `${(item.replies ?? []).length} respuestas`,
+                      `expira ${formatDate(item.expiresAt)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                     body={item.body}
                   >
-                    <SecondaryButton onClick={() => startEditCommunityThread(item)} type="button">
+                    <SecondaryButton className="w-full sm:w-auto" onClick={() => startEditCommunityThread(item)} type="button">
                       Gestionar hilo
                     </SecondaryButton>
-                    <SecondaryButton onClick={() => deleteCollectionItem("communityThreads", item.id)} type="button">
+                    <SecondaryButton className="w-full sm:w-auto" onClick={() => deleteCollectionItem("communityThreads", item.id)} type="button">
                       Eliminar
                     </SecondaryButton>
                   </RowCard>
@@ -2111,7 +2170,7 @@ export function AdminWorkspace({
         >
           <SectionToolbar
             action={
-              <ActionButton onClick={startCreateSocialSource} type="button">
+              <ActionButton className="w-full sm:w-auto" onClick={startCreateSocialSource} type="button">
                 Agregar fuente
               </ActionButton>
             }
@@ -2123,7 +2182,7 @@ export function AdminWorkspace({
               value={viewFilters.socialSources}
             />
           </SectionToolbar>
-          <ScrollArea>
+          <ScrollArea className="max-h-none pr-0 lg:max-h-[32rem]">
             <div className="grid gap-4 lg:grid-cols-2">
               {filteredSocialSources.length ? (
                 filteredSocialSources.map((item) => (
@@ -2131,17 +2190,17 @@ export function AdminWorkspace({
                     key={item.id}
                     eyebrow={`${item.plataforma} · ${item.activo ? "Activa" : "Inactiva"} · ${item.automationStatus === "active" ? "Automatizada" : "Planeada"}`}
                     title={item.nombre}
-                    meta={`${item.page_identifier} · ${item.page_url}`}
+                    meta={item.page_identifier ? `${item.page_identifier}${item.page_url ? ` · ${item.page_url}` : ""}` : item.page_url || "Sin enlace registrado"}
                     body={
                       item.automationStatus === "active"
                         ? "Esta fuente ya puede recibir publicaciones automaticas por webhook."
-                        : "La fuente queda registrada por UI, pero su automatizacion se activara cuando Make y el backend soporten esa red."
-                    }
-                  >
-                    <SecondaryButton onClick={() => startEditSocialSource(item)} type="button">
+                      : "La fuente queda registrada por UI, pero su automatizacion se activara cuando Make y el backend soporten esa red."
+                  }
+                >
+                    <SecondaryButton className="w-full sm:w-auto" onClick={() => startEditSocialSource(item)} type="button">
                       Editar
                     </SecondaryButton>
-                    <SecondaryButton onClick={() => removeSocialSource(item.id)} type="button">
+                    <SecondaryButton className="w-full sm:w-auto" onClick={() => removeSocialSource(item.id)} type="button">
                       Eliminar
                     </SecondaryButton>
                   </RowCard>
@@ -2163,7 +2222,7 @@ export function AdminWorkspace({
         >
           <SectionToolbar
             action={
-              <ActionButton onClick={startCreateNews} type="button">
+              <ActionButton className="w-full sm:w-auto" onClick={startCreateNews} type="button">
                 Crear noticia
               </ActionButton>
             }
@@ -2175,7 +2234,7 @@ export function AdminWorkspace({
               value={viewFilters.news}
             />
           </SectionToolbar>
-          <ScrollArea>
+          <ScrollArea className="max-h-none pr-0 lg:max-h-[32rem]">
           <div className="grid gap-4 lg:grid-cols-2">
             {filteredNews.length ? (
               filteredNews.map((item) => (
@@ -2192,10 +2251,10 @@ export function AdminWorkspace({
                   }
                   body={item.summary}
                 >
-                  <SecondaryButton onClick={() => startEditNews(item)} type="button">
+                  <SecondaryButton className="w-full sm:w-auto" onClick={() => startEditNews(item)} type="button">
                     Editar
                   </SecondaryButton>
-                  <SecondaryButton onClick={() => deleteCollectionItem("news", item.id)} type="button">
+                  <SecondaryButton className="w-full sm:w-auto" onClick={() => deleteCollectionItem("news", item.id)} type="button">
                     Eliminar
                   </SecondaryButton>
                 </RowCard>
@@ -2215,7 +2274,7 @@ export function AdminWorkspace({
         >
           <SectionToolbar
             action={
-              <ActionButton onClick={startCreateTestimonial} type="button">
+              <ActionButton className="w-full sm:w-auto" onClick={startCreateTestimonial} type="button">
                 Crear testimonio
               </ActionButton>
             }
@@ -2227,14 +2286,16 @@ export function AdminWorkspace({
               value={viewFilters.testimonials}
             />
           </SectionToolbar>
-          <ScrollArea>
+          <ScrollArea className="max-h-none pr-0 lg:max-h-[32rem]">
           <div className="grid gap-4 lg:grid-cols-2">
             {filteredTestimonials.length ? (
               filteredTestimonials.map((item) => (
-                <RowCard key={item.id} title={item.author} meta={item.organization} body={`“${item.quote}”`}>
-                  <SecondaryButton onClick={() => deleteCollectionItem("testimonials", item.id)} type="button">
-                    Eliminar
-                  </SecondaryButton>
+                <RowCard density="compact" key={item.id} title={item.author} meta={item.organization} body={`“${item.quote}”`}>
+                  <div className="grid w-full gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                    <SecondaryButton className="w-full sm:w-auto" onClick={() => deleteCollectionItem("testimonials", item.id)} type="button">
+                      Eliminar
+                    </SecondaryButton>
+                  </div>
                 </RowCard>
               ))
             ) : (
@@ -2243,24 +2304,26 @@ export function AdminWorkspace({
           </div>
           </ScrollArea>
 
-          <div className="mt-8 rounded-[1.15rem] border border-[#dfe6ee] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
-            <div className="mb-4 flex items-end justify-between gap-4">
+          <div className="mt-8 rounded-[1.15rem] border border-[#dfe6ee] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_12px_28px_rgba(15,23,42,0.04)] sm:p-5">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Moderacion</p>
-                <h4 className="mt-2 font-['Georgia'] text-2xl text-[#172033]">Pendientes de aprobacion</h4>
+                <h4 className="mt-2 font-['Georgia'] text-[1.35rem] leading-tight text-[#172033] sm:text-2xl">Pendientes de aprobacion</h4>
               </div>
               <p className="text-sm text-[#617085]">{content.testimonialSubmissions?.length ?? 0} esperando revision</p>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               {content.testimonialSubmissions?.length ? (
                 content.testimonialSubmissions.map((item) => (
-                  <RowCard key={item.id} title={item.author} meta={item.organization} body={`“${item.quote}”`}>
-                    <ActionButton onClick={() => approveTestimonialSubmission(item)} type="button">
-                      Aprobar
-                    </ActionButton>
-                    <SecondaryButton onClick={() => deleteCollectionItem("testimonialSubmissions", item.id)} type="button">
-                      Rechazar
-                    </SecondaryButton>
+                  <RowCard density="compact" key={item.id} title={item.author} meta={item.organization} body={`“${item.quote}”`}>
+                    <div className="grid w-full gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                      <ActionButton className="w-full sm:w-auto" onClick={() => approveTestimonialSubmission(item)} type="button">
+                        Aprobar
+                      </ActionButton>
+                      <SecondaryButton className="w-full sm:w-auto" onClick={() => deleteCollectionItem("testimonialSubmissions", item.id)} type="button">
+                        Rechazar
+                      </SecondaryButton>
+                    </div>
                   </RowCard>
                 ))
               ) : (
@@ -2630,14 +2693,14 @@ export function AdminWorkspace({
     if (modal === "learning") {
       return (
         <ModalShell
-          title={learningForm.id ? "Editar modulo" : "Crear modulo"}
-          subtitle="Piensa cada item como una pieza breve y clara dentro de la ruta de aprendizaje."
+          title={learningForm.id ? "Editar hito" : "Crear hito"}
+          subtitle="Piensa cada item como una etapa clara dentro del roadmap de aprendizaje."
           onClose={closeModal}
         >
           <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <form className="grid gap-4" onSubmit={saveLearning}>
               <div className="grid gap-3 rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Plantillas de modulos</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Plantillas de roadmap</p>
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
                   <Select
                     value={templateSelections.learning}
@@ -2668,24 +2731,90 @@ export function AdminWorkspace({
                   </SecondaryButton>
                 </div>
               </div>
-              <Input value={learningForm.title} onChange={(event) => setLearningForm({ ...learningForm, title: event.target.value })} placeholder="Titulo del modulo" />
-              <Select value={learningForm.type} onChange={(event) => setLearningForm({ ...learningForm, type: event.target.value })}>
-                <option value="Asincronico">Asincronico</option>
-                <option value="Sincronico">Sincronico</option>
-                <option value="Mentoria">Mentoria</option>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  value={learningForm.stageLabel}
+                  onChange={(event) => setLearningForm({ ...learningForm, stageLabel: event.target.value })}
+                  placeholder="Etapa o encabezado"
+                />
+                <Input
+                  value={learningForm.track}
+                  onChange={(event) => setLearningForm({ ...learningForm, track: event.target.value, type: event.target.value })}
+                  placeholder="Enfoque o categoria"
+                />
+              </div>
+              <Input value={learningForm.title} onChange={(event) => setLearningForm({ ...learningForm, title: event.target.value })} placeholder="Titulo del hito" />
+              <div className="grid gap-4 md:grid-cols-3">
+                <Input
+                  value={learningForm.duration}
+                  onChange={(event) => setLearningForm({ ...learningForm, duration: event.target.value })}
+                  placeholder="Duracion"
+                />
+                <Input
+                  value={learningForm.order}
+                  onChange={(event) => setLearningForm({ ...learningForm, order: event.target.value })}
+                  placeholder="Orden"
+                />
+                <Select
+                  value={learningForm.progressState}
+                  onChange={(event) => setLearningForm({ ...learningForm, progressState: event.target.value })}
+                >
+                  <option value="Disponible">Disponible</option>
+                  <option value="En curso">En curso</option>
+                  <option value="Proximamente">Proximamente</option>
+                </Select>
+              </div>
+              <Select value={learningForm.theme} onChange={(event) => setLearningForm({ ...learningForm, theme: event.target.value })}>
+                <option value="blue">Azul institucional</option>
+                <option value="gold">Dorado calido</option>
+                <option value="green">Verde progreso</option>
               </Select>
-              <Textarea value={learningForm.status} onChange={(event) => setLearningForm({ ...learningForm, status: event.target.value })} placeholder="Estado o enfoque del modulo" />
+              <Textarea
+                value={learningForm.description}
+                onChange={(event) => setLearningForm({ ...learningForm, description: event.target.value, status: event.target.value })}
+                placeholder="Descripcion principal del hito"
+              />
+              <Textarea
+                value={learningForm.outcome}
+                onChange={(event) => setLearningForm({ ...learningForm, outcome: event.target.value })}
+                placeholder="Resultado esperado o capacidad que se desarrolla"
+              />
               <div className="flex gap-3">
-                <ActionButton type="submit">{learningForm.id ? "Guardar cambios" : "Crear modulo"}</ActionButton>
+                <ActionButton type="submit">{learningForm.id ? "Guardar cambios" : "Crear hito"}</ActionButton>
                 <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
               </div>
             </form>
 
-            <RowCard
-              eyebrow={learningForm.type || "Ruta"}
-              title={learningForm.title || "Titulo del modulo"}
-              body={learningForm.status || "La descripcion breve del modulo aparecera aqui como vista previa."}
-            />
+            {(() => {
+              const preview = normalizeLearningPathItem(learningForm, Math.max((Number.parseInt(String(learningForm.order ?? "1"), 10) || 1) - 1, 0));
+              const theme = getLearningPathThemeClasses(preview.theme);
+
+              return (
+                <div className={`rounded-[22px] border p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)] ${theme.card}`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] ${theme.badge}`}>
+                      {preview.stageLabel || "Trayectoria"}
+                    </span>
+                    {preview.duration ? (
+                      <span className="rounded-full border border-[#d7e0ea] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">
+                        {preview.duration}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{preview.track || "Ruta academica"}</p>
+                  <h3 className="mt-2 text-[1.45rem] font-semibold leading-tight text-[#172033]">{preview.title || "Titulo del hito"}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-[#536277]">
+                    {preview.description || "La descripcion breve del hito aparecera aqui como vista previa del roadmap."}
+                  </p>
+                  {preview.outcome ? (
+                    <div className="mt-4 rounded-[18px] border border-[#d7e0ea] bg-white/90 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Resultado esperado</p>
+                      <p className="mt-2 text-sm leading-relaxed text-[#435066]">{preview.outcome}</p>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })()}
           </div>
         </ModalShell>
       );
@@ -3735,80 +3864,97 @@ export function AdminWorkspace({
       return null;
     }
 
+  const systemMessage = authError || workspaceError || workspaceMessage || "";
+  const systemMessageTone = authError || workspaceError ? "warning" : workspaceMessage ? "accent" : "default";
+
   return (
     <div className="grid gap-6">
-      <SectionCard
-        title="Cabina administrativa"
-        description="Todo cambio queda registrado en backend. Esta capa ordena la operacion con navegacion clara, busqueda superior y bloques mas faciles de escanear."
-        accent="strong"
-      >
-        <div className="grid gap-6">
-          <div className="grid gap-4 rounded-[18px] border border-[#d7e0ea] bg-white p-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:items-center">
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#6b7a90]">Sesion operativa</p>
-              <p className="mt-2 text-lg font-semibold text-[#172033]">
-                {currentUser.fullName} · <span className="text-[#536277]">{currentUser.email}</span>
-              </p>
-              <p className="mt-1 text-sm text-[#536277]">
-                Rol activo: {currentUser.role} · Roles: {formatRolesLabel(currentUser.roles, currentUser.role)} · Estado: {currentUser.status}
-              </p>
+      <section className="overflow-hidden rounded-[20px] border border-[#1e293b] bg-[#111827] shadow-[0_18px_44px_rgba(15,23,42,0.18)]">
+        <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,24rem)] lg:items-end">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#9fb0c9]">
+              <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
+              Cabina administrativa
             </div>
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-              <FilterInput
-                onChange={(event) => {
-                  const nextQuery = event.target.value;
-                  setGlobalSearchQuery(nextQuery);
-                  if (nextQuery.trim()) {
-                    setActiveView("search");
-                  }
-                }}
-                placeholder="Busqueda general: cursos, usuarios, matriculas, sesiones, noticias, instituciones..."
-                value={globalSearchQuery}
-              />
-              <SecondaryButton
-                className="px-3 py-2 text-xs"
-                onClick={() => {
-                  setGlobalSearchQuery("");
-                  if (activeView === "search") {
-                    setActiveView("queue");
-                  }
-                }}
-                type="button"
-              >
-                Limpiar
-              </SecondaryButton>
-            </div>
+            <h2 className="mt-5 text-[1.85rem] font-semibold leading-tight text-white sm:text-[2.15rem]">
+              Administracion GoBeyond
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9fb0c9]">
+              Todo cambio queda registrado en backend. Esta capa ordena la operacion con navegacion clara, busqueda superior y bloques mas faciles de escanear.
+            </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-4">
-            <SmallStat label="Cursos" value={content.courses?.length ?? 0} help="Programas visibles para captacion y aprendizaje." tone="accent" />
-            <SmallStat label="Usuarios" value={users.length} help="Cuentas administrables desde la UI." />
-            <SmallStat label="Matriculas" value={enrollments.length} help="Accesos activos o historicos por estudiante." />
-            <SmallStat label="Queue" value={queueItems.length} help="Bandeja unificada de trabajo operativo." />
-          </div>
-
-          <div className="grid gap-4">
-            <div className="grid gap-4 rounded-[18px] border border-[#d7e0ea] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7edf5] pb-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Vista activa</p>
-                  <p className="mt-2 text-lg font-semibold text-[#172033]">{adminViewLabels[activeView]}</p>
-                </div>
-                <div className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-2 text-[11px] font-semibold text-[#536277]">
-                  {globalSearchQuery.trim() ? "Busqueda focalizada" : "Modo de trabajo normal"}
-                </div>
-              </div>
-              <p className="text-sm leading-6 text-[#617085]">Usa el sidebar principal para cambiar de bloque y la queue para aterrizar casos puntuales dentro de cada modulo.</p>
-              {authError ? <p className="mt-3 text-sm text-[#b45309]">{authError}</p> : null}
-              {workspaceError ? <p className="mt-3 text-sm text-[#b45309]">{workspaceError}</p> : null}
-              {workspaceMessage ? <p className="mt-3 text-sm text-[#1d4ed8]">{workspaceMessage}</p> : null}
-              {!authError && !workspaceError && !workspaceMessage ? (
-                <p className="mt-3 text-sm leading-relaxed text-[#617085]">Sin alertas activas. Los mensajes de guardado y seguimiento apareceran aqui.</p>
-              ) : null}
-            </div>
+          <div className="grid gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#9fb0c9]">Vista activa</p>
+            <p className="text-lg font-semibold text-white">{adminViewLabels[activeView]}</p>
+            <p className="text-sm leading-6 text-[#c2cfdf]">
+              {globalSearchQuery.trim()
+                ? "Busqueda focalizada sobre cursos, usuarios, matriculas, noticias y recursos internos."
+                : "Usa la navegacion lateral para cambiar de bloque y la queue para aterrizar casos puntuales."}
+            </p>
           </div>
         </div>
-      </SectionCard>
+      </section>
+
+      <section className="rounded-[18px] border border-[#d7e0ea] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <FilterInput
+            onChange={(event) => {
+              const nextQuery = event.target.value;
+              setGlobalSearchQuery(nextQuery);
+              if (nextQuery.trim()) {
+                setActiveView("search");
+              }
+            }}
+            placeholder="Busqueda general: cursos, usuarios, matriculas, sesiones, noticias, instituciones..."
+            value={globalSearchQuery}
+          />
+          <SecondaryButton
+            className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em]"
+            onClick={() => {
+              setGlobalSearchQuery("");
+              if (activeView === "search") {
+                setActiveView("queue");
+              }
+            }}
+            type="button"
+          >
+            Limpiar
+          </SecondaryButton>
+        </div>
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SmallStat label="Cursos" value={content.courses?.length ?? 0} help="Programas visibles para captacion y aprendizaje." tone="accent" />
+        <SmallStat label="Usuarios" value={users.length} help="Cuentas administrables desde la UI." />
+        <SmallStat label="Matriculas" value={enrollments.length} help="Accesos activos o historicos por estudiante." />
+        <SmallStat label="Queue" value={queueItems.length} help="Bandeja unificada de trabajo operativo." />
+      </div>
+
+      <section className="rounded-[18px] border border-[#d7e0ea] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7edf5] pb-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estado del sistema</p>
+            <p className="mt-2 text-lg font-semibold text-[#172033]">
+              {systemMessage ? "Seguimiento operativo activo" : "Sin alertas activas"}
+            </p>
+          </div>
+          <div
+            className={`rounded-full border px-4 py-2 text-[11px] font-semibold ${
+              systemMessageTone === "warning"
+                ? "border-[#fed7aa] bg-[#fff7ed] text-[#9a3412]"
+                : systemMessageTone === "accent"
+                  ? "border-[#c6d4ec] bg-[#eef4ff] text-[#1d4ed8]"
+                  : "border-[#d7e0ea] bg-[#f7f9fc] text-[#536277]"
+            }`}
+          >
+            {globalSearchQuery.trim() ? "Busqueda focalizada" : "Modo de trabajo normal"}
+          </div>
+        </div>
+        <p className="mt-4 text-sm leading-6 text-[#617085]">
+          {systemMessage || "Los mensajes de guardado, validacion y seguimiento apareceran aqui para darte contexto rapido mientras operas el panel."}
+        </p>
+      </section>
 
       {activeView === "queue" ? renderQueueView() : null}
       {activeView === "identity" ? renderIdentityView() : null}

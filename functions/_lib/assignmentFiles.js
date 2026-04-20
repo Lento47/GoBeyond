@@ -1,5 +1,26 @@
 import { listStudentEnrollments } from "./enrollments";
 
+function normalizeAssignmentAttachment(attachment, courseId, assignmentId) {
+  const expired = isExpiredAssignment(attachment);
+  const expiresAt = getAssignmentExpiry(attachment);
+
+  return {
+    ...attachment,
+    fileData: expired ? "" : attachment?.fileData ?? "",
+    fileExpired: expired,
+    fileExpiresAt: expiresAt ? expiresAt.toISOString() : attachment?.fileExpiresAt ?? "",
+    fileKey: expired ? "" : attachment?.fileKey ?? "",
+    fileName: expired ? "" : attachment?.fileName ?? "",
+    fileType: attachment?.fileType ?? "",
+    fileUrl: expired
+      ? ""
+      : attachment?.fileKey && assignmentId && courseId
+        ? buildAssignmentDownloadUrl(courseId, assignmentId, attachment.id)
+        : attachment?.fileUrl ?? "",
+    id: attachment?.id || attachment?.fileKey || `attachment-${assignmentId || "item"}`,
+  };
+}
+
 function addBusinessDays(startDate, businessDays) {
   const result = new Date(startDate);
   let remaining = businessDays;
@@ -35,33 +56,62 @@ function isExpiredAssignment(assignment) {
   return Boolean(expiresAt && expiresAt.getTime() <= Date.now());
 }
 
-function buildAssignmentDownloadUrl(courseId, assignmentId) {
-  return `/api/secure/assignment-file?courseId=${encodeURIComponent(courseId)}&assignmentId=${encodeURIComponent(assignmentId)}`;
+function buildAssignmentDownloadUrl(courseId, assignmentId, attachmentId = "") {
+  const params = new URLSearchParams({
+    courseId: String(courseId ?? ""),
+    assignmentId: String(assignmentId ?? ""),
+  });
+
+  if (attachmentId) {
+    params.set("attachmentId", String(attachmentId));
+  }
+
+  return `/api/secure/assignment-file?${params.toString()}`;
 }
 
 export function sanitizeCourseAssignments(course) {
   let changed = false;
 
   const assignments = (course?.assignments ?? []).map((assignment) => {
-    const expired = isExpiredAssignment(assignment);
-    const expiresAt = getAssignmentExpiry(assignment);
+    const legacyAttachment =
+      assignment?.fileKey || assignment?.fileName || assignment?.fileUrl || assignment?.fileData
+        ? {
+            id: "legacy",
+            fileData: assignment.fileData ?? "",
+            fileExpiresAt: assignment.fileExpiresAt ?? "",
+            fileKey: assignment.fileKey ?? "",
+            fileName: assignment.fileName ?? "",
+            fileType: assignment.fileType ?? "",
+            fileUploadedAt: assignment.fileUploadedAt ?? "",
+            fileUrl: assignment.fileUrl ?? "",
+          }
+        : null;
+    const sourceAttachments = Array.isArray(assignment?.attachments) && assignment.attachments.length
+      ? assignment.attachments
+      : legacyAttachment
+        ? [legacyAttachment]
+        : [];
+    const attachments = sourceAttachments.map((attachment) => normalizeAssignmentAttachment(attachment, course?.id, assignment?.id));
+    const primaryAttachment = attachments[0] ?? null;
 
-    if (expired && (assignment.fileData || assignment.fileName || assignment.fileKey || assignment.fileUrl)) {
+    if (sourceAttachments.some((attachment) => isExpiredAssignment(attachment) && (attachment.fileData || attachment.fileName || attachment.fileKey || attachment.fileUrl))) {
+      changed = true;
+    }
+    if (!Array.isArray(assignment?.attachments) && attachments.length) {
       changed = true;
     }
 
     return {
       ...assignment,
-      fileData: expired ? "" : assignment.fileData ?? "",
-      fileExpired: expired,
-      fileExpiresAt: expiresAt ? expiresAt.toISOString() : assignment.fileExpiresAt ?? "",
-      fileKey: expired ? "" : assignment.fileKey ?? "",
-      fileName: expired ? "" : assignment.fileName ?? "",
-      fileUrl: expired
-        ? ""
-        : assignment.fileKey && assignment.id && course?.id
-          ? buildAssignmentDownloadUrl(course.id, assignment.id)
-          : assignment.fileUrl ?? "",
+      attachments,
+      fileData: primaryAttachment?.fileData ?? "",
+      fileExpired: primaryAttachment?.fileExpired ?? false,
+      fileExpiresAt: primaryAttachment?.fileExpiresAt ?? "",
+      fileKey: primaryAttachment?.fileKey ?? "",
+      fileName: primaryAttachment?.fileName ?? "",
+      fileType: primaryAttachment?.fileType ?? "",
+      fileUploadedAt: primaryAttachment?.fileUploadedAt ?? "",
+      fileUrl: primaryAttachment?.fileUrl ?? "",
     };
   });
 
@@ -71,9 +121,11 @@ export function sanitizeCourseAssignments(course) {
       ...course,
       assignments,
     },
-    expiredKeys: (course?.assignments ?? [])
-      .filter((assignment) => isExpiredAssignment(assignment) && assignment.fileKey)
-      .map((assignment) => assignment.fileKey),
+    expiredKeys: assignments.flatMap((assignment) =>
+      (assignment.attachments ?? [])
+        .filter((attachment) => attachment.fileExpired && attachment.fileKey)
+        .map((attachment) => attachment.fileKey)
+    ),
   };
 }
 
@@ -106,7 +158,7 @@ function cleanDownloadName(name) {
     .slice(0, 120);
 }
 
-export async function resolveAssignmentFileDownload(env, auth, courseId, assignmentId) {
+export async function resolveAssignmentFileDownload(env, auth, courseId, assignmentId, attachmentId = "") {
   const row = await env.DB.prepare(
     "SELECT value_json FROM collection_items WHERE section = 'courses' AND id = ? LIMIT 1"
   )
@@ -121,8 +173,23 @@ export async function resolveAssignmentFileDownload(env, auth, courseId, assignm
 
   const course = JSON.parse(row.value_json);
   const assignment = (course.assignments ?? []).find((item) => item?.id === assignmentId);
+  const attachments = Array.isArray(assignment?.attachments) && assignment.attachments.length
+    ? assignment.attachments
+    : assignment?.fileKey
+      ? [{
+          id: "legacy",
+          fileExpiresAt: assignment.fileExpiresAt ?? "",
+          fileKey: assignment.fileKey ?? "",
+          fileName: assignment.fileName ?? "",
+          fileType: assignment.fileType ?? "",
+          fileUploadedAt: assignment.fileUploadedAt ?? "",
+        }]
+      : [];
+  const targetAttachment = attachmentId
+    ? attachments.find((item) => String(item?.id ?? "") === attachmentId)
+    : attachments[0];
 
-  if (!assignment || !assignment.fileKey) {
+  if (!assignment || !targetAttachment?.fileKey) {
     const error = new Error("Archivo no encontrado.");
     error.status = 404;
     throw error;
@@ -141,7 +208,7 @@ export async function resolveAssignmentFileDownload(env, auth, courseId, assignm
     }
   }
 
-  if (isExpiredAssignment(assignment)) {
+  if (isExpiredAssignment(targetAttachment)) {
     const error = new Error("El archivo adjunto ya expiro.");
     error.status = 410;
     throw error;
@@ -153,7 +220,7 @@ export async function resolveAssignmentFileDownload(env, auth, courseId, assignm
     throw error;
   }
 
-  const object = await env.MEDIA_BUCKET.get(assignment.fileKey);
+  const object = await env.MEDIA_BUCKET.get(targetAttachment.fileKey);
   if (!object) {
     const error = new Error("Archivo no encontrado.");
     error.status = 404;
@@ -161,8 +228,8 @@ export async function resolveAssignmentFileDownload(env, auth, courseId, assignm
   }
 
   return {
-    contentType: assignment.fileType || object.httpMetadata?.contentType || "application/octet-stream",
-    fileName: cleanDownloadName(assignment.fileName),
+    contentType: targetAttachment.fileType || object.httpMetadata?.contentType || "application/octet-stream",
+    fileName: cleanDownloadName(targetAttachment.fileName),
     object,
   };
 }

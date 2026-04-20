@@ -586,11 +586,42 @@ export async function deleteTeacherEnrollment(request, env, auth, enrollmentId) 
 }
 
 function normalizeAssignmentDraft(input, fallback = {}) {
+  const dueAtCandidate = cleanOptionalString(input.dueAt ?? fallback.dueAt, 64);
+  const dueAtDate = dueAtCandidate ? new Date(dueAtCandidate) : null;
+  const normalizedDueAt = dueAtDate && !Number.isNaN(dueAtDate.getTime()) ? dueAtDate.toISOString() : "";
+  const fallbackLabel = normalizedDueAt
+    ? dueAtDate.toLocaleString("es-CR", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
   return {
     ...fallback,
     title: validateRequiredString(input.title ?? fallback.title, "Titulo de la asignacion", 255),
     instruction: validateRequiredString(input.instruction ?? fallback.instruction, "Instruccion", 5000),
-    dueLabel: cleanOptionalString(input.dueLabel ?? fallback.dueLabel, 120),
+    dueAt: normalizedDueAt || fallback.dueAt || "",
+    dueLabel: cleanOptionalString(input.dueLabel ?? fallback.dueLabel ?? fallbackLabel, 120),
+    fileKey: cleanOptionalString(input.fileKey ?? fallback.fileKey, 255),
+    fileName: cleanOptionalString(input.fileName ?? fallback.fileName, 255),
+    fileType: cleanOptionalString(input.fileType ?? fallback.fileType, 255),
+    fileUploadedAt: cleanOptionalString(input.fileUploadedAt ?? fallback.fileUploadedAt, 64),
+    fileExpiresAt: cleanOptionalString(input.fileExpiresAt ?? fallback.fileExpiresAt, 64),
+    attachments: Array.isArray(input.attachments)
+      ? input.attachments.map((attachment, index) => ({
+          id: cleanOptionalString(attachment?.id, 255) || `attachment-${index + 1}`,
+          fileKey: cleanOptionalString(attachment?.fileKey, 255),
+          fileName: cleanOptionalString(attachment?.fileName, 255),
+          fileType: cleanOptionalString(attachment?.fileType, 255),
+          fileUploadedAt: cleanOptionalString(attachment?.fileUploadedAt, 64),
+          fileExpiresAt: cleanOptionalString(attachment?.fileExpiresAt, 64),
+        }))
+      : Array.isArray(fallback.attachments)
+        ? fallback.attachments
+        : [],
   };
 }
 
@@ -600,14 +631,9 @@ export async function createTeacherAssignment(request, env, auth, body) {
   const course = await getPersistedCourse(env, courseId);
   const assignment = {
     id: createId("assignment"),
-    ...normalizeAssignmentDraft(body),
     fileData: "",
-    fileName: "",
     fileUrl: "",
-    fileKey: "",
-    fileContentType: "",
-    fileUploadedAt: "",
-    fileExpiresAt: "",
+    ...normalizeAssignmentDraft(body),
   };
 
   await updateCollectionItem(env, "courses", {
@@ -683,6 +709,14 @@ export async function deleteTeacherAssignment(request, env, auth, body) {
 
   if (currentAssignment.fileKey && env.MEDIA_BUCKET) {
     await env.MEDIA_BUCKET.delete(currentAssignment.fileKey);
+  }
+
+  const attachmentKeys = Array.isArray(currentAssignment.attachments)
+    ? currentAssignment.attachments.map((attachment) => attachment?.fileKey).filter(Boolean)
+    : [];
+
+  if (attachmentKeys.length && env.MEDIA_BUCKET) {
+    await Promise.all(attachmentKeys.map((fileKey) => env.MEDIA_BUCKET.delete(fileKey)));
   }
 
   await updateCollectionItem(env, "courses", {

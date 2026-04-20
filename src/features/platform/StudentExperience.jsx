@@ -6,6 +6,7 @@ import {
   createStudentTicket,
 } from "../../services/contentApi";
 import { MarkdownContent } from "../../shared/MarkdownContent";
+import { getLearningPathThemeClasses, normalizeLearningPath } from "./learningPath";
 import { workspaceChrome } from "./workspaceTheme";
 
 // --- COMPONENTES DE INTERFAZ EDITORIAL ---
@@ -50,6 +51,67 @@ function DashboardCard({ eyebrow, value, label, body, icon }) {
       <p className="mt-4 text-base font-semibold text-[#172033]">{label}</p>
       <p className="mt-2 text-sm leading-relaxed text-[#536277]">{body}</p>
     </div>
+  );
+}
+
+function LearningRoadmapCard({ item, index, isLast = false }) {
+  const theme = getLearningPathThemeClasses(item.theme);
+
+  return (
+    <article className="grid gap-4 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-5">
+      <div className="relative hidden sm:flex sm:justify-center">
+        {!isLast ? (
+          <span
+            aria-hidden="true"
+            className={`absolute top-14 h-[calc(100%+1.25rem)] w-px bg-gradient-to-b ${theme.line}`}
+          />
+        ) : null}
+        <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full border border-[#d7e0ea] bg-white shadow-[0_10px_22px_rgba(15,23,42,0.06)]">
+          <div className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-black text-white ${theme.dot}`}>
+            {String(index + 1).padStart(2, "0")}
+          </div>
+        </div>
+      </div>
+
+      <div className={`rounded-[22px] border p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)] sm:p-6 ${theme.card}`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] ${theme.badge}`}>
+            {item.stageLabel}
+          </span>
+          {item.duration ? (
+            <span className="rounded-full border border-[#d7e0ea] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">
+              {item.duration}
+            </span>
+          ) : null}
+          <span className="rounded-full border border-[#d7e0ea] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#435066]">
+            {item.progressState}
+          </span>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{item.track}</p>
+            <h3 className="mt-2 text-[1.4rem] font-semibold leading-tight text-[#172033]">{item.title}</h3>
+          </div>
+          <div className="flex items-center gap-3 rounded-[16px] border border-[#d7e0ea] bg-white px-4 py-3">
+            <span className={`h-3 w-3 rounded-full ${theme.dot}`} />
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Orden</p>
+              <p className="mt-1 text-sm font-semibold text-[#172033]">Hito {String(index + 1).padStart(2, "0")}</p>
+            </div>
+          </div>
+        </div>
+
+        <MarkdownContent className="mt-4 text-sm leading-relaxed text-[#536277]">{item.description}</MarkdownContent>
+
+        {item.outcome ? (
+          <div className="mt-4 rounded-[18px] border border-[#d7e0ea] bg-white/90 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Resultado esperado</p>
+            <p className="mt-2 text-sm leading-relaxed text-[#435066]">{item.outcome}</p>
+          </div>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
@@ -459,7 +521,21 @@ function CourseDetailModal({ course, onClose }) {
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{assignment.dueLabel || "Tarea"}</p>
                     <h5 className="mt-2 text-lg font-semibold text-[#172033]">{assignment.title}</h5>
                     <p className="mt-2 text-sm leading-relaxed text-[#536277]">{assignment.instruction}</p>
-                    {assignment.fileUrl || assignment.fileData ? (
+                    {(assignment.attachments ?? []).length ? (
+                      <div className="mt-4 grid gap-2">
+                        {(assignment.attachments ?? []).map((attachment) => (
+                          <a
+                            key={attachment.id}
+                            className="inline-flex items-center justify-between gap-3 rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3 text-sm font-semibold text-[#1d4ed8]"
+                            download={attachment.fileName}
+                            href={attachment.fileUrl || attachment.fileData}
+                          >
+                            <span className="min-w-0 truncate">{attachment.fileName || "Adjunto"}</span>
+                            <span className="shrink-0 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Descargar</span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : assignment.fileUrl || assignment.fileData ? (
                       <a className="mt-4 inline-flex rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#1d4ed8]" download={assignment.fileName} href={assignment.fileUrl || assignment.fileData}>
                         Descargar adjunto
                       </a>
@@ -600,7 +676,7 @@ function CourseInterestModal({ course, user, onClose, onSubmit, submitting, mess
 
 // --- COMPONENTE PRINCIPAL: STUDENT EXPERIENCE ---
 
-export function StudentExperience({ dashboard, dashboardLoading, dashboardError, onLogout, onOpenCommunity }) {
+export function StudentExperience({ activeSection = "portal-overview", dashboard, dashboardLoading, dashboardError, onOpenCommunity, onNavigateSection }) {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [requestedCourse, setRequestedCourse] = useState(null);
   const [courseRequestMessage, setCourseRequestMessage] = useState("");
@@ -608,7 +684,8 @@ export function StudentExperience({ dashboard, dashboardLoading, dashboardError,
   const [courseRequestSubmitting, setCourseRequestSubmitting] = useState(false);
   const [activeNotification, setActiveNotification] = useState(dashboard?.notificationBanner ?? null);
   const [acknowledgedNotificationId, setAcknowledgedNotificationId] = useState("");
-
+  const studentSection = activeSection || "portal-overview";
+  const learningPath = normalizeLearningPath(dashboard?.dashboard?.learningPath ?? []);
   useEffect(() => {
     setActiveNotification(dashboard?.notificationBanner ?? null);
     setAcknowledgedNotificationId("");
@@ -662,12 +739,9 @@ export function StudentExperience({ dashboard, dashboardLoading, dashboardError,
   }
 
   function handleNotificationAction() {
-    const targetId = getNotificationTargetId(activeNotification);
-    if (targetId) {
-      document.getElementById(targetId)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+    const targetId = getNotificationTargetId(activeNotification) || "portal-courses";
+    if (onNavigateSection) {
+      onNavigateSection(targetId);
     }
 
     setActiveNotification(null);
@@ -683,43 +757,9 @@ export function StudentExperience({ dashboard, dashboardLoading, dashboardError,
     syncCourseLocation("");
   }
 
-  return (
-    <div className="grid gap-6">
-      {activeNotification ? (
-        <section
-          aria-live="polite"
-          className={`${workspaceChrome.surface} border border-[#c6d4ec] bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_55%,#ffffff_100%)] p-4 sm:p-5`}
-        >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#c6d4ec] bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">
-                <span className="h-2 w-2 rounded-full bg-[#1d4ed8]" />
-                Actualizacion academica
-              </div>
-              <h2 className="mt-3 text-xl font-semibold text-[#172033]">{activeNotification.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-[#536277]">{activeNotification.body}</p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                className="rounded-xl bg-[#1d4ed8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]"
-                onClick={handleNotificationAction}
-                type="button"
-              >
-                Ir a cursos activos
-              </button>
-              <button
-                className="rounded-xl border border-[#d7e0ea] bg-white px-5 py-3 text-sm font-medium text-[#172033] transition hover:bg-[#fbfcfe]"
-                onClick={() => setActiveNotification(null)}
-                type="button"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className={`${workspaceChrome.elevatedSurface} scroll-mt-28 overflow-hidden`} id="portal-overview">
+  function renderOverviewSection() {
+    return (
+      <section className={`${workspaceChrome.elevatedSurface} overflow-hidden`} id="portal-overview">
         <div className="grid gap-6 border-b border-[#e7edf5] p-5 sm:p-6 xl:grid-cols-[minmax(0,1.3fr)_22rem]">
           <div className="max-w-4xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#c6d4ec] bg-[#eef4ff] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">
@@ -758,130 +798,214 @@ export function StudentExperience({ dashboard, dashboardLoading, dashboardError,
               </div>
               <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Ruta</p>
-                <p className="mt-2 text-sm font-semibold text-[#172033]">{dashboard.dashboard.learningPath.length} hitos registrados</p>
+                <p className="mt-2 text-sm font-semibold text-[#172033]">{learningPath.length} hitos registrados</p>
               </div>
             </div>
           </div>
         </div>
       </section>
+    );
+  }
 
-      <section className={`${workspaceChrome.surface} scroll-mt-28 p-5 sm:p-6`} id="portal-courses">
-          <div className="flex flex-col gap-4 border-b border-[#e7edf5] pb-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Operacion academica</p>
-              <h2 className="mt-2 text-[1.6rem] font-semibold text-[#172033] sm:text-[1.9rem]">Cursos en curso</h2>
-            </div>
-            <div className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-2 text-[11px] font-semibold text-[#435066]">
-              {dashboard.dashboard.courses.length} acceso{dashboard.dashboard.courses.length === 1 ? "" : "s"} vigente{dashboard.dashboard.courses.length === 1 ? "" : "s"}
-            </div>
+  function renderCoursesSection() {
+    return (
+      <section className={`${workspaceChrome.surface} p-5 sm:p-6`} id="portal-courses">
+        <div className="flex flex-col gap-4 border-b border-[#e7edf5] pb-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Operacion academica</p>
+            <h2 className="mt-2 text-[1.6rem] font-semibold text-[#172033] sm:text-[1.9rem]">Cursos en curso</h2>
           </div>
+          <div className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-2 text-[11px] font-semibold text-[#435066]">
+            {dashboard.dashboard.courses.length} acceso{dashboard.dashboard.courses.length === 1 ? "" : "s"} vigente{dashboard.dashboard.courses.length === 1 ? "" : "s"}
+          </div>
+        </div>
 
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
-            {dashboard.dashboard.courses.length ? (
-              dashboard.dashboard.courses.map((course) => (
-                <article key={course.enrollmentId} className="rounded-[20px] border border-[#d7e0ea] bg-white p-5">
-                  <div className="grid gap-5 md:grid-cols-[13rem_minmax(0,1fr)]">
-                    <div className="overflow-hidden rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc]">
-                      {course.coverImage ? (
-                        <img alt={course.title} className="h-full min-h-[180px] w-full object-cover" src={course.coverImage} />
-                      ) : (
-                        <div className="flex min-h-[180px] items-center justify-center px-6 text-center text-sm font-semibold text-[#6b7a90]">
-                          Programa sin imagen destacada
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.format}</span>
-                        <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.duration}</span>
+        <div className="mt-5 grid gap-4 xl:grid-cols-2">
+          {dashboard.dashboard.courses.length ? (
+            dashboard.dashboard.courses.map((course) => (
+              <article key={course.enrollmentId} className="rounded-[20px] border border-[#d7e0ea] bg-white p-5">
+                <div className="grid gap-5 md:grid-cols-[13rem_minmax(0,1fr)]">
+                  <div className="overflow-hidden rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc]">
+                    {course.coverImage ? (
+                      <img alt={course.title} className="h-full min-h-[180px] w-full object-cover" src={course.coverImage} />
+                    ) : (
+                      <div className="flex min-h-[180px] items-center justify-center px-6 text-center text-sm font-semibold text-[#6b7a90]">
+                        Programa sin imagen destacada
                       </div>
-                      <h3 className="mt-4 break-words text-[1.4rem] font-semibold leading-tight text-[#172033]">{course.title}</h3>
-                      <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">{course.description}</MarkdownContent>
-
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Vencimiento</p>
-                          <p className="mt-2 text-sm font-semibold text-[#172033]">{formatDisplayDate(course.accessExpiresAt)}</p>
-                        </div>
-                        <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Avance</p>
-                          <p className="mt-2 text-sm font-semibold text-[#172033]">{course.enhancement?.progressPercent ?? 0}% completado</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 h-2 w-full rounded-full bg-[#e7edf5]">
-                        <div className="h-2 rounded-full bg-[#1d4ed8]" style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }} />
-                      </div>
-
-                      <button className="mt-5 w-full rounded-xl bg-[#1d4ed8] py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]" onClick={() => handleOpenCourse(course)} type="button">
-                        Entrar al aula virtual
-                      </button>
-                    </div>
+                    )}
                   </div>
-                </article>
-              ))
-            ) : (
-              <div className="col-span-full rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f7f9fc] p-10 text-center text-[#5d6b80]">
-                No se encuentran matriculas activas registradas a su nombre en este ciclo.
-              </div>
-            )}
-          </div>
-      </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className={`${workspaceChrome.surface} scroll-mt-28 p-5 sm:p-6`} id="portal-path">
-            <div className="flex items-center justify-between gap-4 border-b border-[#e7edf5] pb-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Ruta academica</p>
-                <h2 className="mt-2 text-[1.4rem] font-semibold text-[#172033]">Trayectoria</h2>
-              </div>
-            </div>
-            <div className="mt-5 space-y-4">
-              {dashboard.dashboard.learningPath.map((item) => (
-                <div key={item.id} className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{item.type}</p>
-                  <h3 className="mt-2 text-lg font-semibold text-[#172033]">{item.title}</h3>
-                  <MarkdownContent className="mt-2 text-sm text-[#536277]">{item.status}</MarkdownContent>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.format}</span>
+                      <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.duration}</span>
+                    </div>
+                    <h3 className="mt-4 break-words text-[1.4rem] font-semibold leading-tight text-[#172033]">{course.title}</h3>
+                    <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">{course.description}</MarkdownContent>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Vencimiento</p>
+                        <p className="mt-2 text-sm font-semibold text-[#172033]">{formatDisplayDate(course.accessExpiresAt)}</p>
+                      </div>
+                      <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Avance</p>
+                        <p className="mt-2 text-sm font-semibold text-[#172033]">{course.enhancement?.progressPercent ?? 0}% completado</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 h-2 w-full rounded-full bg-[#e7edf5]">
+                      <div className="h-2 rounded-full bg-[#1d4ed8]" style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }} />
+                    </div>
+
+                    <button className="mt-5 w-full rounded-xl bg-[#1d4ed8] py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]" onClick={() => handleOpenCourse(course)} type="button">
+                      Entrar al aula virtual
+                    </button>
+                  </div>
                 </div>
+              </article>
+            ))
+          ) : (
+            <div className="col-span-full rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f7f9fc] p-10 text-center text-[#5d6b80]">
+              No se encuentran matriculas activas registradas a su nombre en este ciclo.
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  function renderPathSection() {
+    return (
+      <section className={`${workspaceChrome.elevatedSurface} overflow-hidden`} id="portal-path">
+        <div className="grid gap-6 border-b border-[#e7edf5] p-5 sm:p-6 xl:grid-cols-[minmax(0,1.2fr)_20rem]">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#c6d4ec] bg-[#eef4ff] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">
+              <span className="h-2 w-2 rounded-full bg-[#1d4ed8]" />
+              Ruta academica
+            </div>
+            <h2 className="mt-4 text-[1.8rem] font-semibold leading-tight text-[#172033] sm:text-[2.2rem]">Roadmap de trayectoria</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[#536277]">
+              Cada hito resume la progresion formativa disponible en GoBeyond. La ruta se gestiona desde admin y puede evolucionar
+              sin perder claridad para el estudiante.
+            </p>
+          </div>
+
+          <div className="grid gap-4">
+            <div className="rounded-[20px] border border-[#d7e0ea] bg-white p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estado de la ruta</p>
+              <p className="mt-2 text-lg font-semibold text-[#172033]">{learningPath.length} etapas visibles</p>
+              <p className="mt-2 text-sm leading-relaxed text-[#536277]">Un recorrido editorial claro para ubicar tu siguiente foco de aprendizaje.</p>
+            </div>
+            <div className="rounded-[20px] border border-[#c6d4ec] bg-[#eef4ff] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Lectura sugerida</p>
+              <p className="mt-2 text-sm leading-relaxed text-[#435066]">
+                Avanza de arriba hacia abajo: cada bloque funciona como una etapa independiente y complementaria.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 sm:p-6">
+          {learningPath.length ? (
+            <div className="grid gap-5">
+              {learningPath.map((item, index) => (
+                <LearningRoadmapCard key={item.id} index={index} isLast={index === learningPath.length - 1} item={item} />
               ))}
             </div>
-          </div>
-
-          <div className={`${workspaceChrome.surface} scroll-mt-28 p-5 sm:p-6`} id="portal-openings">
-            <div className="flex items-center justify-between gap-4 border-b border-[#e7edf5] pb-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Exploracion</p>
-                <h2 className="mt-2 text-[1.4rem] font-semibold text-[#172033]">Nuevas aperturas</h2>
-              </div>
+          ) : (
+            <div className="rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f7f9fc] p-10 text-center text-[#5d6b80]">
+              Los hitos publicados desde admin apareceran aqui como roadmap academico.
             </div>
-            <div className="mt-5 space-y-4">
-              {dashboard.dashboard.availableCourses.map((c) => (
-                <div key={c.id} className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{c.format} · {c.duration}</p>
-                  <h3 className="mt-2 text-lg font-semibold text-[#172033]">{c.title}</h3>
-                  <button
-                    className="mt-4 rounded-xl border border-[#d7e0ea] bg-white px-4 py-2 text-sm font-medium text-[#1d4ed8] transition hover:border-[#bbc8d9] hover:bg-[#fbfcfe]"
-                    onClick={() => {
-                      setCourseRequestMessage("");
-                      setCourseRequestError("");
-                      setRequestedCourse(c);
-                    }}
-                    type="button"
-                  >
-                    Solicitar informacion
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
+        </div>
       </section>
+    );
+  }
 
+  function renderOpeningsSection() {
+    return (
+      <div className={`${workspaceChrome.surface} p-5 sm:p-6`} id="portal-openings">
+        <div className="flex items-center justify-between gap-4 border-b border-[#e7edf5] pb-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Exploracion</p>
+            <h2 className="mt-2 text-[1.4rem] font-semibold text-[#172033]">Nuevas aperturas</h2>
+          </div>
+        </div>
+        <div className="mt-5 space-y-4">
+          {dashboard.dashboard.availableCourses.map((c) => (
+            <div key={c.id} className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{c.format} · {c.duration}</p>
+              <h3 className="mt-2 text-lg font-semibold text-[#172033]">{c.title}</h3>
+              <button
+                className="mt-4 rounded-xl border border-[#d7e0ea] bg-white px-4 py-2 text-sm font-medium text-[#1d4ed8] transition hover:border-[#bbc8d9] hover:bg-[#fbfcfe]"
+                onClick={() => {
+                  setCourseRequestMessage("");
+                  setCourseRequestError("");
+                  setRequestedCourse(c);
+                }}
+                type="button"
+              >
+                Solicitar informacion
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function renderSupportSection() {
+    return (
       <StudentAssistant
         activeCourses={dashboard.dashboard.courses}
         availableCount={dashboard.dashboard.availableCourses.length}
         courseCount={dashboard.dashboard.courses.length}
       />
+    );
+  }
+
+  return (
+    <div className="grid gap-6">
+      {activeNotification ? (
+        <section
+          aria-live="polite"
+          className={`${workspaceChrome.surface} border border-[#c6d4ec] bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_55%,#ffffff_100%)] p-4 sm:p-5`}
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#c6d4ec] bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">
+                <span className="h-2 w-2 rounded-full bg-[#1d4ed8]" />
+                Actualizacion academica
+              </div>
+              <h2 className="mt-3 text-xl font-semibold text-[#172033]">{activeNotification.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-[#536277]">{activeNotification.body}</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                className="rounded-xl bg-[#1d4ed8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]"
+                onClick={handleNotificationAction}
+                type="button"
+              >
+                Ir a cursos activos
+              </button>
+              <button
+                className="rounded-xl border border-[#d7e0ea] bg-white px-5 py-3 text-sm font-medium text-[#172033] transition hover:bg-[#fbfcfe]"
+                onClick={() => setActiveNotification(null)}
+                type="button"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {studentSection === "portal-overview" ? renderOverviewSection() : null}
+      {studentSection === "portal-courses" ? renderCoursesSection() : null}
+      {studentSection === "portal-path" ? renderPathSection() : null}
+      {studentSection === "portal-openings" ? renderOpeningsSection() : null}
+      {studentSection === "portal-support" ? renderSupportSection() : null}
 
       <CourseDetailModal course={selectedCourse} onClose={handleCloseCourseModal} />
       <CourseInterestModal

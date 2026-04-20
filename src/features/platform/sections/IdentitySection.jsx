@@ -8,6 +8,7 @@ import {
   SectionCard,
   SectionToolbar,
 } from "../components/admin/AdminUI";
+import { normalizeLearningPathItem } from "../learningPath";
 
 export function IdentitySection({
   content,
@@ -220,35 +221,51 @@ export function IdentitySection({
           </ScrollArea>
         </SectionCard>
 
-        <SectionCard title="Ruta de aprendizaje" description="La ruta se administra como piezas ordenadas, no como campos sueltos.">
+      <SectionCard title="Ruta de aprendizaje" description="La ruta se administra como piezas ordenadas, no como campos sueltos.">
           <SectionToolbar
             action={
               <ActionButton onClick={startCreateLearning} type="button">
-                Crear modulo
+                Crear hito
               </ActionButton>
             }
           >
             <FilterInput
               onChange={(event) => updateViewFilter("learning", event.target.value)}
-              placeholder="Filtrar modulos por titulo, tipo o enfoque"
+              placeholder="Filtrar hitos por titulo, etapa o enfoque"
               value={viewFilters.learning}
             />
           </SectionToolbar>
           <ScrollArea>
             <div className="grid gap-4">
               {filteredLearning.length ? (
-                filteredLearning.map((item) => (
-                  <RowCard key={item.id} eyebrow={item.type} title={item.title} body={item.status}>
-                    <SecondaryButton onClick={() => startEditLearning(item)} type="button">
-                      Editar
-                    </SecondaryButton>
-                    <SecondaryButton onClick={() => deleteCollectionItem("learningPath", item.id)} type="button">
-                      Eliminar
-                    </SecondaryButton>
-                  </RowCard>
-                ))
+                filteredLearning.map((item, index) => {
+                  const roadmapItem = normalizeLearningPathItem(item, index);
+
+                  return (
+                    <RowCard
+                      key={item.id}
+                      eyebrow={roadmapItem.stageLabel}
+                      title={roadmapItem.title}
+                      meta={[
+                        roadmapItem.track,
+                        roadmapItem.duration || null,
+                        roadmapItem.progressState || null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      body={roadmapItem.description}
+                    >
+                      <SecondaryButton onClick={() => startEditLearning(item)} type="button">
+                        Editar
+                      </SecondaryButton>
+                      <SecondaryButton onClick={() => deleteCollectionItem("learningPath", item.id)} type="button">
+                        Eliminar
+                      </SecondaryButton>
+                    </RowCard>
+                  );
+                })
               ) : (
-                <EmptyState title="No hay modulos que coincidan" body="Crea uno nuevo o ajusta el filtro." />
+                <EmptyState title="No hay hitos que coincidan" body="Crea uno nuevo o ajusta el filtro." />
               )}
             </div>
           </ScrollArea>

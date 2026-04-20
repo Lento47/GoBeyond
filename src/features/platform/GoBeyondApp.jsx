@@ -129,7 +129,10 @@ function getWorkspaceSectionFromLocation(pathname, hash) {
   return getDefaultWorkspaceSection(getViewModeFromPath(pathname));
 }
 
-function WorkspaceHomeButton({ subtitle, contextInitial }) {
+function WorkspaceHomeButton({ subtitle, contextInitial, variant = "default" }) {
+  const isAdminVariant = variant === "admin";
+  const isTeacherVariant = variant === "teacher";
+  const isStudentVariant = variant === "student";
   return (
     <div className="flex min-w-0 items-center gap-3">
       <div className="flex h-11 shrink-0 items-center">
@@ -137,7 +140,15 @@ function WorkspaceHomeButton({ subtitle, contextInitial }) {
         <span className="sr-only">{contextInitial}</span>
       </div>
       <div className="min-w-0 text-left">
-        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#6b7a90]">GoBeyond Workspace</p>
+        <p className={`text-[10px] font-black uppercase ${
+          isAdminVariant || isTeacherVariant
+            ? "tracking-[0.42em] text-[#c07d36]"
+            : isStudentVariant
+              ? "tracking-[0.42em] text-[#1d4ed8]"
+              : "tracking-[0.24em] text-[#6b7a90]"
+        }`}>
+          {isAdminVariant || isTeacherVariant || isStudentVariant ? "GoBeyond" : "GoBeyond Workspace"}
+        </p>
         <p className="truncate text-sm font-semibold leading-tight text-[#172033]">{subtitle}</p>
       </div>
     </div>
@@ -160,19 +171,43 @@ function ShellMenuIcon({ open }) {
   );
 }
 
-function WorkspaceSidebarButton({ item, onSelect }) {
+function WorkspaceSidebarButton({ item, onSelect, variant = "default" }) {
+  const isAdminVariant = variant === "admin";
+  const isTeacherVariant = variant === "teacher";
+  const isStudentVariant = variant === "student";
   return (
     <button
-      className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-        item.active
-          ? "border-[#c6d4ec] bg-[#eef4ff] text-[#172033] shadow-[0_1px_2px_rgba(29,78,216,0.06)]"
-          : "border-transparent bg-transparent text-[#536277] hover:border-[#d7e0ea] hover:bg-white"
+      className={`w-full text-left transition ${
+        isAdminVariant
+          ? item.active
+            ? "rounded-[12px] bg-[#111827] px-3 py-2.5 text-[11px] font-semibold text-[#c2cfdf]"
+            : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
+          : isTeacherVariant
+            ? item.active
+              ? "rounded-[12px] bg-[#eef4ff] px-3 py-2.5 text-[11px] font-semibold text-[#1d4ed8]"
+              : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
+          : isStudentVariant
+            ? item.active
+              ? "rounded-[12px] bg-[#eef4ff] px-3 py-2.5 text-[11px] font-semibold text-[#1d4ed8]"
+              : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
+          : item.active
+            ? "rounded-2xl border border-[#c6d4ec] bg-[#eef4ff] px-4 py-3 text-[#172033] shadow-[0_1px_2px_rgba(29,78,216,0.06)]"
+            : "rounded-2xl border border-transparent bg-transparent px-4 py-3 text-[#536277] hover:border-[#d7e0ea] hover:bg-white"
       }`}
       onClick={() => onSelect(item)}
       type="button"
     >
-      <p className="text-sm font-semibold leading-none">{item.label}</p>
-      {item.caption ? <p className="mt-1 text-xs leading-relaxed text-inherit/80">{item.caption}</p> : null}
+      <div className="flex items-center gap-3">
+        {isAdminVariant || isTeacherVariant || isStudentVariant ? (
+          <span className={`h-2.5 w-2.5 rounded-full ${
+            item.active ? (isTeacherVariant ? "bg-[#d6a46e]" : "bg-[#60a5fa]") : "bg-[#d7e0ea]"
+          }`} />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <p className={`${isAdminVariant || isTeacherVariant || isStudentVariant ? "truncate" : ""} text-sm font-semibold leading-none`}>{item.label}</p>
+          {item.caption && !isAdminVariant && !isTeacherVariant && !isStudentVariant ? <p className="mt-1 text-xs leading-relaxed text-inherit/80">{item.caption}</p> : null}
+        </div>
+      </div>
     </button>
   );
 }
@@ -224,33 +259,25 @@ function WorkspaceContextSwitcher({ currentUser, onRoleSwitch, compact = false, 
 
   const activeRoleMeta = workspaceRoleMeta[currentUser.role] ?? workspaceRoleMeta.student;
   const controlId = `workspace-context-options-${compact ? "compact" : "full"}`;
+  const compactMenuClass = menuPlacement === "top" ? "bottom-full mb-2" : "top-full mt-2";
 
   return (
-    <div className={`grid gap-2 ${compact ? "" : "rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"}`} ref={containerRef}>
+    <div className={`min-w-0 ${compact ? "relative" : "rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"}`} ref={containerRef}>
       {compact ? (
         <button
           aria-controls={controlId}
           aria-expanded={open}
-          className={`grid w-full grid-cols-[minmax(0,1fr)_4.25rem_1.75rem] items-center gap-2 rounded-[18px] border px-3 py-2.5 text-left transition ${
+          className={`grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-[14px] border px-3 py-2.5 text-left transition ${
             open
-              ? "border-[#c8d7f2] bg-[linear-gradient(180deg,#f6f9ff_0%,#edf4ff_100%)] shadow-[0_10px_22px_rgba(29,78,216,0.1)]"
-              : "border-[#d7e2f1] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_8px_18px_rgba(15,23,42,0.05)] hover:border-[#bfd0eb] hover:bg-[#fbfdff]"
+              ? "border-[#c6d4ec] bg-[#eef4ff]"
+              : "border-[#d7e0ea] bg-[#f5f7fb] hover:border-[#bbc8d9]"
           }`}
           onClick={() => setOpen((current) => !current)}
           type="button"
         >
-          <span className="flex min-w-0 items-center gap-2.5 overflow-hidden">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.95rem] border border-[#d9e3ef] bg-[#f8fbff]">
-              <span className={`h-3.5 w-3.5 rounded-full ${activeRoleMeta.accent}`} />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-[0.96rem] font-semibold leading-none text-[#172033]">{activeRoleMeta.label}</span>
-            </span>
-          </span>
-          <span className="flex h-6 w-[4.25rem] shrink-0 items-center justify-center rounded-full border border-[#d9e3ef] bg-white px-2 text-center text-[9px] font-black uppercase leading-none tracking-[0.16em] text-[#5f6f86]">
-            {currentUser.status}
-          </span>
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#d9e3ef] bg-white text-[#5f6f86]">
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${activeRoleMeta.accent}`} />
+          <span className="min-w-0 whitespace-nowrap text-sm font-semibold leading-none text-[#172033]">{activeRoleMeta.label}</span>
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center justify-self-end text-[#6b7a90]">
             <WorkspaceContextGlyph className="text-[10px]" />
           </span>
         </button>
@@ -286,7 +313,7 @@ function WorkspaceContextSwitcher({ currentUser, onRoleSwitch, compact = false, 
 
       {open ? (
         <div
-          className={`grid gap-2 rounded-[20px] border border-[#d7e2f1] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-2.5 shadow-[0_12px_26px_rgba(15,23,42,0.06)] ${compact ? "" : "mt-1"}`}
+          className={`grid w-full min-w-0 gap-2 rounded-[16px] border border-[#d7e0ea] bg-[#f5f7fb] p-2 ${compact ? `absolute left-0 right-0 z-20 shadow-[0_12px_26px_rgba(15,23,42,0.06)] ${compactMenuClass}` : "mt-1 shadow-[0_12px_26px_rgba(15,23,42,0.06)]"}`}
           id={controlId}
           role="listbox"
         >
@@ -297,10 +324,10 @@ function WorkspaceContextSwitcher({ currentUser, onRoleSwitch, compact = false, 
             return (
               <button
                 aria-selected={isActive}
-                className={`grid min-h-[4.2rem] w-full grid-cols-[2.25rem_minmax(0,1fr)_1.5rem] items-center gap-2.5 rounded-[18px] border px-3 py-2.5 text-left transition ${
+                className={`grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-[12px] border px-3 py-2.5 text-left transition ${
                   isActive
-                    ? "border-[#c8d7f2] bg-[linear-gradient(180deg,#f3f7ff_0%,#eaf1ff_100%)] text-[#163067] shadow-[0_8px_18px_rgba(29,78,216,0.08)]"
-                    : "border-[#dbe4ef] bg-white text-[#172033] hover:border-[#c8d6ea] hover:bg-[#f8fbff]"
+                    ? "border-[#c6d4ec] bg-[#eef4ff] text-[#1d4ed8]"
+                    : "border-[#d7e0ea] bg-white text-[#172033] hover:border-[#bbc8d9] hover:bg-[#f5f7fb]"
                 }`}
                 key={role}
                 onClick={async () => {
@@ -318,23 +345,17 @@ function WorkspaceContextSwitcher({ currentUser, onRoleSwitch, compact = false, 
                 }}
                 type="button"
               >
-                <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-[1rem] border ${
-                    isActive ? "border-[#c8d7f2] bg-white shadow-[0_4px_12px_rgba(29,78,216,0.08)]" : "border-[#d7e0ea] bg-[#f6f9fd]"
-                  }`}
-                >
-                  <span className={`h-4 w-4 rounded-full ${roleMeta.accent}`} />
-                </span>
+                <span className={`h-2.5 w-2.5 rounded-full ${roleMeta.accent}`} />
                 <span className="min-w-0">
-                  <span className={`block text-[0.98rem] font-semibold leading-[1.08] ${isActive ? "text-[#163067]" : "text-[#172033]"}`}>
+                  <span className={`block text-sm font-semibold leading-none ${isActive ? "text-[#1d4ed8]" : "text-[#172033]"}`}>
                     {roleMeta.label}
                   </span>
-                  <span className={`mt-0.5 block text-[0.82rem] leading-[1.15] ${isActive ? "text-[#45608d]" : "text-[#617085]"}`}>
+                  <span className={`mt-1 block text-[11px] leading-[1.15] ${isActive ? "text-[#45608d]" : "text-[#6b7a90]"}`}>
                     {roleMeta.description}
                   </span>
                 </span>
-                <span className="flex h-6 w-6 items-center justify-center justify-self-end">
-                  {isActive ? <span className={`h-2.5 w-2.5 rounded-full ${roleMeta.accent}`} /> : null}
+                <span className="flex h-5 w-5 items-center justify-center justify-self-end">
+                  {isActive ? <span className={`h-2 w-2 rounded-full ${roleMeta.accent}`} /> : null}
                 </span>
               </button>
             );
@@ -417,9 +438,60 @@ function WorkspaceShell({
   sessionAction = null,
   accessDetail = null,
   onRoleSwitch = null,
+  variant = "default",
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const groupedNavigationItems = groupWorkspaceNavigationItems(navigationItems);
+  const isAdminVariant = variant === "admin";
+  const isTeacherVariant = variant === "teacher";
+  const isStudentVariant = variant === "student";
+  const shellRootClass = isAdminVariant || isStudentVariant
+    ? "min-h-screen bg-[linear-gradient(180deg,#f9fbfe_0%,#f3f7fc_48%,#eef3f8_100%)] text-[#172033]"
+    : `min-h-screen ${workspaceChrome.canvas} text-[#172033]`;
+  const sidebarClass = isAdminVariant
+    ? "border-r border-[#d7e0ea] bg-[#fbfcfe]"
+    : "border-r border-[#d7e0ea] bg-[#fbfcfe]";
+  const brandPanelClass = isAdminVariant
+    ? "rounded-[22px] border border-[#d7e0ea] bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+    : isStudentVariant
+      ? "rounded-[22px] border border-[#d7e0ea] bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+    : isTeacherVariant
+      ? "rounded-[22px] border border-[#d7e0ea] bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+    : `${workspaceChrome.shellPanel} p-4`;
+  const accessPanelClass = isAdminVariant
+    ? "mt-4 rounded-[18px] border border-[#1e293b] bg-[#111827] px-4 py-4 shadow-[0_18px_44px_rgba(15,23,42,0.18)]"
+    : isStudentVariant
+      ? "mt-4 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] px-4 py-4 shadow-[0_12px_24px_rgba(29,78,216,0.08)]"
+    : isTeacherVariant
+      ? "mt-4 rounded-[18px] border border-[#e8d4bf] bg-[#fff8f1] px-4 py-4 shadow-[0_12px_24px_rgba(182,110,42,0.08)]"
+    : "mt-4 rounded-2xl border border-[#e7edf5] bg-[#f7f9fc] px-3 py-3";
+  const navPanelClass = isAdminVariant
+    ? "flex-1 min-h-0 overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+    : isStudentVariant
+      ? "flex-1 min-h-0 overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+    : isTeacherVariant
+      ? "flex-1 min-h-0 overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+    : `${workspaceChrome.shellPanel} flex-1 min-h-0 overflow-hidden p-3`;
+  const sessionPanelClass = isAdminVariant
+    ? "rounded-[22px] border border-[#d7e0ea] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+    : isStudentVariant
+      ? "rounded-[22px] border border-[#d7e0ea] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+    : isTeacherVariant
+      ? "rounded-[22px] border border-[#d7e0ea] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+    : `${workspaceChrome.shellPanel} p-4`;
+  const topbarClass = isAdminVariant || isStudentVariant
+    ? "sticky top-0 z-30 border-b border-[#d7e0ea] bg-[#fbfcfe]/96 backdrop-blur-xl"
+    : isTeacherVariant
+      ? "sticky top-0 z-30 border-b border-[#d7e0ea] bg-[#fbfcfe]/96 backdrop-blur-xl"
+    : `${workspaceChrome.topbar} sticky top-0 z-30`;
+  const titleEyebrow = isAdminVariant || isTeacherVariant || isStudentVariant ? "GoBeyond" : "Workspace";
+  const sessionInitials =
+    String(currentUser?.fullName ?? "")
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "GB";
 
   function handleNavigation(item) {
     setSidebarOpen(false);
@@ -427,7 +499,7 @@ function WorkspaceShell({
   }
 
   return (
-    <div className={`min-h-screen ${workspaceChrome.canvas} text-[#172033]`}>
+    <div className={shellRootClass}>
       <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
         <div
           aria-hidden={!sidebarOpen}
@@ -438,39 +510,43 @@ function WorkspaceShell({
         />
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-[17rem] border-r border-[#d7e0ea] bg-[#fbfcfe] px-4 py-5 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 w-[17rem] ${sidebarClass} px-4 py-5 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           <div className="flex h-full min-h-0 flex-col gap-5">
-            <div className={`${workspaceChrome.shellPanel} p-4`}>
-              <WorkspaceHomeButton contextInitial={contextInitial} subtitle={subtitle} />
-              <div className="mt-4 rounded-2xl border border-[#e7edf5] bg-[#f7f9fc] px-3 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Acceso</p>
-                <p className="mt-2 text-sm font-semibold text-[#172033]">
+            <div className={brandPanelClass}>
+              <WorkspaceHomeButton contextInitial={contextInitial} subtitle={subtitle} variant={variant} />
+              <div className={accessPanelClass}>
+                <p className={`text-[10px] font-black uppercase tracking-[0.22em] ${
+                  isAdminVariant ? "text-[#9fb0c9]" : isTeacherVariant ? "text-[#b66e2a]" : isStudentVariant ? "text-[#1d4ed8]" : "text-[#6b7a90]"
+                }`}>Acceso</p>
+                <p className={`mt-2 text-sm font-semibold ${isAdminVariant ? "text-white" : "text-[#172033]"}`}>
                   {currentUser?.role === "admin"
                     ? "Control administrativo"
                     : currentUser?.role === "teacher"
                       ? "Experiencia docente"
                       : "Experiencia estudiantil"}
                 </p>
-                <p className="mt-1 text-xs leading-relaxed text-[#5d6b80]">
+                <p className={`mt-1 text-xs leading-relaxed ${
+                  isAdminVariant ? "text-[#c2cfdf]" : isTeacherVariant ? "text-[#8b5e34]" : isStudentVariant ? "text-[#45608d]" : "text-[#5d6b80]"
+                }`}>
                   {accessDetail ?? (currentUser ? `${currentUser.email} · ${formatUserRoles(currentUser)}` : "Workspace operativo seguro")}
                 </p>
               </div>
             </div>
 
-            <nav className={`${workspaceChrome.shellPanel} flex-1 min-h-0 overflow-hidden p-3`}>
-              <p className="px-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Navegacion</p>
+            <nav className={navPanelClass}>
+              <p className={`px-2 font-black uppercase text-[#6b7a90] ${isAdminVariant || isTeacherVariant || isStudentVariant ? "text-[8px] tracking-[0.3em]" : "text-[10px] tracking-[0.22em]"}`}>Navegacion</p>
               <div className="mt-3 grid max-h-full gap-2 overflow-y-auto pr-1">
                 {navigationItems.length ? (
                   groupedNavigationItems.map((group, index) => (
                     <div className="grid gap-2" key={group.label || `nav-group-${index}`}>
                       {group.label ? (
-                        <p className="px-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{group.label}</p>
+                        <p className={`px-2 font-black uppercase text-[#6b7a90] ${isAdminVariant || isTeacherVariant || isStudentVariant ? "text-[8px] tracking-[0.3em]" : "text-[10px] tracking-[0.22em]"}`}>{group.label}</p>
                       ) : null}
                       {group.items.map((item) => (
-                        <WorkspaceSidebarButton item={item} key={`${group.label}-${item.label}`} onSelect={handleNavigation} />
+                        <WorkspaceSidebarButton item={item} key={`${group.label}-${item.label}`} onSelect={handleNavigation} variant={variant} />
                       ))}
                     </div>
                   ))
@@ -482,22 +558,32 @@ function WorkspaceShell({
               </div>
             </nav>
 
-            <div className={`${workspaceChrome.shellPanel} p-4`}>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Sesión</p>
+            <div className={`${sessionPanelClass} mt-auto min-w-0 overflow-visible`}>
               {currentUser ? (
                 <>
-                  <p className="mt-2 text-sm font-semibold text-[#172033]">{currentUser.fullName}</p>
-                  <div className="mt-1">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#c6d4ec] bg-[#eef4ff] text-[11px] font-bold text-[#1d4ed8]">
+                      {sessionInitials}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#172033]">{currentUser.fullName}</p>
+                      <p className="truncate text-[11px] text-[#6b7a90]">{currentUser.email}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 min-w-0">
                     {currentUser?.roles?.length > 1 && onRoleSwitch ? (
                       <WorkspaceContextSwitcher currentUser={currentUser} compact menuPlacement="top" onRoleSwitch={onRoleSwitch} />
                     ) : (
-                      <p className="text-xs uppercase tracking-[0.18em] text-[#6b7a90]">
+                      <div className="rounded-[14px] border border-[#d7e0ea] bg-[#f5f7fb] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90]">
                         {workspaceRoleLabels[currentUser.role] ?? currentUser.role} · {currentUser.status}
-                      </p>
+                      </div>
                     )}
                   </div>
-                  <p className="mt-2 text-xs text-[#617085]">{currentUser.email}</p>
-                  {sessionAction ? <div className="mt-4">{sessionAction}</div> : null}
+                  {sessionAction ? (
+                    <div className="mt-3 [&>button]:w-full [&>button]:rounded-xl [&>button]:border [&>button]:border-[#d7e0ea] [&>button]:bg-white [&>button]:px-4 [&>button]:py-2.5 [&>button]:text-[11px] [&>button]:font-semibold [&>button]:text-[#9a3412] [&>button]:transition [&>button]:hover:border-[#fecaca] [&>button]:hover:bg-[#fff7ed]">
+                      {sessionAction}
+                    </div>
+                  ) : null}
                 </>
               ) : (
                 <p className="mt-2 text-sm leading-relaxed text-[#5d6b80]">Validando identidad del workspace.</p>
@@ -507,7 +593,7 @@ function WorkspaceShell({
         </aside>
 
         <div className="min-w-0 lg:col-start-2">
-          <header className={`${workspaceChrome.topbar} sticky top-0 z-30`}>
+          <header className={topbarClass}>
             <div className="flex min-h-[4.6rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
               <button
                 className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#d7e0ea] bg-white text-[#172033] lg:hidden"
@@ -517,7 +603,13 @@ function WorkspaceShell({
                 <ShellMenuIcon open={sidebarOpen} />
               </button>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#6b7a90]">Workspace</p>
+                <p className={`text-[10px] font-black uppercase ${
+                  isAdminVariant || isTeacherVariant
+                    ? "tracking-[0.42em] text-[#c07d36]"
+                    : isStudentVariant
+                      ? "tracking-[0.42em] text-[#1d4ed8]"
+                      : "tracking-[0.24em] text-[#6b7a90]"
+                }`}>{titleEyebrow}</p>
                 <h1 className="truncate text-lg font-semibold text-[#172033] sm:text-[1.35rem]">{subtitle}</h1>
               </div>
               <div className="hidden items-center gap-3 lg:flex">
@@ -525,7 +617,12 @@ function WorkspaceShell({
                 {actions}
               </div>
             </div>
-            {(utility || actions) ? <div className="flex flex-wrap items-center gap-3 border-t border-[#e7edf5] px-4 py-3 lg:hidden sm:px-6">{utility}{actions}</div> : null}
+            {(utility || actions) ? (
+              <div className="flex flex-wrap items-center gap-3 border-t border-[#e7edf5] px-4 py-3 lg:hidden sm:px-6">
+                {utility}
+                {actions}
+              </div>
+            ) : null}
           </header>
 
           <div className={`mx-auto w-full ${wide ? "max-w-[120rem]" : "max-w-[96rem]"} px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8`}>
@@ -750,6 +847,18 @@ export default function GoBeyondApp() {
   }
 
   function navigateToWorkspaceSection(nextView, sectionId) {
+    if (nextView === "teacher" || nextView === "portal") {
+      const nextPath = nextView === "teacher" ? "/teacher" : "/portal";
+      if (viewMode !== nextView) {
+        window.history.pushState({}, "", `${nextPath}#${sectionId}`);
+        setViewMode(nextView);
+      } else {
+        window.history.replaceState({}, "", `${nextPath}#${sectionId}`);
+      }
+      setActiveWorkspaceSection(sectionId);
+      return;
+    }
+
     if (viewMode !== nextView) {
       navigateTo(nextView);
     }
@@ -1190,14 +1299,16 @@ export default function GoBeyondApp() {
           }
           subtitle="Portal estudiantil"
           utility={<WorkspaceStatusChip>{currentUser?.fullName || "Sesion estudiantil"}</WorkspaceStatusChip>}
+          variant="student"
           wide
         >
           <StudentExperience
+            activeSection={activeWorkspaceSection}
             dashboard={studentDashboard}
             dashboardError={studentDashboardError}
             dashboardLoading={studentDashboardLoading}
+            onNavigateSection={(sectionId) => navigateToWorkspaceSection("portal", sectionId)}
             onOpenCommunity={() => navigateTo("comunidad")}
-            onLogout={handleStudentLogout}
           />
         </WorkspaceShell>
       ) : viewMode === "comunidad" ? (
@@ -1306,9 +1417,11 @@ export default function GoBeyondApp() {
           }
           subtitle="Workspace docente"
           utility={<WorkspaceStatusChip>{currentUser?.email || "Sesion docente"}</WorkspaceStatusChip>}
+          variant="teacher"
           wide
         >
           <TeacherExperience
+            activeSection={activeWorkspaceSection}
             courses={teacherCourses}
             coursesError={teacherCoursesError}
             coursesLoading={teacherCoursesLoading}
@@ -1363,6 +1476,7 @@ export default function GoBeyondApp() {
           }
           subtitle="Panel administrativo"
           utility={<WorkspaceStatusChip>{currentUser?.email || "Sesion administrativa"}</WorkspaceStatusChip>}
+          variant="admin"
           wide
         >
           <div>

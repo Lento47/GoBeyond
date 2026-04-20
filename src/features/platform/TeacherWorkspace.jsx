@@ -12,6 +12,7 @@ import {
   SmallStat,
   Textarea,
 } from "./components/admin/AdminUI";
+import { uploadAdminAsset } from "../../services/contentApi";
 import { TeacherSopsSection } from "./SopsWorkspaceV2";
 
 const initialAssignmentForm = {
@@ -20,6 +21,15 @@ const initialAssignmentForm = {
   title: "",
   instruction: "",
   dueLabel: "",
+  dueAt: "",
+  dueDate: "",
+  dueTime: "",
+  fileKey: "",
+  fileName: "",
+  fileType: "",
+  fileUploadedAt: "",
+  fileUrl: "",
+  attachments: [],
 };
 
 const initialEnrollmentForm = {
@@ -80,6 +90,55 @@ function formatDateTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function toDateTimeLocalParts(value) {
+  if (!value) {
+    return { dueDate: "", dueTime: "" };
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return { dueDate: "", dueTime: "" };
+  }
+
+  const pad = (segment) => String(segment).padStart(2, "0");
+
+  return {
+    dueDate: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    dueTime: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+  };
+}
+
+function buildAssignmentDueState(dueDate, dueTime) {
+  const normalizedDate = String(dueDate ?? "").trim();
+  const normalizedTime = String(dueTime ?? "").trim();
+
+  if (!normalizedDate) {
+    return { dueAt: "", dueLabel: "" };
+  }
+
+  const isoCandidate = `${normalizedDate}T${normalizedTime || "23:59"}`;
+  const parsed = new Date(isoCandidate);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return { dueAt: "", dueLabel: "" };
+  }
+
+  return {
+    dueAt: parsed.toISOString(),
+    dueLabel: parsed.toLocaleString("es-CR", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+}
+
+function createAttachmentId() {
+  return `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function titleCase(value) {
@@ -163,6 +222,7 @@ function SupportList({ items, emptyTitle, emptyBody, renderMeta, actionLabel, on
 export function TeacherExperience(props) {
   const {
     currentUser,
+    activeSection = "teacher-overview",
     dashboard,
     dashboardLoading,
     dashboardError,
@@ -224,6 +284,7 @@ export function TeacherExperience(props) {
       : courses?.reduce((total, course) => total + ((course.assignments ?? []).length || 0), 0) ?? 0,
     openCases: supportLoading ? dashboard?.metrics?.openCases ?? 0 : liveOpenCases,
   };
+  const teacherSection = activeSection || "teacher-overview";
 
   function closeModal() {
     setModal("");
@@ -239,12 +300,36 @@ export function TeacherExperience(props) {
   }
 
   function startEditAssignment(courseId, assignment) {
+    const dueParts = toDateTimeLocalParts(assignment.dueAt);
+    const attachments =
+      Array.isArray(assignment.attachments) && assignment.attachments.length
+        ? assignment.attachments
+        : assignment.fileKey
+          ? [{
+              id: "legacy",
+              fileKey: assignment.fileKey ?? "",
+              fileName: assignment.fileName ?? "",
+              fileType: assignment.fileType ?? "",
+              fileUploadedAt: assignment.fileUploadedAt ?? "",
+              fileExpiresAt: assignment.fileExpiresAt ?? "",
+              fileUrl: assignment.fileUrl ?? "",
+            }]
+          : [];
     setAssignmentForm({
       courseId,
       assignmentId: assignment.id,
       title: assignment.title ?? "",
       instruction: assignment.instruction ?? "",
       dueLabel: assignment.dueLabel ?? "",
+      dueAt: assignment.dueAt ?? "",
+      dueDate: dueParts.dueDate,
+      dueTime: dueParts.dueTime,
+      fileKey: assignment.fileKey ?? "",
+      fileName: assignment.fileName ?? "",
+      fileType: assignment.fileType ?? "",
+      fileUploadedAt: assignment.fileUploadedAt ?? "",
+      fileUrl: assignment.fileUrl ?? "",
+      attachments,
     });
     setModal("assignment");
   }
@@ -294,22 +379,37 @@ export function TeacherExperience(props) {
     setActionMessage("");
 
     try {
+      const dueState = buildAssignmentDueState(assignmentForm.dueDate, assignmentForm.dueTime);
+      const attachments = Array.isArray(assignmentForm.attachments) ? assignmentForm.attachments : [];
+      const payload = {
+        courseId: assignmentForm.courseId,
+        title: assignmentForm.title,
+        instruction: assignmentForm.instruction,
+        dueAt: dueState.dueAt,
+        dueLabel: dueState.dueLabel,
+        fileKey: attachments[0]?.fileKey ?? assignmentForm.fileKey,
+        fileName: attachments[0]?.fileName ?? assignmentForm.fileName,
+        fileType: attachments[0]?.fileType ?? assignmentForm.fileType,
+        fileUploadedAt: attachments[0]?.fileUploadedAt ?? assignmentForm.fileUploadedAt,
+        fileExpiresAt: attachments[0]?.fileExpiresAt ?? "",
+        attachments: attachments.map((attachment) => ({
+          id: attachment.id,
+          fileKey: attachment.fileKey,
+          fileName: attachment.fileName,
+          fileType: attachment.fileType,
+          fileUploadedAt: attachment.fileUploadedAt,
+          fileExpiresAt: attachment.fileExpiresAt ?? "",
+        })),
+      };
+
       if (assignmentForm.assignmentId) {
         await onUpdateAssignment({
-          courseId: assignmentForm.courseId,
           assignmentId: assignmentForm.assignmentId,
-          title: assignmentForm.title,
-          instruction: assignmentForm.instruction,
-          dueLabel: assignmentForm.dueLabel,
+          ...payload,
         });
         setActionMessage("Asignacion actualizada en el curso docente.");
       } else {
-        await onCreateAssignment({
-          courseId: assignmentForm.courseId,
-          title: assignmentForm.title,
-          instruction: assignmentForm.instruction,
-          dueLabel: assignmentForm.dueLabel,
-        });
+        await onCreateAssignment(payload);
         setActionMessage("Asignacion publicada para el curso seleccionado.");
       }
       closeModal();
@@ -409,11 +509,8 @@ export function TeacherExperience(props) {
     }
   }
 
-  return (
-    <div className="grid gap-6">
-      <WorkspaceNotice message={actionMessage} />
-      <WorkspaceNotice message={actionError || dashboardError || coursesError || enrollmentsError || supportError} tone="error" />
-
+  function renderOverviewSection() {
+    return (
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]" id="teacher-overview">
         <SectionCard
           description={dashboard?.summary || "Gestiona cursos, tareas, matriculas e incidencias desde un mismo frente docente."}
@@ -450,7 +547,11 @@ export function TeacherExperience(props) {
           )}
         </SectionCard>
       </section>
+    );
+  }
 
+  function renderCoursesSection() {
+    return (
       <SectionCard
         description="Cursos asignados, cohortes activas y acceso rapido para abrir nuevas tareas o matriculas."
         title="Cursos y grupos"
@@ -497,7 +598,11 @@ export function TeacherExperience(props) {
           )}
         </div>
       </SectionCard>
+    );
+  }
 
+  function renderAssignmentsSection() {
+    return (
       <SectionCard
         description="Gestiona las asignaciones publicadas en tus cursos sin salir del workspace."
         title="Tareas y evaluaciones"
@@ -525,7 +630,12 @@ export function TeacherExperience(props) {
                         density="compact"
                         eyebrow={assignment.dueLabel ? `Entrega ${assignment.dueLabel}` : "Sin fecha de entrega"}
                         key={assignment.id}
-                        meta={`${course.title} · ${assignment.fileName || "Sin archivo adjunto"}`}
+                        meta={[
+                          course.title,
+                          `${(assignment.attachments ?? []).length || (assignment.fileName ? 1 : 0)} adjunto${((assignment.attachments ?? []).length || (assignment.fileName ? 1 : 0)) === 1 ? "" : "s"}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                         title={assignment.title}
                       >
                         <SecondaryButton onClick={() => startEditAssignment(course.id, assignment)} type="button">
@@ -544,7 +654,11 @@ export function TeacherExperience(props) {
           )}
         </div>
       </SectionCard>
+    );
+  }
 
+  function renderOperationsSection() {
+    return (
       <section className="grid gap-6 xl:items-start xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]" id="teacher-operations">
         <SectionCard
           description="Matricula estudiantes en tus cursos asignados y ajusta progreso o vigencia de acceso."
@@ -634,7 +748,11 @@ export function TeacherExperience(props) {
           )}
         </SectionCard>
       </section>
+    );
+  }
 
+  function renderSopsSection() {
+    return (
       <TeacherSopsSection
         activeRequests={sopActiveRequests ?? []}
         error={sopsError}
@@ -644,6 +762,18 @@ export function TeacherExperience(props) {
         onRequestChange={onRequestSopChange}
         sops={sops ?? []}
       />
+    );
+  }
+
+  return (
+    <div className="grid gap-6">
+      <WorkspaceNotice message={actionMessage} />
+      <WorkspaceNotice message={actionError || dashboardError || coursesError || enrollmentsError || supportError} tone="error" />
+      {teacherSection === "teacher-overview" ? renderOverviewSection() : null}
+      {teacherSection === "teacher-courses" ? renderCoursesSection() : null}
+      {teacherSection === "teacher-assignments" ? renderAssignmentsSection() : null}
+      {teacherSection === "teacher-operations" ? renderOperationsSection() : null}
+      {teacherSection === "teacher-sops" ? renderSopsSection() : null}
 
       {modal === "assignment" ? (
         <ModalShell
@@ -661,8 +791,109 @@ export function TeacherExperience(props) {
               ))}
             </Select>
             <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, title: event.target.value }))} placeholder="Titulo de la tarea" value={assignmentForm.title} />
-            <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueLabel: event.target.value }))} placeholder="Entrega estimada (ej. Viernes 18:00)" value={assignmentForm.dueLabel} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueDate: event.target.value }))} type="date" value={assignmentForm.dueDate} />
+              <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueTime: event.target.value }))} type="time" value={assignmentForm.dueTime} />
+            </div>
             <Textarea onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Instruccion o criterio de evaluacion" value={assignmentForm.instruction} />
+            <div className="grid gap-3 rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Archivo adjunto</p>
+                  <p className="mt-1 text-sm text-[#536277]">
+                    Sube una o varias guias, plantillas o recursos para esta tarea.
+                  </p>
+                </div>
+                {assignmentForm.attachments.length ? (
+                  <span className="rounded-full border border-[#d7e0ea] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#435066]">
+                    {assignmentForm.attachments.length} adjunto{assignmentForm.attachments.length === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+              </div>
+              <input
+                accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv"
+                className="block w-full text-sm text-[#435066] file:mr-4 file:rounded-xl file:border-0 file:bg-[#eef4ff] file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-[#1d4ed8] hover:file:bg-[#dbeafe]"
+                disabled={submitting}
+                onChange={async (event) => {
+                  const files = Array.from(event.target.files ?? []);
+                  if (!files.length) {
+                    return;
+                  }
+
+                  try {
+                    setSubmitting(true);
+                    setActionError("");
+                    const uploads = await Promise.all(files.map((file) => uploadAdminAsset(undefined, file, "assignment-file")));
+                    setAssignmentForm((current) => {
+                      const nextAttachments = [...(current.attachments ?? [])];
+
+                      uploads.forEach((asset, index) => {
+                        nextAttachments.push({
+                          id: createAttachmentId(),
+                          fileKey: asset.key ?? "",
+                          fileName: asset.fileName ?? files[index].name,
+                          fileType: asset.contentType ?? files[index].type,
+                          fileUploadedAt: new Date().toISOString(),
+                          fileExpiresAt: "",
+                          fileUrl: asset.url ?? "",
+                        });
+                      });
+
+                      return {
+                        ...current,
+                        attachments: nextAttachments,
+                        fileKey: nextAttachments[0]?.fileKey ?? "",
+                        fileName: nextAttachments[0]?.fileName ?? "",
+                        fileType: nextAttachments[0]?.fileType ?? "",
+                        fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
+                        fileUrl: nextAttachments[0]?.fileUrl ?? "",
+                      };
+                    });
+                  } catch (uploadError) {
+                    setActionError(uploadError.message);
+                  } finally {
+                    setSubmitting(false);
+                    event.target.value = "";
+                  }
+                }}
+                multiple
+                type="file"
+              />
+              {assignmentForm.attachments.length ? (
+                <div className="grid gap-2">
+                  {assignmentForm.attachments.map((attachment) => (
+                    <div key={attachment.id} className="flex flex-col gap-2 rounded-[14px] border border-[#d7e0ea] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[#172033]">{attachment.fileName}</p>
+                        <p className="mt-1 text-[11px] text-[#6b7a90]">
+                          {attachment.fileUploadedAt ? `cargado ${formatDateTime(attachment.fileUploadedAt)}` : "Adjunto listo"}
+                        </p>
+                      </div>
+                      <SecondaryButton
+                        className="w-full sm:w-auto"
+                        onClick={() =>
+                          setAssignmentForm((current) => {
+                            const nextAttachments = (current.attachments ?? []).filter((item) => item.id !== attachment.id);
+                            return {
+                              ...current,
+                              attachments: nextAttachments,
+                              fileKey: nextAttachments[0]?.fileKey ?? "",
+                              fileName: nextAttachments[0]?.fileName ?? "",
+                              fileType: nextAttachments[0]?.fileType ?? "",
+                              fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
+                              fileUrl: nextAttachments[0]?.fileUrl ?? "",
+                            };
+                          })
+                        }
+                        type="button"
+                      >
+                        Quitar
+                      </SecondaryButton>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-3">
               <ActionButton disabled={submitting} type="submit">
                 {submitting ? "Guardando..." : assignmentForm.assignmentId ? "Guardar cambios" : "Crear asignacion"}
