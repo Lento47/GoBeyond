@@ -122,7 +122,7 @@ const defaultParticipationOptions = [
 
 // --- COMPONENTES ATÓMICOS ---
 const SectionTag = ({ children }) => (
-  <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-blue-500 mb-6 block">
+  <span className="text-[11px] font-bold uppercase tracking-[0.5em] text-blue-500 mb-6 block">
     {children}
   </span>
 );
@@ -134,7 +134,7 @@ const GlassCard = ({ children, className = "" }) => (
 );
 
 const Badge = ({ children }) => (
-  <span className="px-3 py-1 bg-blue-600/10 border border-blue-600/20 text-blue-400 text-[9px] font-bold uppercase tracking-widest rounded-full">
+  <span className="px-3 py-1 bg-blue-600/10 border border-blue-600/20 text-blue-400 text-[11px] font-bold uppercase tracking-widest rounded-full">
     {children}
   </span>
 );
@@ -411,7 +411,7 @@ export function PublicExperience({
     <div className="min-h-screen bg-[#050505] text-white selection:bg-blue-500/30 font-sans overflow-x-hidden">
       
       {/* NAVBAR */}
-      <header className="fixed top-0 left-0 right-0 z-[100] bg-[#050505]/60 backdrop-blur-xl border-b border-white/5">
+      <header className="fixed top-0 left-0 right-0 z-[100] bg-[#050505]/60 backdrop-blur-xl border-b border-white/5 safe-top">
         <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 py-4 sm:py-5 flex items-center justify-between gap-3">
           <a className="flex items-center gap-3 min-w-0" href="#inicio">
             <img alt="Logo de GoBeyond" className="h-9 w-9 object-contain md:h-10 md:w-10" src="/logo-icon.png" />
@@ -478,8 +478,8 @@ export function PublicExperience({
                 {hero.description || brand.description}
               </MarkdownContent>
               <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-                <a href="#contacto" className="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all hover:bg-blue-500 hover:shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:-translate-y-1 text-center">Empezar ahora</a>
-                <a href="#servicios" className="px-8 py-4 bg-transparent text-white border border-white/10 font-bold rounded-xl text-sm transition-all hover:bg-white/5 text-center">Explorar catálogo</a>
+                <a href="#contacto" className="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all hover:bg-blue-500 hover:shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:-translate-y-1 active:scale-95 active:opacity-90 text-center">Empezar ahora</a>
+                <a href="#servicios" className="px-8 py-4 bg-transparent text-white border border-white/10 font-bold rounded-xl text-sm transition-all hover:bg-white/5 active:scale-95 active:opacity-80 text-center">Explorar catálogo</a>
               </div>
 
               {metrics.length ? (
@@ -844,7 +844,7 @@ export function PublicExperience({
                                       <EmbedFrame src={embed.embedUrl} title={item.title} />
                                     ) : (
                                       <div className="flex h-full min-h-[6.5rem] flex-col items-center justify-center bg-white/[0.03] px-4 text-center">
-                                        <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-blue-300">
+                                        <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-300">
                                           {externalDomain || "Referencia"}
                                         </p>
                                         <p className="mt-2 text-[11px] text-gray-500">
@@ -858,7 +858,7 @@ export function PublicExperience({
                               </div>
                               <div className="flex items-center justify-between gap-4 p-4">
                                 <div className="min-w-0">
-                                  <p className="text-[9px] uppercase tracking-[0.22em] text-blue-400">
+                                  <p className="text-[11px] uppercase tracking-[0.22em] text-blue-400">
                                     {item.source || item.category || "Noticia"}
                                     {item.publishedAt ? ` · ${new Date(item.publishedAt).toLocaleDateString("es-CR")}` : ""}
                                   </p>
@@ -1050,14 +1050,14 @@ export function PublicExperience({
         </section>
       </main>
 
-      <footer className="border-t border-white/5 py-12">
+      <footer className="border-t border-white/5 py-12 safe-bottom safe-x">
         <div className="container mx-auto grid gap-8 px-5 sm:px-6 md:px-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
             <div className="flex items-center gap-3">
               <img alt="Logo de GoBeyond" className="h-7 w-7 object-contain" src="/logo-icon.png" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">{brand.name || "GoBeyond Academy"}</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.3em]">{brand.name || "GoBeyond Academy"}</span>
             </div>
-            <p className="mt-4 text-[10px] uppercase tracking-[0.3em] text-gray-600">
+            <p className="mt-4 text-[11px] uppercase tracking-[0.3em] text-gray-600">
               © {new Date().getFullYear()} {brand.name || "GoBeyond Academy"} · Formación de Alto Impacto · Puerto Limón, CR.
             </p>
           </div>
