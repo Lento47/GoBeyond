@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   useAdminContent,
   useAdminEnrollments,
@@ -29,16 +29,19 @@ import {
   updateAdminSopChangeRequest,
   verifyEmail,
 } from "../../services/contentApi";
-import { AdminExperience } from "./AdminExperience";
-import { LegalPage } from "./LegalPages";
-import { LoginExperience } from "./LoginExperience";
-import { NewsArchive } from "./NewsArchive";
-import { StudentCommunityExperience } from "./StudentCommunityExperience";
-import { PublicExperience } from "./PublicExperience";
-import { StudentExperience } from "./StudentExperience";
-import { TeacherExperience } from "./TeacherWorkspace";
-import { adminNavigationGroups, adminViewLabels, adminViewIcons } from "./AdminWorkspace";
+import { adminNavigationGroups, adminViewIcons, adminViewLabels } from "./adminNavigation";
 import { workspaceChrome } from "./workspaceTheme";
+
+const AdminExperience = lazy(() => import("./AdminExperience").then((module) => ({ default: module.AdminExperience })));
+const LegalPage = lazy(() => import("./LegalPages").then((module) => ({ default: module.LegalPage })));
+const LoginExperience = lazy(() => import("./LoginExperience").then((module) => ({ default: module.LoginExperience })));
+const NewsArchive = lazy(() => import("./NewsArchive").then((module) => ({ default: module.NewsArchive })));
+const PublicExperience = lazy(() => import("./PublicExperience").then((module) => ({ default: module.PublicExperience })));
+const StudentCommunityExperience = lazy(() =>
+  import("./StudentCommunityExperience").then((module) => ({ default: module.StudentCommunityExperience }))
+);
+const StudentExperience = lazy(() => import("./StudentExperience").then((module) => ({ default: module.StudentExperience })));
+const TeacherExperience = lazy(() => import("./TeacherWorkspace").then((module) => ({ default: module.TeacherExperience })));
 
 const authSyncChannelName = "gobeyond-auth";
 const authSyncStorageKey = "gobeyond_auth_sync_event";
@@ -686,6 +689,17 @@ function WorkspaceShell({
   );
 }
 
+function RouteLoadingFallback() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center px-6 text-center text-[#172033]">
+      <div className="rounded-[24px] border border-[#d7e0ea] bg-white/90 px-6 py-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+        <p className="text-[11px] font-black uppercase tracking-[0.42em] text-[#1d4ed8]">GoBeyond</p>
+        <p className="mt-2 text-sm font-semibold text-[#435066]">Cargando experiencia...</p>
+      </div>
+    </div>
+  );
+}
+
 export default function GoBeyondApp() {
   const initialTokens = getAuthRouteTokens(window.location.pathname, window.location.search);
   const [viewMode, setViewMode] = useState(() => getViewModeFromPath(window.location.pathname));
@@ -1230,6 +1244,7 @@ export default function GoBeyondApp() {
   }
 
   return (
+    <Suspense fallback={<RouteLoadingFallback />}>
       <div className={`min-h-screen ${workspaceChrome.canvas} text-[#1d1d1b]`}>
         {viewMode === "landing" ? (
           <div className="relative">
@@ -1597,6 +1612,7 @@ export default function GoBeyondApp() {
           {publicError}
         </div>
       ) : null}
-    </div>
+      </div>
+    </Suspense>
   );
 }
