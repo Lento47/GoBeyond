@@ -23,6 +23,7 @@ import { getLearningPathThemeClasses, normalizeLearningPathItem } from "./learni
 import { IdentitySection } from "./sections/IdentitySection";
 import { PeopleSection } from "./sections/PeopleSection";
 import { AdminSopsSection } from "./SopsWorkspaceV2";
+import { adminNavigationGroups, adminViewIcons, adminViewLabels } from "./adminNavigation";
 
 function getPreviewEmbedUrl(value) {
   return getEmbedDescriptor(value).embedUrl || extractEmbedUrl(value);
@@ -190,42 +191,7 @@ const initialRuleDraft = {
   points: "10",
 };
 
-export const adminViewLabels = {
-  identity: "Marca e identidad",
-  catalog: "Oferta academica",
-  people: "Administrativos",
-  queue: "Queue",
-  support: "Tickets y soporte",
-  community: "Editorial y comunidad",
-  sops: "SOPs",
-  search: "Busqueda global",
-};
 
-export const adminViewIcons = {
-  identity: "tag",
-  catalog: "grid",
-  queue: "inbox",
-  people: "user-check",
-  support: "help-circle",
-  community: "message-square",
-  sops: "file-text",
-  search: "search",
-};
-
-export const adminNavigationGroups = [
-  {
-    label: "Core",
-    items: ["identity", "catalog"],
-  },
-  {
-    label: "Operacion",
-    items: ["queue", "people", "support", "community"],
-  },
-  {
-    label: "Herramientas",
-    items: ["sops", "search"],
-  },
-];
 
 function normalizeLandingState(landing = {}) {
   return {
