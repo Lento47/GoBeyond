@@ -161,6 +161,8 @@ export function getPublicContentView(content) {
     institutions: (content.institutions ?? []).map(normalizeMediaItem),
     liveSessions: (content.liveSessions ?? []).map(normalizeMediaItem),
     news: (content.news ?? []).map(normalizeMediaItem),
+    participationSection: undefined,
+    participationOptions: undefined,
     socialSources: undefined,
     testimonialSubmissions: undefined,
     materialTemplates: undefined,
