@@ -23,6 +23,7 @@ import { getEmbedDescriptor } from "./embedUtils";
 import { CatalogSection } from "./sections/CatalogSection";
 import { getLearningPathThemeClasses, normalizeLearningPathItem } from "./learningPath";
 import { IdentitySection } from "./sections/IdentitySection";
+import { LandingEditorSection } from "./sections/LandingEditorSection";
 import { PeopleSection } from "./sections/PeopleSection";
 import { AdminSopsSection } from "./SopsWorkspaceV2";
 import { adminNavigationGroups, adminViewIcons, adminViewLabels } from "./adminNavigation";
@@ -2128,6 +2129,33 @@ export function AdminWorkspace({
         startEditSession={startEditSession}
         updateViewFilter={updateViewFilter}
         viewFilters={viewFilters}
+      />
+    );
+  }
+
+  async function handleSaveLandingAll() {
+    await runAction(
+      async () => {
+        await updateSection("brand", brandForm);
+        await updateSection("hero", heroForm);
+        await updateSection("landing", normalizeLandingForm());
+      },
+      "Landing page actualizado."
+    );
+  }
+
+  function renderLandingView() {
+    return (
+      <LandingEditorSection
+        landingForm={landingForm}
+        heroForm={heroForm}
+        brandForm={brandForm}
+        content={content}
+        setLandingForm={setLandingForm}
+        setHeroForm={setHeroForm}
+        setBrandForm={setBrandForm}
+        onSaveAll={handleSaveLandingAll}
+        onOpenAdvancedForm={() => openModal("landing")}
       />
     );
   }
@@ -4391,6 +4419,7 @@ export function AdminWorkspace({
         </div>
       ) : null}
 
+      {activeView === "landing" ? renderLandingView() : null}
       {activeView === "queue" ? renderQueueView() : null}
       {activeView === "identity" ? renderIdentityView() : null}
       {activeView === "catalog" ? renderCatalogView() : null}
