@@ -583,7 +583,7 @@ export function PublicExperience({
             <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-1000 z-10">
               <SectionTag>{hero.eyebrow || "Aprende con nosotros"}</SectionTag>
               <h1 className="max-w-4xl text-[3rem] sm:text-[3.6rem] md:text-[5rem] lg:text-[6.2rem] font-[900] leading-[0.9] tracking-[-0.06em]">
-                {hero.title || brand.tagline || brand.name}
+                {hero.title || brand.name}
               </h1>
               <MarkdownContent className="mt-8 max-w-xl text-sm sm:text-base md:text-lg text-gray-400 font-light leading-relaxed">
                 {hero.description}
@@ -623,7 +623,7 @@ export function PublicExperience({
             <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
               <SectionTag>{landing.aboutTitle || "Sobre nosotros"}</SectionTag>
               <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-                {brand.name}
+                {landing.aboutHeading || brand.tagline || brand.name}
               </h2>
               <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
                 {landing.aboutBodyTwo || brand.description}
@@ -962,9 +962,6 @@ export function PublicExperience({
                 <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-white">
                   {landing.contactBody || "Ponte en contacto con GoBeyond."}
                 </h2>
-                {brand.description ? (
-                  <MarkdownContent className="mt-8 max-w-2xl text-base sm:text-lg md:text-xl text-blue-100 font-light leading-relaxed">{brand.description}</MarkdownContent>
-                ) : null}
 
                 {(contactInfo.emailValue || contactInfo.phoneValue) ? (
                   <div className="mt-10 grid gap-4 sm:grid-cols-2">
