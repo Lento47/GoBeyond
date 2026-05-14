@@ -623,14 +623,11 @@ export function PublicExperience({
                 {brand.name}
               </h2>
               <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
-                {landing.aboutBody || brand.description}
+                {landing.aboutBodyTwo || brand.description}
               </MarkdownContent>
             </div>
 
             <GlassCard className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-              {landing.aboutBodyTwo ? (
-                <MarkdownContent className="text-lg text-gray-300 font-light leading-relaxed">{landing.aboutBodyTwo}</MarkdownContent>
-              ) : null}
               {benefits.length ? (
                 <div className="mt-8 grid gap-4 md:grid-cols-2">
                   {benefits.map((item) => (
