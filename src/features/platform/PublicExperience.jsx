@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { EmbedFeedbackCarousel } from "./components/EmbedFeedbackCarousel";
 import HeroArcadePanel from "./components/HeroArcadePanel";
 import { getDomainLabel, getEmbedDescriptor, normalizePublicMediaUrl } from "./embedUtils";
 import { normalizeLearningPath } from "./learningPath";
@@ -209,52 +208,23 @@ function InstitutionLogoCard({ institution }) {
 }
 
 // For institutions that have embeds, we still use the carousel (fixed elsewhere)
-function InstitutionsDisplay({ institutions, landing }) {
-  const hasAnyEmbed = institutions.some((i) => {
-    const e = getEmbedDescriptor(i.embed);
-    return !!e.embedUrl;
-  });
-
-  // Grid for logo-only institutions (≤4 or no embeds)
-  if (!hasAnyEmbed && institutions.length <= 6) {
-    return (
-      <div
-        className={`grid gap-5 ${
-          institutions.length <= 2
-            ? "grid-cols-2"
-            : institutions.length <= 4
-            ? "grid-cols-2 sm:grid-cols-4"
-            : "grid-cols-2 sm:grid-cols-3"
-        }`}
-      >
-        {institutions.map((item, index) => (
-          <InstitutionLogoCard key={item.id || index} institution={item} />
-        ))}
-      </div>
-    );
-  }
-
-  // Carousel fallback for institutions with embeds
-  const carouselItems = institutions.map((item, index) => {
-    const embed = getEmbedDescriptor(item.embed);
-    const href = item.link || embed.externalUrl || "";
-    return {
-      id: item.id || `institution-${index}`,
-      title: item.name,
-      label: "Institucion aliada",
-      href,
-      embedUrl: embed.embedUrl,
-      domainLabel: getDomainLabel(href) || embed.domainLabel,
-      image: normalizePublicMediaUrl(item.image),
-      fallbackBody: "Vista no disponible.",
-    };
-  });
+// Institutions always render as a logo grid — social embed URLs (LinkedIn,
+// Facebook, etc.) are valid for news but not for institution logo cards since
+// those platforms block external iframes. The embed field is ignored here.
+function InstitutionsDisplay({ institutions }) {
+  const cols =
+    institutions.length <= 2
+      ? "grid-cols-2"
+      : institutions.length <= 4
+      ? "grid-cols-2 sm:grid-cols-4"
+      : "grid-cols-2 sm:grid-cols-3";
 
   return (
-    <EmbedFeedbackCarousel
-      controlsLabel={landing.institutionsCarouselLabel || "Convenios activos"}
-      items={carouselItems}
-    />
+    <div className={`grid gap-5 ${cols}`}>
+      {institutions.map((item, index) => (
+        <InstitutionLogoCard key={item.id || index} institution={item} />
+      ))}
+    </div>
   );
 }
 
@@ -581,7 +551,7 @@ function InstitutionsSection({ landing, visibleInstitutions }) {
         </div>
 
         <div className="gobeyond-reveal">
-          <InstitutionsDisplay institutions={visibleInstitutions} landing={landing} />
+          <InstitutionsDisplay institutions={visibleInstitutions} />
         </div>
       </div>
     </section>
