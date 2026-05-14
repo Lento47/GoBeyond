@@ -2883,11 +2883,15 @@ export function AdminWorkspace({
                   <div key={card.id || index} className="grid gap-3 rounded-xl border border-[#dfe6ee] bg-white p-4">
                     <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Tarjeta {index + 1}</p>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Input value={card.eyebrow ?? ""} onChange={(e) => updateProgramCard(index, "eyebrow", e.target.value)} placeholder="Etiqueta superior" />
-                      <Input value={card.title ?? ""} onChange={(e) => updateProgramCard(index, "title", e.target.value)} placeholder="Título" />
+                      <Input value={card.eyebrow ?? ""} onChange={(e) => updateProgramCard(index, "eyebrow", e.target.value)} placeholder="Etiqueta (ej. Certificación Internacional)" />
+                      <Input value={card.title ?? ""} onChange={(e) => updateProgramCard(index, "title", e.target.value)} placeholder="Título del curso" />
                     </div>
-                    <Input value={card.subtitle ?? ""} onChange={(e) => updateProgramCard(index, "subtitle", e.target.value)} placeholder="Subtítulo" />
-                    <Textarea value={card.description ?? ""} onChange={(e) => updateProgramCard(index, "description", e.target.value)} placeholder="Descripción" />
+                    <Input value={card.image ?? ""} onChange={(e) => updateProgramCard(index, "image", e.target.value)} placeholder="URL de imagen de portada (dejar vacío para gradiente)" />
+                    <Textarea value={card.description ?? ""} onChange={(e) => updateProgramCard(index, "description", e.target.value)} placeholder="Descripción (texto gris bajo el título)" />
+                    <Textarea value={card.relevance ?? ""} onChange={(e) => updateProgramCard(index, "relevance", e.target.value)} placeholder="¿Por qué es relevante? (texto blanco en recuadro)" />
+                    <Textarea value={listToLines(card.outcomes)} onChange={(e) => updateProgramCard(index, "outcomes", linesToList(e.target.value))} placeholder="Resultados, uno por línea (ej. Fundamentos reales de gestión)" />
+                    <Input value={card.certificationNote ?? ""} onChange={(e) => updateProgramCard(index, "certificationNote", e.target.value)} placeholder="Nota de certificación (ej. Certificación Propia de Go Beyond)" />
+                    <Input value={card.subtitle ?? ""} onChange={(e) => updateProgramCard(index, "subtitle", e.target.value)} placeholder="Subtítulo (opcional)" />
                     <Textarea value={listToLines(card.availablePrograms)} onChange={(e) => updateProgramCard(index, "availablePrograms", linesToList(e.target.value))} placeholder="Programas disponibles, uno por línea" />
                     <Textarea value={listToLines(card.includes)} onChange={(e) => updateProgramCard(index, "includes", linesToList(e.target.value))} placeholder="Incluye, uno por línea" />
                     <Textarea value={listToLines(card.benefits)} onChange={(e) => updateProgramCard(index, "benefits", linesToList(e.target.value))} placeholder="Beneficios adicionales, uno por línea" />
@@ -2895,7 +2899,7 @@ export function AdminWorkspace({
                     <Textarea value={card.idealFor ?? ""} onChange={(e) => updateProgramCard(index, "idealFor", e.target.value)} placeholder="Ideal para" />
                     <Textarea value={listToLines(card.tags)} onChange={(e) => updateProgramCard(index, "tags", linesToList(e.target.value))} placeholder="Etiquetas, una por línea" />
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Input value={card.ctaLabel ?? ""} onChange={(e) => updateProgramCard(index, "ctaLabel", e.target.value)} placeholder="Texto del botón" />
+                      <Input value={card.ctaLabel ?? ""} onChange={(e) => updateProgramCard(index, "ctaLabel", e.target.value)} placeholder="Texto del botón (ej. Aplicar →)" />
                       <Input value={card.href ?? ""} onChange={(e) => updateProgramCard(index, "href", e.target.value)} placeholder="Enlace del botón" />
                     </div>
                   </div>

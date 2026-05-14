@@ -437,56 +437,69 @@ export function LandingEditorSection({
 
             {programCards.length ? (
               <div className="grid gap-6 xl:grid-cols-3">
-                {programCards.map((program, index) => (
-                  <GlassCard
-                    key={program.id || index}
-                    className={`flex h-full flex-col justify-between ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""}`}
-                  >
-                    <div>
-                      <Badge>
+                {programCards.map((program, index) => {
+                  const initials = String(program.title ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
+                  return (
+                    <GlassCard
+                      key={program.id || index}
+                      className={`flex h-full flex-col justify-between overflow-hidden ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""}`}
+                    >
+                      <div>
+                        {/* Cover image */}
+                        <div className="mb-7 overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0b0f17]">
+                          {program.image ? (
+                            <img alt={program.title} className="h-52 w-full object-cover" src={program.image} />
+                          ) : (
+                            <div className="relative flex h-52 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-6">
+                              <div className="absolute right-5 top-5 text-5xl font-black tracking-tighter text-white/10">{initials || "GB"}</div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Agregar imagen desde formulario avanzado</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <Badge>
+                          <EditableField value={program.eyebrow ?? ""} onChange={(v) => updateCard(index, "eyebrow", v)} as="span" placeholder="Badge" />
+                        </Badge>
+                        <h3 className="mt-5 text-3xl font-black leading-tight tracking-tight text-white">
+                          <EditableField value={program.title ?? ""} onChange={(v) => updateCard(index, "title", v)} as="span" placeholder="Título del curso" />
+                        </h3>
                         <EditableField
-                          value={program.eyebrow ?? ""}
-                          onChange={(v) => updateCard(index, "eyebrow", v)}
-                          as="span"
-                          placeholder="Badge"
+                          value={program.description ?? ""}
+                          onChange={(v) => updateCard(index, "description", v)}
+                          as="p"
+                          multiline
+                          className="mt-5 text-sm leading-relaxed text-gray-400"
+                          placeholder="Descripción (texto gris)..."
                         />
-                      </Badge>
-                      <h3 className="mt-6 text-3xl font-black leading-tight tracking-tight text-white">
-                        <EditableField
-                          value={program.title ?? ""}
-                          onChange={(v) => updateCard(index, "title", v)}
-                          as="span"
-                          placeholder="Título del programa"
-                        />
-                      </h3>
-                      <p className="mt-4 text-sm font-semibold leading-relaxed text-blue-100">
-                        <EditableField
-                          value={program.subtitle ?? ""}
-                          onChange={(v) => updateCard(index, "subtitle", v)}
-                          as="span"
-                          placeholder="Subtítulo del programa"
-                        />
-                      </p>
-                      <EditableField
-                        value={program.description ?? ""}
-                        onChange={(v) => updateCard(index, "description", v)}
-                        as="p"
-                        multiline
-                        className="mt-6 text-sm leading-relaxed text-gray-400"
-                        placeholder="Descripción del programa..."
-                      />
-                      <ProgramList items={program.availablePrograms} title="Programas disponibles" />
-                      <ProgramList items={program.includes} title="Incluye" />
-                      <ProgramList items={program.benefits} title="Beneficios adicionales" />
-                      <ProgramList items={program.requirements} title="Requisitos" />
-                    </div>
-                    <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-gray-600">
-                        Para editar listas, tags y CTA → usa el formulario avanzado
-                      </p>
-                    </div>
-                  </GlassCard>
-                ))}
+                        {(program.relevance || true) ? (
+                          <div className="mt-6 rounded-[1.4rem] border border-white/8 bg-white/[0.04] p-5">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
+                            <EditableField
+                              value={program.relevance ?? ""}
+                              onChange={(v) => updateCard(index, "relevance", v)}
+                              as="p"
+                              multiline
+                              className="mt-3 text-sm leading-relaxed text-gray-200"
+                              placeholder="Texto de relevancia..."
+                            />
+                          </div>
+                        ) : null}
+                        <ProgramList items={program.outcomes} title="Resultados" />
+                        <ProgramList items={program.availablePrograms} title="Programas disponibles" />
+                        <ProgramList items={program.includes} title="Incluye" />
+                        <ProgramList items={program.benefits} title="Beneficios adicionales" />
+                        {program.certificationNote ? (
+                          <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{program.certificationNote}</p>
+                        ) : null}
+                      </div>
+                      <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-gray-600">
+                          Imagen, resultados, URL y CTA → formulario avanzado
+                        </p>
+                      </div>
+                    </GlassCard>
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/[0.01] p-8 text-center">

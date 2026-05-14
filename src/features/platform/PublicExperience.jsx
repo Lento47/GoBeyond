@@ -686,57 +686,63 @@ export function PublicExperience({
             <div className={programCards.length ? "grid gap-6 xl:grid-cols-3" : "grid gap-8 lg:grid-cols-2"}>
               {programCards.length ? programCards.map((program, index) => {
                 const external = isExternalHref(program.href);
+                const programImage = normalizePublicMediaUrl(program.image || "");
+                const initials = String(program.title ?? "")
+                  .trim().split(/\s+/).filter(Boolean).slice(0, 2)
+                  .map((p) => p[0]?.toUpperCase() ?? "").join("");
 
                 return (
                   <GlassCard
                     key={program.id || `${program.title}-${index}`}
-                    className={`flex h-full flex-col justify-between ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""}`}
+                    className={`flex h-full flex-col justify-between overflow-hidden ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""}`}
                   >
                     <div>
+                      {/* Cover image */}
+                      <div className="mb-7 overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0b0f17]">
+                        {programImage ? (
+                          <img alt={program.title} className="h-52 w-full object-cover" src={programImage} />
+                        ) : (
+                          <div className="relative flex h-52 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-6">
+                            <div className="absolute right-5 top-5 text-5xl font-black tracking-tighter text-white/10">{initials || "GB"}</div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Go Beyond</p>
+                          </div>
+                        )}
+                      </div>
+
                       <Badge>{program.eyebrow}</Badge>
-                      <h3 className="mt-6 text-3xl font-black leading-tight tracking-tight text-white">{program.title}</h3>
-                      {program.subtitle ? (
-                        <p className="mt-4 text-sm font-semibold leading-relaxed text-blue-100">{program.subtitle}</p>
-                      ) : null}
+                      <h3 className="mt-5 text-3xl font-black leading-tight tracking-tight text-white">{program.title}</h3>
+
                       {program.description ? (
-                        <MarkdownContent className="mt-6 text-sm leading-relaxed text-gray-400">
+                        <MarkdownContent className="mt-5 text-sm leading-relaxed text-gray-400">
                           {program.description}
                         </MarkdownContent>
                       ) : null}
 
+                      {program.relevance ? (
+                        <div className="mt-6 rounded-[1.4rem] border border-white/8 bg-white/[0.04] p-5">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
+                          <p className="mt-3 text-sm leading-relaxed text-gray-200">{program.relevance}</p>
+                        </div>
+                      ) : null}
+
+                      <ProgramList items={program.outcomes} title="Resultados" />
                       <ProgramList items={program.availablePrograms} title="Programas disponibles" />
                       <ProgramList items={program.includes} title="Incluye" />
                       <ProgramList items={program.benefits} title="Beneficios adicionales" />
                       <ProgramList items={program.requirements} title="Requisitos del programa" />
 
-                      {program.idealFor ? (
-                        <div className="mt-7 rounded-[1.5rem] border border-white/8 bg-white/[0.03] p-5">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">Ideal para</p>
-                          <p className="mt-3 text-sm leading-relaxed text-gray-300">{program.idealFor}</p>
-                        </div>
-                      ) : null}
-
-                      {program.tags?.length ? (
-                        <div className="mt-7 flex flex-wrap gap-2">
-                          {program.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-200"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
+                      {program.certificationNote ? (
+                        <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{program.certificationNote}</p>
                       ) : null}
                     </div>
 
                     <a
-                      className="mt-10 inline-flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition-all hover:border-blue-500/30 hover:bg-white/[0.08] hover:text-blue-200"
+                      className="mt-8 inline-flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition-all hover:border-blue-500/30 hover:bg-white/[0.08] hover:text-blue-200"
                       href={program.href || "#contacto"}
                       rel={external ? "noreferrer" : undefined}
                       target={external ? "_blank" : undefined}
                     >
-                      <span>{program.ctaLabel || "Coordinar implementacion"}</span>
+                      <span>{program.ctaLabel || "Aplicar"}</span>
                       <span>&rarr;</span>
                     </a>
                   </GlassCard>
