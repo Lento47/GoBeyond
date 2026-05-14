@@ -1315,6 +1315,16 @@ export function PublicExperience({
             ))}
           </nav>
         </div>
+        <div className="container mx-auto mt-8 border-t border-white/5 px-5 pt-6 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 opacity-60">
+            <svg aria-hidden="true" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 60 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M42.8 10.8c-.2-.1-.4-.1-.6-.1-.2-2.6-2.4-4.7-5.1-4.7-1.2 0-2.3.4-3.2 1.1C33.1 5.4 31.2 4 29 4c-3.3 0-6 2.7-6 6v.1c-2.2.3-3.9 2.2-3.9 4.5 0 2.5 2 4.5 4.5 4.5h19c2 0 3.6-1.6 3.6-3.6 0-1.8-1.3-3.3-3.4-3.7z" fill="#F6821F"/>
+            </svg>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
+              Protected by <span className="text-[#F6821F]">Cloudflare</span>
+            </span>
+          </div>
+        </div>
       </footer>
     </div>
   );
