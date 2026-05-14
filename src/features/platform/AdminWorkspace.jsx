@@ -93,6 +93,36 @@ const initialUserForm = {
 
 const roleOptions = ["student", "teacher", "admin"];
 
+function listToLines(value = []) {
+  return Array.isArray(value) ? value.filter(Boolean).join("\n") : String(value ?? "");
+}
+
+function linesToList(value = "") {
+  return String(value ?? "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function metricsToLines(value = []) {
+  return Array.isArray(value)
+    ? value
+        .map((item) => [item?.label, item?.value, item?.description].map((part) => String(part ?? "").trim()).join(" | "))
+        .join("\n")
+    : "";
+}
+
+function linesToMetrics(value = "") {
+  return String(value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label = "", metricValue = "", description = ""] = line.split("|").map((part) => part.trim());
+      return { label, value: metricValue, description };
+    });
+}
+
 function formatRolesLabel(roles = [], fallbackRole = "") {
   const values = Array.isArray(roles) && roles.length ? roles : fallbackRole ? [fallbackRole] : [];
   return values.join(" / ");
@@ -196,6 +226,22 @@ const initialRuleDraft = {
 function normalizeLandingState(landing = {}) {
   return {
     ...landing,
+    institutionsCarouselTitle: landing?.institutionsCarouselTitle ?? "Instituciones con convenio",
+    institutionsCarouselLabel: landing?.institutionsCarouselLabel ?? "Convenios activos",
+    institutionsCarouselBody:
+      landing?.institutionsCarouselBody ??
+      "Centros educativos y organizaciones aliadas que trabajan con Go Beyond para ampliar oportunidades de formacion y certificacion.",
+    heroPrimaryCtaLabel: landing?.heroPrimaryCtaLabel ?? "Empezar ahora",
+    heroSecondaryCtaLabel: landing?.heroSecondaryCtaLabel ?? "Explorar catalogo",
+    coursesHeading: landing?.coursesHeading ?? "Creados para el Impacto Real.",
+    courseResultsLabel: landing?.courseResultsLabel ?? "Resultados:",
+    participationCostLabel: landing?.participationCostLabel ?? "Costo",
+    participationCloseLabel: landing?.participationCloseLabel ?? "Cierre",
+    participationDetailsEyebrow: landing?.participationDetailsEyebrow ?? "Mas detalles",
+    newsTitle: landing?.newsTitle ?? "Noticias",
+    newsArchiveLabel: landing?.newsArchiveLabel ?? "Ver mas noticias",
+    testimonialsCarouselLabel: landing?.testimonialsCarouselLabel ?? "Rotando testimonios",
+    programCards: Array.isArray(landing?.programCards) ? landing.programCards : [],
     contactInfo: {
       emailLabel: landing?.contactInfo?.emailLabel ?? "Email",
       emailValue: landing?.contactInfo?.emailValue ?? "info@gobeyondcr.org",
@@ -209,6 +255,21 @@ function normalizeLandingState(landing = {}) {
       instagram: landing?.socialLinks?.instagram ?? "",
     },
   };
+}
+
+function normalizeParticipationSectionState(section = {}) {
+  return {
+    eyebrow: section?.eyebrow ?? "Modalidades",
+    title: section?.title ?? "Formacion de alto valor, con acceso real.",
+    description: section?.description ?? "",
+    footnote: section?.footnote ?? "",
+    detailsHref: section?.detailsHref ?? "",
+    detailsLabel: section?.detailsLabel ?? "Ver mas detalles y condiciones",
+  };
+}
+
+function normalizeParticipationOptionsState(options = []) {
+  return Array.isArray(options) ? options : [];
 }
 
 function normalizeSecuritySettingsState(settings = {}) {
@@ -441,6 +502,8 @@ export function AdminWorkspace({
   const [brandForm, setBrandForm] = useState(content.brand);
   const [heroForm, setHeroForm] = useState(content.hero);
   const [landingForm, setLandingForm] = useState(() => normalizeLandingState(content.landing));
+  const [participationSectionForm, setParticipationSectionForm] = useState(() => normalizeParticipationSectionState(content.participationSection));
+  const [participationOptionsForm, setParticipationOptionsForm] = useState(() => normalizeParticipationOptionsState(content.participationOptions));
   const [securitySettingsForm, setSecuritySettingsForm] = useState(() => normalizeSecuritySettingsState(content.securitySettings));
   const [sessionForm, setSessionForm] = useState(initialSessionForm);
   const [learningForm, setLearningForm] = useState(initialLearningForm);
@@ -495,6 +558,8 @@ export function AdminWorkspace({
     setBrandForm(content.brand);
     setHeroForm(content.hero);
     setLandingForm(normalizeLandingState(content.landing));
+    setParticipationSectionForm(normalizeParticipationSectionState(content.participationSection));
+    setParticipationOptionsForm(normalizeParticipationOptionsState(content.participationOptions));
     setSecuritySettingsForm(normalizeSecuritySettingsState(content.securitySettings));
   }, [content]);
 
@@ -1137,7 +1202,36 @@ export function AdminWorkspace({
         linkedin: String(landingForm.socialLinks?.linkedin ?? "").trim(),
         instagram: String(landingForm.socialLinks?.instagram ?? "").trim(),
       },
+      programCards: (landingForm.programCards ?? []).map((card) => ({
+        ...card,
+        eyebrow: String(card.eyebrow ?? "").trim(),
+        title: String(card.title ?? "").trim(),
+        subtitle: String(card.subtitle ?? "").trim(),
+        description: String(card.description ?? "").trim(),
+        idealFor: String(card.idealFor ?? "").trim(),
+        ctaLabel: String(card.ctaLabel ?? "").trim(),
+        href: String(card.href ?? "").trim(),
+        availablePrograms: Array.isArray(card.availablePrograms) ? card.availablePrograms.filter(Boolean) : [],
+        includes: Array.isArray(card.includes) ? card.includes.filter(Boolean) : [],
+        benefits: Array.isArray(card.benefits) ? card.benefits.filter(Boolean) : [],
+        requirements: Array.isArray(card.requirements) ? card.requirements.filter(Boolean) : [],
+        tags: Array.isArray(card.tags) ? card.tags.filter(Boolean) : [],
+      })),
     };
+  }
+
+  function normalizeParticipationOptionsPayload() {
+    return (participationOptionsForm ?? []).map((option) => ({
+      ...option,
+      eyebrow: String(option.eyebrow ?? "").trim(),
+      title: String(option.title ?? "").trim(),
+      price: String(option.price ?? "").trim(),
+      priceNote: String(option.priceNote ?? "").trim(),
+      description: String(option.description ?? "").trim(),
+      ctaLabel: String(option.ctaLabel ?? "").trim(),
+      href: String(option.href ?? "").trim(),
+      highlights: Array.isArray(option.highlights) ? option.highlights.filter(Boolean) : [],
+    }));
   }
 
   function normalizeSecuritySettingsPayload() {
@@ -1570,6 +1664,42 @@ export function AdminWorkspace({
       () => updateSection("landing", normalizeLandingForm()),
       "Narrativa institucional actualizada.",
       { closeAfter: true }
+    );
+  }
+
+  async function saveParticipation(event) {
+    event.preventDefault();
+    await runAction(
+      async () => {
+        await updateSection("participationSection", {
+          eyebrow: String(participationSectionForm.eyebrow ?? "").trim(),
+          title: String(participationSectionForm.title ?? "").trim(),
+          description: String(participationSectionForm.description ?? "").trim(),
+          footnote: String(participationSectionForm.footnote ?? "").trim(),
+          detailsHref: String(participationSectionForm.detailsHref ?? "").trim(),
+          detailsLabel: String(participationSectionForm.detailsLabel ?? "").trim(),
+        });
+        await updateSection("participationOptions", normalizeParticipationOptionsPayload());
+      },
+      "Modalidades actualizadas.",
+      { closeAfter: true }
+    );
+  }
+
+  function updateProgramCard(index, key, value) {
+    setLandingForm((current) => ({
+      ...current,
+      programCards: (current.programCards ?? []).map((card, cardIndex) =>
+        cardIndex === index ? { ...card, [key]: value } : card
+      ),
+    }));
+  }
+
+  function updateParticipationOption(index, key, value) {
+    setParticipationOptionsForm((current) =>
+      (current ?? []).map((option, optionIndex) =>
+        optionIndex === index ? { ...option, [key]: value } : option
+      )
     );
   }
 
@@ -2574,6 +2704,11 @@ export function AdminWorkspace({
             <Input value={heroForm.eyebrow} onChange={(event) => setHeroForm({ ...heroForm, eyebrow: event.target.value })} placeholder="Eyebrow" />
             <Input value={heroForm.title} onChange={(event) => setHeroForm({ ...heroForm, title: event.target.value })} placeholder="Titulo" />
             <Textarea value={heroForm.description} onChange={(event) => setHeroForm({ ...heroForm, description: event.target.value })} placeholder="Descripcion" />
+            <Textarea
+              value={metricsToLines(heroForm.metrics)}
+              onChange={(event) => setHeroForm({ ...heroForm, metrics: linesToMetrics(event.target.value) })}
+              placeholder="Metricas del hero: Etiqueta | Valor | Descripcion"
+            />
             <div className="flex gap-3">
               <ActionButton type="submit">Guardar hero</ActionButton>
               <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
@@ -2592,9 +2727,49 @@ export function AdminWorkspace({
           >
             <form className="grid gap-4" onSubmit={saveLanding}>
             <Input value={landingForm.aboutTitle} onChange={(event) => setLandingForm({ ...landingForm, aboutTitle: event.target.value })} placeholder="Titulo sobre nosotros" />
-            <Textarea value={landingForm.aboutBody} onChange={(event) => setLandingForm({ ...landingForm, aboutBody: event.target.value })} placeholder="Texto principal" />
+              <Textarea value={landingForm.aboutBody} onChange={(event) => setLandingForm({ ...landingForm, aboutBody: event.target.value })} placeholder="Texto principal" />
               <Textarea value={landingForm.aboutBodyTwo} onChange={(event) => setLandingForm({ ...landingForm, aboutBodyTwo: event.target.value })} placeholder="Texto secundario" />
               <Textarea value={landingForm.relevanceBody} onChange={(event) => setLandingForm({ ...landingForm, relevanceBody: event.target.value })} placeholder="Texto de relevancia laboral" />
+              <Input value={landingForm.institutionsCarouselTitle ?? ""} onChange={(event) => setLandingForm({ ...landingForm, institutionsCarouselTitle: event.target.value })} placeholder="Titulo del carrusel de convenios" />
+              <Input value={landingForm.institutionsCarouselLabel ?? ""} onChange={(event) => setLandingForm({ ...landingForm, institutionsCarouselLabel: event.target.value })} placeholder="Etiqueta de controles del carrusel" />
+              <Textarea value={landingForm.institutionsCarouselBody ?? ""} onChange={(event) => setLandingForm({ ...landingForm, institutionsCarouselBody: event.target.value })} placeholder="Descripcion del carrusel de convenios" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input value={landingForm.heroPrimaryCtaLabel ?? ""} onChange={(event) => setLandingForm({ ...landingForm, heroPrimaryCtaLabel: event.target.value })} placeholder="Boton principal del hero" />
+                <Input value={landingForm.heroSecondaryCtaLabel ?? ""} onChange={(event) => setLandingForm({ ...landingForm, heroSecondaryCtaLabel: event.target.value })} placeholder="Boton secundario del hero" />
+                <Input value={landingForm.coursesTitle ?? ""} onChange={(event) => setLandingForm({ ...landingForm, coursesTitle: event.target.value })} placeholder="Titulo de programas y cursos" />
+                <Input value={landingForm.coursesHeading ?? ""} onChange={(event) => setLandingForm({ ...landingForm, coursesHeading: event.target.value })} placeholder="Encabezado de programas y cursos" />
+                <Input value={landingForm.courseResultsLabel ?? ""} onChange={(event) => setLandingForm({ ...landingForm, courseResultsLabel: event.target.value })} placeholder="Etiqueta de resultados de cursos" />
+                <Input value={landingForm.participationCostLabel ?? ""} onChange={(event) => setLandingForm({ ...landingForm, participationCostLabel: event.target.value })} placeholder="Etiqueta de costo en modalidades" />
+                <Input value={landingForm.participationCloseLabel ?? ""} onChange={(event) => setLandingForm({ ...landingForm, participationCloseLabel: event.target.value })} placeholder="Etiqueta de cierre en modalidades" />
+                <Input value={landingForm.participationDetailsEyebrow ?? ""} onChange={(event) => setLandingForm({ ...landingForm, participationDetailsEyebrow: event.target.value })} placeholder="Etiqueta de detalles en modalidades" />
+                <Input value={landingForm.newsTitle ?? ""} onChange={(event) => setLandingForm({ ...landingForm, newsTitle: event.target.value })} placeholder="Titulo de noticias" />
+                <Input value={landingForm.newsArchiveLabel ?? ""} onChange={(event) => setLandingForm({ ...landingForm, newsArchiveLabel: event.target.value })} placeholder="Boton de archivo de noticias" />
+                <Input value={landingForm.testimonialTitle ?? ""} onChange={(event) => setLandingForm({ ...landingForm, testimonialTitle: event.target.value })} placeholder="Titulo de testimonios" />
+                <Input value={landingForm.testimonialsCarouselLabel ?? ""} onChange={(event) => setLandingForm({ ...landingForm, testimonialsCarouselLabel: event.target.value })} placeholder="Etiqueta del carrusel de testimonios" />
+              </div>
+              <div className="grid gap-4 rounded-2xl border border-[#d7e0ea] bg-[#f8fafc] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Tarjetas de programas del landing</p>
+                {(landingForm.programCards ?? []).map((card, index) => (
+                  <div key={card.id || index} className="grid gap-3 rounded-xl border border-[#dfe6ee] bg-white p-4">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Input value={card.eyebrow ?? ""} onChange={(event) => updateProgramCard(index, "eyebrow", event.target.value)} placeholder="Etiqueta superior" />
+                      <Input value={card.title ?? ""} onChange={(event) => updateProgramCard(index, "title", event.target.value)} placeholder="Titulo" />
+                    </div>
+                    <Input value={card.subtitle ?? ""} onChange={(event) => updateProgramCard(index, "subtitle", event.target.value)} placeholder="Subtitulo" />
+                    <Textarea value={card.description ?? ""} onChange={(event) => updateProgramCard(index, "description", event.target.value)} placeholder="Descripcion" />
+                    <Textarea value={listToLines(card.availablePrograms)} onChange={(event) => updateProgramCard(index, "availablePrograms", linesToList(event.target.value))} placeholder="Programas disponibles, uno por linea" />
+                    <Textarea value={listToLines(card.includes)} onChange={(event) => updateProgramCard(index, "includes", linesToList(event.target.value))} placeholder="Incluye, uno por linea" />
+                    <Textarea value={listToLines(card.benefits)} onChange={(event) => updateProgramCard(index, "benefits", linesToList(event.target.value))} placeholder="Beneficios adicionales, uno por linea" />
+                    <Textarea value={listToLines(card.requirements)} onChange={(event) => updateProgramCard(index, "requirements", linesToList(event.target.value))} placeholder="Requisitos, uno por linea" />
+                    <Textarea value={card.idealFor ?? ""} onChange={(event) => updateProgramCard(index, "idealFor", event.target.value)} placeholder="Ideal para" />
+                    <Textarea value={listToLines(card.tags)} onChange={(event) => updateProgramCard(index, "tags", linesToList(event.target.value))} placeholder="Etiquetas, una por linea" />
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Input value={card.ctaLabel ?? ""} onChange={(event) => updateProgramCard(index, "ctaLabel", event.target.value)} placeholder="Texto del boton" />
+                      <Input value={card.href ?? ""} onChange={(event) => updateProgramCard(index, "href", event.target.value)} placeholder="Enlace del boton" />
+                    </div>
+                  </div>
+                ))}
+              </div>
               <Textarea value={landingForm.contactBody} onChange={(event) => setLandingForm({ ...landingForm, contactBody: event.target.value })} placeholder="Texto de contacto" />
               <div className="grid gap-4 md:grid-cols-2">
                 <Input
@@ -2708,6 +2883,52 @@ export function AdminWorkspace({
                 <ActionButton type="submit">Guardar narrativa</ActionButton>
                 <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
               </div>
+          </form>
+        </ModalShell>
+      );
+    }
+
+    if (modal === "participation") {
+      return (
+        <ModalShell
+          title="Editar modalidades"
+          subtitle="Todo este contenido aparece en la seccion Modalidades del landing."
+          onClose={closeModal}
+        >
+          <form className="grid gap-4" onSubmit={saveParticipation}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input value={participationSectionForm.eyebrow} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, eyebrow: event.target.value })} placeholder="Etiqueta superior" />
+              <Input value={participationSectionForm.title} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, title: event.target.value })} placeholder="Titulo" />
+            </div>
+            <Textarea value={participationSectionForm.description} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, description: event.target.value })} placeholder="Descripcion" />
+            <Textarea value={participationSectionForm.footnote} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, footnote: event.target.value })} placeholder="Cierre" />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input value={participationSectionForm.detailsLabel} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, detailsLabel: event.target.value })} placeholder="Texto del enlace de detalles" />
+              <Input value={participationSectionForm.detailsHref} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, detailsHref: event.target.value })} placeholder="URL de detalles" />
+            </div>
+            <div className="grid gap-4 rounded-2xl border border-[#d7e0ea] bg-[#f8fafc] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Opciones visibles</p>
+              {(participationOptionsForm ?? []).map((option, index) => (
+                <div key={option.id || index} className="grid gap-3 rounded-xl border border-[#dfe6ee] bg-white p-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Input value={option.eyebrow ?? ""} onChange={(event) => updateParticipationOption(index, "eyebrow", event.target.value)} placeholder="Etiqueta" />
+                    <Input value={option.title ?? ""} onChange={(event) => updateParticipationOption(index, "title", event.target.value)} placeholder="Titulo" />
+                    <Input value={option.price ?? ""} onChange={(event) => updateParticipationOption(index, "price", event.target.value)} placeholder="Costo" />
+                    <Input value={option.priceNote ?? ""} onChange={(event) => updateParticipationOption(index, "priceNote", event.target.value)} placeholder="Nota del costo" />
+                  </div>
+                  <Textarea value={option.description ?? ""} onChange={(event) => updateParticipationOption(index, "description", event.target.value)} placeholder="Descripcion" />
+                  <Textarea value={listToLines(option.highlights)} onChange={(event) => updateParticipationOption(index, "highlights", linesToList(event.target.value))} placeholder="Puntos destacados, uno por linea" />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Input value={option.ctaLabel ?? ""} onChange={(event) => updateParticipationOption(index, "ctaLabel", event.target.value)} placeholder="Texto del boton" />
+                    <Input value={option.href ?? ""} onChange={(event) => updateParticipationOption(index, "href", event.target.value)} placeholder="URL del boton" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <ActionButton type="submit">Guardar modalidades</ActionButton>
+              <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
+            </div>
           </form>
         </ModalShell>
       );
@@ -4056,35 +4277,26 @@ export function AdminWorkspace({
 
   return (
     <div className="grid gap-6">
-      <section className="overflow-hidden rounded-[20px] border border-[#1e293b] bg-[#111827] shadow-[0_18px_44px_rgba(15,23,42,0.18)]">
-        <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,24rem)] lg:items-end">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#9fb0c9]">
-              <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
-              Cabina administrativa
-            </div>
-            <h2 className="mt-5 text-[1.85rem] font-semibold leading-tight text-white sm:text-[2.15rem]">
-              Administracion GoBeyond
+      <section className="rounded-2xl border border-[#d8e2f0] bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#1d4ed8]">Operacion administrativa</p>
+            <h2 className="mt-2 text-2xl font-semibold leading-tight text-[#172033] sm:text-3xl">
+              Centro de administracion
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9fb0c9]">
-              Todo cambio queda registrado en backend. Esta capa ordena la operacion con navegacion clara, busqueda superior y bloques mas faciles de escanear.
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#536277]">
+              Monitorea solicitudes, comunidad, soporte y estado del sistema desde una sola vista.
             </p>
           </div>
-
-          <div className="grid gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#9fb0c9]">Vista activa</p>
-            <p className="text-lg font-semibold text-white">{adminViewLabels[activeView]}</p>
-            <p className="text-sm leading-6 text-[#c2cfdf]">
-              {globalSearchQuery.trim()
-                ? "Busqueda focalizada sobre cursos, usuarios, matriculas, noticias y recursos internos."
-                : "Usa la navegacion lateral para cambiar de bloque y la queue para aterrizar casos puntuales."}
-            </p>
+          <div className="rounded-xl border border-[#d8e2f0] bg-[#f8fbff] px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Vista activa</p>
+            <p className="mt-1 text-sm font-semibold text-[#172033]">{adminViewLabels[activeView]}</p>
           </div>
         </div>
       </section>
 
-      <section className="rounded-[18px] border border-[#d7e0ea] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <section className="rounded-2xl border border-[#d8e2f0] bg-white p-4 shadow-sm">
+        <div className="grid gap-3 xl:grid-cols-[minmax(18rem,1fr)_auto_minmax(32rem,1.45fr)] xl:items-center">
           <FilterInput
             onChange={(event) => {
               const nextQuery = event.target.value;
@@ -4093,11 +4305,11 @@ export function AdminWorkspace({
                 setActiveView("search");
               }
             }}
-            placeholder="Busqueda general: cursos, usuarios, matriculas, sesiones, noticias, instituciones..."
+            placeholder="Buscar estudiantes, cursos o tickets..."
             value={globalSearchQuery}
           />
           <SecondaryButton
-            className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em]"
+            className="px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em]"
             onClick={() => {
               setGlobalSearchQuery("");
               if (activeView === "search") {
@@ -4108,15 +4320,14 @@ export function AdminWorkspace({
           >
             Limpiar
           </SecondaryButton>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <SmallStat label="Cursos" value={content.courses?.length ?? 0} help="Catalogo" tone="accent" />
+            <SmallStat label="Usuarios" value={users.length} help="Cuentas" />
+            <SmallStat label="Matriculas" value={enrollments.length} help="Accesos" />
+            <SmallStat label="Queue" value={queueItems.length} help="Pendientes" />
+          </div>
         </div>
       </section>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SmallStat label="Cursos" value={content.courses?.length ?? 0} help="Programas visibles para captacion y aprendizaje." tone="accent" />
-        <SmallStat label="Usuarios" value={users.length} help="Cuentas administrables desde la UI." />
-        <SmallStat label="Matriculas" value={enrollments.length} help="Accesos activos o historicos por estudiante." />
-        <SmallStat label="Queue" value={queueItems.length} help="Bandeja unificada de trabajo operativo." />
-      </div>
 
       <section className="rounded-[18px] border border-[#d7e0ea] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7edf5] pb-4">

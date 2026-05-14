@@ -1,7 +1,7 @@
 export const defaultContent = {
   brand: {
     name: "GoBeyond",
-    tagline: "Formacion de alto impacto para transformar oportunidades en resultados.",
+    tagline: "Go Beyond: Del Caribe hacia el mundo.",
     description:
       "Iniciativa limonense sin fines de lucro que impulsa el desarrollo integral de jovenes desde instituciones educativas y tambien de manera independiente.",
   },
@@ -9,7 +9,7 @@ export const defaultContent = {
     eyebrow: "Aprende con nosotros",
     title: "Go Beyond abre oportunidades reales para la juventud de Limon.",
     description:
-      "Preparamos a estudiantes y jovenes profesionales en Project Management, Six Sigma y metodologias agiles como Scrum, reduciendo brechas hacia certificaciones internacionales y empleabilidad real.",
+      "Preparamos a estudiantes y jovenes profesionales en Project Management, IA y metodologias agiles como Scrum, reduciendo brechas hacia certificaciones internacionales y empleabilidad real.",
     metrics: [
       {
         label: "Origen",
@@ -19,7 +19,7 @@ export const defaultContent = {
       {
         label: "Enfoque",
         value: "3 areas clave",
-        description: "Project Management, Six Sigma y Scrum.",
+        description: "Project Management, IA y Scrum.",
       },
       {
         label: "Impacto",
@@ -39,12 +39,6 @@ export const defaultContent = {
       id: "live-1",
       title: "Project Management",
       date: "Formacion estructurada",
-      format: "Servicio",
-    },
-    {
-      id: "live-2",
-      title: "Six Sigma",
-      date: "Mejora continua",
       format: "Servicio",
     },
     {
@@ -70,20 +64,6 @@ export const defaultContent = {
       order: 1,
     },
     {
-      id: "path-2",
-      stageLabel: "Mejora continua",
-      title: "Six Sigma",
-      track: "Mejora continua",
-      type: "Mejora continua",
-      description: "Metodologias estructuradas para identificar ineficiencias, resolver problemas y optimizar procesos.",
-      status: "Metodologias estructuradas para identificar ineficiencias, resolver problemas y optimizar procesos.",
-      duration: "6 semanas",
-      outcome: "Pensamiento analitico para medir, resolver y optimizar procesos.",
-      progressState: "Disponible",
-      theme: "gold",
-      order: 2,
-    },
-    {
       id: "path-3",
       stageLabel: "Agilidad",
       title: "Scrum",
@@ -95,7 +75,7 @@ export const defaultContent = {
       outcome: "Capacidad para coordinar entregas, equipos y dinamicas adaptativas.",
       progressState: "Disponible",
       theme: "green",
-      order: 3,
+      order: 2,
     },
   ],
   courses: [
@@ -112,13 +92,13 @@ export const defaultContent = {
     },
     {
       id: "course-2",
-      title: "Six Sigma Foundations",
-      audience: "Participantes con interes en mejora continua y optimizacion",
+      title: "Scrum Agile Specialist",
+      audience: "Participantes con interes en metodologias agiles",
       format: "Formacion aplicada",
-      duration: "6 semanas",
+      duration: "5 semanas",
       description:
-        "Metodologias estructuradas para detectar ineficiencias, analizar causas y mejorar procesos en distintos entornos.",
-      outcomes: "Pensamiento analitico, mejora continua, solucion estructurada de problemas.",
+        "Preparacion practica en Scrum y marcos agiles para coordinar equipos, entregas y proyectos de forma adaptable.",
+      outcomes: "Agilidad aplicada, coordinacion de equipos, preparacion orientada a certificacion Scrum.",
     },
   ],
   testimonials: [
@@ -135,15 +115,15 @@ export const defaultContent = {
     {
       id: "institution-1",
       name: "Colegio de Limon Diurno",
-      image: "/institutions/colegio-limon-diurno.jpg",
+      image: "/institutions/colegio-limon-diurno-logo.png",
       link: "",
       embed: "",
       featured: true,
     },
     {
       id: "institution-2",
-      name: "LLMBB",
-      image: "/institutions/llmbb-liceo.jpg",
+      name: "Liceo Mario Bourne Bourne",
+      image: "/institutions/liceo-mario-bourne.png",
       link: "",
       embed: "",
       featured: true,
@@ -151,7 +131,15 @@ export const defaultContent = {
     {
       id: "institution-3",
       name: "ASOIC",
-      image: "/institutions/asoic.jpg",
+      image: "/institutions/asoic-logo.jpg",
+      link: "",
+      embed: "",
+      featured: true,
+    },
+    {
+      id: "institution-4",
+      name: "Colegio Tecnico Profesional de Puerto Limon",
+      image: "/institutions/ctp-puerto-limon.png",
       link: "",
       embed: "",
       featured: true,
@@ -190,7 +178,7 @@ export const defaultContent = {
     label: "Conocimiento relevante para entorno laboral",
     price: "Alta demanda",
     description:
-      "Project Management, Six Sigma y Scrum se posicionan entre las competencias mas demandadas y mejor remuneradas a nivel nacional e internacional.",
+      "Project Management, uso de la IA en proyectos y Scrum se posicionan entre las competencias mas demandadas y mejor remuneradas a nivel nacional e internacional.",
   },
   communityStats: [
     {
@@ -282,12 +270,104 @@ export const defaultContent = {
       "Somos una organizacion sin fines de lucro con sede en Puerto Limon. Trabajamos en alianza con centros educativos y tambien abrimos espacios para jovenes independientes que buscan oportunidades distintas de crecimiento.",
     relevanceTitle: "Conocimiento relevante para el entorno laboral",
     relevanceBody:
-      "Las areas de Project Management, Six Sigma y metodologias agiles como Scrum se posicionan entre las competencias mas demandadas y mejor remuneradas del mercado laboral actual. Integrar esta formacion fortalece la empleabilidad del estudiantado y tambien eleva el prestigio institucional.",
+      "Las areas de Project Management, desarrollo de proyectos con IA y metodologias agiles como Scrum se posicionan entre las competencias mas demandadas y mejor remuneradas del mercado laboral actual. Integrar esta formacion fortalece la empleabilidad del estudiantado y tambien eleva el prestigio institucional.",
     servicesTitle: "Nuestros servicios",
     trustTitle: "Confian en nosotros",
     trustItems: ["Colegio de Limon Diurno", "LLMBB", "ASOIC"],
     testimonialTitle: "Opiniones de estudiantes",
+    institutionsCarouselTitle: "Instituciones con convenio",
+    institutionsCarouselLabel: "Convenios activos",
+    institutionsCarouselBody:
+      "Centros educativos y organizaciones aliadas que trabajan con Go Beyond para ampliar oportunidades de formacion y certificacion.",
+    heroPrimaryCtaLabel: "Empezar ahora",
+    heroSecondaryCtaLabel: "Explorar catalogo",
     coursesTitle: "Programas y cursos",
+    coursesHeading: "Creados para el Impacto Real.",
+    courseResultsLabel: "Resultados:",
+    participationCostLabel: "Costo",
+    participationCloseLabel: "Cierre",
+    participationDetailsEyebrow: "Mas detalles",
+    newsTitle: "Noticias",
+    newsArchiveLabel: "Ver mas noticias",
+    testimonialsCarouselLabel: "Rotando testimonios",
+    programCards: [
+      {
+        id: "program-foundations",
+        eyebrow: "Formacion flexible - Ruta individual",
+        title: "Programa Foundations",
+        subtitle: "Acceso a formacion especializada en habilidades de alta demanda profesional.",
+        description:
+          "Programa disenado para instituciones que desean implementar cualquiera de nuestros cursos de manera individual segun las necesidades de sus estudiantes.",
+        availablePrograms: [
+          "Gestion de Proyectos (Project Management)",
+          "Metodologias agiles (Scrum)",
+          "IA aplicada al emprendimiento y creacion digital",
+        ],
+        includes: [
+          "Capacitacion practica y guiada",
+          "Formacion orientada al mercado laboral actual",
+          "Preparacion para entornos profesionales modernos",
+          "Acceso a herramientas y metodologias utilizadas globalmente",
+          "Acompanamiento durante el proceso formativo",
+        ],
+        idealFor:
+          "Instituciones que desean iniciar con un programa especifico o implementar formacion progresiva segun sus objetivos academicos.",
+        requirements: ["Minimo de 5 estudiantes matriculados (minimo matriculado no incluye a los becados)"],
+        tags: ["Ruta individual", "Cursos seleccionables", "Acompanamiento formativo"],
+        ctaLabel: "Coordinar implementacion",
+        href: "#contacto",
+      },
+      {
+        id: "program-agile-core",
+        eyebrow: "Ruta profesional - Gestion y metodologias agiles",
+        title: "Agile Project Management Core",
+        subtitle: "Formacion especializada en liderazgo, organizacion de proyectos y trabajo agil.",
+        description:
+          "Programa orientado a estudiantes que desean desarrollar habilidades altamente valoradas en empresas modernas y organizaciones internacionales.",
+        includes: [
+          "Capacitacion en Project Management (Gestion de Proyectos)",
+          "Preparacion y acceso a examen internacional de certificacion en Project Management",
+          "Capacitacion en Scrum y metodologias agiles",
+          "Preparacion y acceso a examen internacional de certificacion en Scrum",
+          "Formacion orientada a empleabilidad y entornos corporativos modernos",
+        ],
+        benefits: [
+          "5 estudiantes becados adicionales en ambos programas",
+          "Taller de elaboracion de CV profesional",
+          "Acompanamiento durante el proceso de preparacion y certificacion",
+        ],
+        requirements: ["Minimo de 10 estudiantes matriculados (minimo matriculado no incluye a los becados)"],
+        tags: ["Project Management", "Scrum", "Minimo 10 estudiantes"],
+        ctaLabel: "Coordinar implementacion",
+        href: "#contacto",
+      },
+      {
+        id: "program-tech-ai-leadership",
+        eyebrow: "Ruta avanzada - Gestion, agilidad e inteligencia artificial",
+        title: "Tech Management & AI Leadership",
+        subtitle: "Programa integral disenado para preparar estudiantes para oportunidades profesionales del entorno digital moderno.",
+        description:
+          "Combina liderazgo, metodologias agiles e inteligencia artificial aplicada al emprendimiento y creacion digital.",
+        includes: [
+          "Capacitacion en Project Management (Gestion de Proyectos)",
+          "Preparacion y acceso a examen internacional de certificacion en Project Management",
+          "Capacitacion en Scrum y metodologias agiles",
+          "Preparacion y acceso a examen internacional de certificacion en Scrum",
+          "Capacitacion practica en IA aplicada a creacion de paginas web y emprendimiento digital",
+          "Formacion aplicada utilizando herramientas modernas de Inteligencia Artificial",
+        ],
+        benefits: [
+          "5 estudiantes becados adicionales en los 3 programas",
+          "Curso de preparacion de CV profesional",
+          "Curso de preparacion para entrevistas utilizando metodologia STAR",
+          "Acompanamiento academico y profesional durante todo el proceso",
+        ],
+        requirements: ["Minimo de 10 estudiantes matriculados (minimo matriculado no incluye a los becados)"],
+        tags: ["Project Management", "Scrum", "IA aplicada"],
+        ctaLabel: "Coordinar implementacion",
+        href: "#contacto",
+      },
+    ],
     contactTitle: "Quieres unirte al cambio?",
     contactBody:
       "Ponte en contacto con Go Beyond para abrir oportunidades de formacion de alto impacto para tu institucion, organizacion o comunidad.",

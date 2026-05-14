@@ -414,10 +414,10 @@ export function TeacherExperience(props) {
           assignmentId: assignmentForm.assignmentId,
           ...payload,
         });
-        setActionMessage("Asignacion actualizada en el curso docente.");
+        setActionMessage("Material actualizado en el curso docente.");
       } else {
         await onCreateAssignment(payload);
-        setActionMessage("Asignacion publicada para el curso seleccionado.");
+        setActionMessage("Material publicado para el curso seleccionado.");
       }
       closeModal();
     } catch (requestError) {
@@ -436,7 +436,7 @@ export function TeacherExperience(props) {
         courseId: assignmentForm.courseId,
         assignmentId: assignmentForm.assignmentId,
       });
-      setActionMessage("Asignacion eliminada del curso docente.");
+      setActionMessage("Material eliminado del curso docente.");
       closeModal();
     } catch (requestError) {
       setActionError(requestError.message);
@@ -520,16 +520,16 @@ export function TeacherExperience(props) {
 
   function renderOverviewSection() {
     return (
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]" id="teacher-overview">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)]" id="teacher-overview">
         <SectionCard
-          description={dashboard?.summary || "Gestiona cursos, tareas, matriculas e incidencias desde un mismo frente docente."}
+          description={dashboard?.summary || "Gestiona cursos, materiales, matriculas e incidencias desde un mismo frente docente."}
           title={dashboard?.welcomeTitle || `Panel docente de ${teacherName}`}
         >
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid overflow-hidden rounded-2xl border border-[#d8e2f0] bg-[#fbfdff] sm:grid-cols-2 xl:grid-cols-5">
             <SmallStat help="Programas bajo tu alcance docente." label="Cursos asignados" value={dashboardLoading ? "..." : metrics.assignedCourses} />
             <SmallStat help="Grupos activos configurados para tus cursos." label="Cohortes activas" value={dashboardLoading ? "..." : metrics.activeCohorts} />
             <SmallStat help="Estudiantes activos en tus cohortes." label="Estudiantes activos" value={dashboardLoading ? "..." : metrics.activeStudents} />
-            <SmallStat help="Asignaciones publicadas para seguimiento." label="Tareas publicadas" value={dashboardLoading ? "..." : metrics.pendingAssignments} />
+            <SmallStat help="Materiales publicados para seguimiento." label="Materiales" value={dashboardLoading ? "..." : metrics.pendingAssignments} />
             <SmallStat help="Tickets, solicitudes e hilos que requieren atencion." label="Casos abiertos" value={dashboardLoading ? "..." : metrics.openCases} />
           </div>
         </SectionCard>
@@ -563,10 +563,10 @@ export function TeacherExperience(props) {
   function renderCoursesSection() {
     return (
       <SectionCard
-        description="Cursos asignados, cohortes activas y acceso rapido para abrir nuevas tareas o matriculas."
+        description="Cursos asignados, cohortes activas y acceso rapido para abrir nuevos materiales o matriculas."
         title="Cursos y grupos"
       >
-        <div className="grid gap-4" id="teacher-courses">
+        <div className="grid gap-3" id="teacher-courses">
           {coursesLoading ? (
             <p className="text-sm text-[#617085]">Cargando cursos asignados...</p>
           ) : courses.length ? (
@@ -577,29 +577,30 @@ export function TeacherExperience(props) {
                 meta={`${course.format || "Formato libre"} · ${course.duration || "Duracion abierta"} · ${course.audience || "Audiencia general"}`}
                 title={course.title}
               >
-                <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.55fr)]">
                   <div className="grid gap-3">
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid overflow-hidden rounded-2xl border border-[#d8e2f0] bg-[#fbfdff] sm:grid-cols-2 xl:grid-cols-4">
                       <SmallStat help="Matriculas registradas." label="Matriculas" value={course.enrollmentCount ?? 0} />
                       <SmallStat help="Grupos configurados para este curso." label="Cohortes" value={course.cohortCount ?? 0} />
                       <SmallStat help="Estudiantes con acceso activo." label="Activos" value={course.activeStudentCount ?? 0} />
-                      <SmallStat help="Entregables creados." label="Tareas" value={course.assignmentCount ?? 0} />
+                      <SmallStat help="Materiales creados." label="Materiales" value={course.assignmentCount ?? 0} />
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                      <ActionButton onClick={() => startCreateAssignment(course.id)} type="button">
-                        Nueva tarea
-                      </ActionButton>
-                      <SecondaryButton onClick={() => startCreateEnrollment(course.id)} type="button">
-                        Matricular estudiante
-                      </SecondaryButton>
+                    <div className="grid gap-3 rounded-2xl border border-[#d8e2f0] bg-[#f8fbff] p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Estudiantes visibles</p>
+                      <CourseStudentsPreview students={course.students ?? []} />
                     </div>
                   </div>
-                  <div className="grid gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cohortes visibles</p>
+                  <div className="grid gap-3 rounded-2xl border border-[#d8e2f0] bg-[#f8fbff] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Cohortes visibles</p>
+                      <span className="rounded-full border border-[#d8e2f0] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#66758c]">
+                        {(course.cohorts ?? []).length} grupos
+                      </span>
+                    </div>
                     {(course.cohorts ?? []).length ? (
                       <div className="grid gap-2">
                         {(course.cohorts ?? []).slice(0, 4).map((cohort) => (
-                          <div className="rounded-[16px] border border-[#dbe3ec] bg-white px-3 py-3" key={cohort.id}>
+                          <div className="rounded-xl border border-[#d8e2f0] bg-white px-3 py-2.5" key={cohort.id}>
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-semibold text-[#172033]">{cohort.title}</p>
@@ -622,10 +623,14 @@ export function TeacherExperience(props) {
                     ) : (
                       <p className="text-sm text-[#617085]">Todavia no hay cohortes configuradas para este curso.</p>
                     )}
-                  </div>
-                  <div className="grid gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] p-4 lg:col-span-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estudiantes visibles</p>
-                    <CourseStudentsPreview students={course.students ?? []} />
+                    <div className="mt-1 grid gap-2">
+                      <ActionButton onClick={() => startCreateAssignment(course.id)} type="button">
+                        Nuevo material
+                      </ActionButton>
+                      <SecondaryButton onClick={() => startCreateEnrollment(course.id)} type="button">
+                        Matricular estudiante
+                      </SecondaryButton>
+                    </div>
                   </div>
                 </div>
               </RowCard>
@@ -644,22 +649,22 @@ export function TeacherExperience(props) {
   function renderAssignmentsSection() {
     return (
       <SectionCard
-        description="Gestiona las asignaciones publicadas en tus cursos sin salir del workspace."
-        title="Tareas y evaluaciones"
+        description="Organiza los materiales publicados en tus cursos desde una ruta clara y escaneable."
+        title="Aula"
       >
         <div className="grid gap-4" id="teacher-assignments">
           {coursesLoading ? (
-            <p className="text-sm text-[#617085]">Cargando asignaciones docentes...</p>
+            <p className="text-sm text-[#617085]">Cargando materiales docentes...</p>
           ) : courses.some((course) => (course.assignments ?? []).length) ? (
             courses.map((course) => (
               <div className="grid gap-3" key={`assignments-${course.id}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] px-4 py-3">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Curso docente</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Ruta de clase</p>
                     <h3 className="mt-1 text-lg font-semibold text-[#172033]">{course.title}</h3>
                   </div>
                   <ActionButton onClick={() => startCreateAssignment(course.id)} type="button">
-                    Agregar tarea
+                    Agregar material
                   </ActionButton>
                 </div>
                 {(course.assignments ?? []).length ? (
@@ -668,7 +673,7 @@ export function TeacherExperience(props) {
                       <RowCard
                         body={assignment.instruction}
                         density="compact"
-                        eyebrow={assignment.dueLabel ? `Entrega ${assignment.dueLabel}` : "Sin fecha de entrega"}
+                        eyebrow={assignment.dueLabel ? `Programado ${assignment.dueLabel}` : "Sin fecha definida"}
                         key={assignment.id}
                         meta={[
                           course.title,
@@ -685,12 +690,12 @@ export function TeacherExperience(props) {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState body="Todavia no has publicado tareas en este curso." title="Sin asignaciones" />
+                  <EmptyState body="Todavia no has publicado materiales en este curso." title="Sin materiales" />
                 )}
               </div>
             ))
           ) : (
-            <EmptyState body="Crea la primera asignacion en cualquiera de tus cursos." title="Sin tareas publicadas" />
+            <EmptyState body="Crea el primer material en cualquiera de tus cursos." title="Sin materiales publicados" />
           )}
         </div>
       </SectionCard>
@@ -818,8 +823,8 @@ export function TeacherExperience(props) {
       {modal === "assignment" ? (
         <ModalShell
           onClose={closeModal}
-          subtitle="Las tareas creadas aqui solo impactan cursos asignados a este docente."
-          title={assignmentForm.assignmentId ? "Editar asignacion docente" : "Nueva asignacion docente"}
+          subtitle="Los materiales creados aqui solo impactan cursos asignados a este docente."
+          title={assignmentForm.assignmentId ? "Editar material docente" : "Nuevo material docente"}
         >
           <form className="grid gap-4" onSubmit={handleAssignmentSubmit}>
             <Select onChange={(event) => setAssignmentForm((current) => ({ ...current, courseId: event.target.value }))} value={assignmentForm.courseId}>
@@ -830,18 +835,18 @@ export function TeacherExperience(props) {
                 </option>
               ))}
             </Select>
-            <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, title: event.target.value }))} placeholder="Titulo de la tarea" value={assignmentForm.title} />
+            <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, title: event.target.value }))} placeholder="Titulo del material" value={assignmentForm.title} />
             <div className="grid gap-4 md:grid-cols-2">
               <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueDate: event.target.value }))} type="date" value={assignmentForm.dueDate} />
               <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueTime: event.target.value }))} type="time" value={assignmentForm.dueTime} />
             </div>
-            <Textarea onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Instruccion o criterio de evaluacion" value={assignmentForm.instruction} />
+            <Textarea onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Guia, instruccion o contexto para el estudiante" value={assignmentForm.instruction} />
             <div className="grid gap-3 rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Archivo adjunto</p>
                   <p className="mt-1 text-sm text-[#536277]">
-                    Sube una o varias guias, plantillas o recursos para esta tarea.
+                    Sube una o varias guias, plantillas o recursos para este material.
                   </p>
                 </div>
                 {assignmentForm.attachments.length ? (
@@ -936,7 +941,7 @@ export function TeacherExperience(props) {
             </div>
             <div className="flex flex-wrap gap-3">
               <ActionButton disabled={submitting} type="submit">
-                {submitting ? "Guardando..." : assignmentForm.assignmentId ? "Guardar cambios" : "Crear asignacion"}
+                {submitting ? "Guardando..." : assignmentForm.assignmentId ? "Guardar cambios" : "Crear material"}
               </ActionButton>
               {assignmentForm.assignmentId ? (
                 <SecondaryButton disabled={submitting} onClick={handleAssignmentDelete} type="button">

@@ -21,14 +21,14 @@ function EmbedFrame({ src, title }) {
 
 function FeedbackCard({ item }) {
   return (
-    <article className="w-[18.5rem] shrink-0 overflow-hidden rounded-[1.9rem] border border-white/10 bg-white/[0.03] shadow-[0_24px_60px_rgba(0,0,0,0.16)] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30 sm:w-[20rem] lg:w-[22rem]">
+    <article className="w-[min(88vw,22rem)] shrink-0 overflow-hidden rounded-[1.9rem] border border-white/10 bg-white/[0.03] shadow-[0_24px_60px_rgba(0,0,0,0.16)] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30">
       {item.embedUrl ? (
         <div className="h-[15rem] overflow-hidden bg-[#0b0f17] sm:h-[18rem] lg:h-[21rem]">
           <EmbedFrame src={item.embedUrl} title={item.title} />
         </div>
       ) : item.image ? (
-        <div className="aspect-[16/10] overflow-hidden bg-[#0b0f17]">
-          <img alt={item.title} className="h-full w-full object-cover" src={normalizePublicMediaUrl(item.image)} />
+        <div className="flex aspect-[16/10] items-center justify-center overflow-hidden bg-white p-7">
+          <img alt={item.title} className="h-full w-full object-contain" src={normalizePublicMediaUrl(item.image)} />
         </div>
       ) : (
         <div className="flex aspect-[16/10] flex-col items-center justify-center bg-[linear-gradient(135deg,rgba(37,99,235,0.12),rgba(8,8,8,0.92))] px-6 text-center">
@@ -57,27 +57,26 @@ function FeedbackCard({ item }) {
   );
 }
 
-export function EmbedFeedbackCarousel({ items, speedMs = 28000 }) {
+export function EmbedFeedbackCarousel({ controlsLabel = "Convenios activos", items, speedMs = 28000 }) {
   const groupRef = useRef(null);
-  const [scrollDistance, setScrollDistance] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const hasMultipleItems = items.length > 1;
 
   useEffect(() => {
-    if (!groupRef.current || items.length <= 1) {
-      setScrollDistance(0);
+    setActiveIndex(0);
+  }, [items]);
+
+  useEffect(() => {
+    if (!hasMultipleItems) {
       return undefined;
     }
 
-    const measure = () => {
-      setScrollDistance(groupRef.current?.offsetWidth ?? 0);
-    };
+    const intervalId = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % items.length);
+    }, Math.max(speedMs / items.length, 4500));
 
-    measure();
-
-    const observer = new ResizeObserver(() => measure());
-    observer.observe(groupRef.current);
-
-    return () => observer.disconnect();
-  }, [items]);
+    return () => window.clearInterval(intervalId);
+  }, [hasMultipleItems, items.length, speedMs]);
 
   if (!items.length) {
     return null;
@@ -85,59 +84,71 @@ export function EmbedFeedbackCarousel({ items, speedMs = 28000 }) {
 
   if (items.length === 1) {
     return (
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="overflow-hidden">
         <FeedbackCard item={items[0]} />
       </div>
     );
   }
 
+  const goToPrevious = () => {
+    setActiveIndex((current) => (current - 1 + items.length) % items.length);
+  };
+
+  const goToNext = () => {
+    setActiveIndex((current) => (current + 1) % items.length);
+  };
+
   return (
-    <div className="grid">
-      <div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
-        <div
-          className="embed-feedback-track flex w-max gap-5"
-          style={{
-            "--embed-feedback-distance": `${scrollDistance}px`,
-            "--embed-feedback-duration": `${speedMs}ms`,
-          }}
-        >
-          <div ref={groupRef} className="flex w-max shrink-0 gap-5">
-            {items.map((item) => (
-              <FeedbackCard key={item.id} item={item} />
-            ))}
-          </div>
-          <div aria-hidden="true" className="flex w-max shrink-0 gap-5">
-            {items.map((item) => (
-              <FeedbackCard key={`${item.id}-clone`} item={item} />
-            ))}
-          </div>
+    <div className="grid gap-5">
+      <div className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">
+          {controlsLabel}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            aria-label="Institucion anterior"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition hover:border-blue-500/30 hover:bg-white/[0.06]"
+            onClick={goToPrevious}
+            type="button"
+          >
+            ←
+          </button>
+          <button
+            aria-label="Siguiente institucion"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition hover:border-blue-500/30 hover:bg-white/[0.06]"
+            onClick={goToNext}
+            type="button"
+          >
+            →
+          </button>
         </div>
       </div>
-      <style>{`
-        @keyframes embed-feedback-marquee {
-          from {
-            transform: translateX(0);
-          }
-          to {
-            transform: translateX(calc(-1 * var(--embed-feedback-distance, 0px)));
-          }
-        }
-
-        .embed-feedback-track {
-          animation: embed-feedback-marquee var(--embed-feedback-duration, 28000ms) linear infinite;
-        }
-
-        .embed-feedback-track:hover {
-          animation-play-state: paused;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .embed-feedback-track {
-            animation: none;
-            transform: none;
-          }
-        }
-      `}</style>
+      <div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]">
+        <div
+          ref={groupRef}
+          className="flex gap-5 transition-transform duration-700 ease-out"
+          style={{
+            transform: `translateX(calc(${activeIndex} * -1 * (min(88vw, 22rem) + 1.25rem)))`,
+          }}
+        >
+          {items.map((item) => (
+            <FeedbackCard key={item.id} item={item} />
+          ))}
+        </div>
+      </div>
+      <div className="flex justify-center gap-2">
+        {items.map((item, index) => (
+          <button
+            aria-label={`Ver ${item.title}`}
+            className={`h-2 rounded-full transition-all ${
+              index === activeIndex ? "w-8 bg-blue-400" : "w-2 bg-white/20 hover:bg-white/40"
+            }`}
+            key={`${item.id}-indicator`}
+            onClick={() => setActiveIndex(index)}
+            type="button"
+          />
+        ))}
+      </div>
     </div>
   );
 }

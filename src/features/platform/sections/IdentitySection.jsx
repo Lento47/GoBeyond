@@ -70,6 +70,16 @@ export function IdentitySection({
               Editar redes
             </ActionButton>
           </RowCard>
+          <RowCard
+            eyebrow="Modalidades"
+            title={content.participationSection?.title ?? "Formacion de alto valor, con acceso real."}
+            meta={`${content.participationOptions?.length ?? 0} opciones visibles en landing`}
+            body={content.participationSection?.description}
+          >
+            <ActionButton onClick={() => openModal("participation")} type="button">
+              Editar modalidades
+            </ActionButton>
+          </RowCard>
         </div>
       </SectionCard>
 
