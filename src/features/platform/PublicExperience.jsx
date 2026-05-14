@@ -650,7 +650,7 @@ function TestimonialsSection({
                 return (
                   <article
                     key={item.id || `${item.author}-${i}`}
-                    className={`gobeyond-reveal rounded-2xl border p-7 transition-colors ${
+                    className={`rounded-2xl border p-7 transition-colors ${
                       isFirst
                         ? "border-l-4 border-l-blue-500 border-t-white/8 border-r-white/8 border-b-white/8 bg-white/[0.04]"
                         : "border-white/8 bg-white/[0.02]"
