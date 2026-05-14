@@ -2942,8 +2942,13 @@ export function AdminWorkspace({
                         <Input value={card.title ?? ""} onChange={(e) => updateProgramCard(index, "title", e.target.value)} placeholder="Nombre del programa" />
                       </Field>
                     </div>
-                    <Field label="URL de imagen de portada" hint="Deja vacío para mostrar un gradiente de fondo automático.">
+                    <Field label="Imagen de portada" hint="Selecciona de la biblioteca o pega una URL. Deja vacío para gradiente automático.">
                       <Input value={card.image ?? ""} onChange={(e) => updateProgramCard(index, "image", e.target.value)} placeholder="https://..." />
+                      <MediaLibraryStrip
+                        emptyLabel="Sube imágenes con propósito 'course-cover' para usarlas aquí."
+                        items={imageLibraryItems.filter((item) => item.purpose === "course-cover")}
+                        onSelect={(item) => updateProgramCard(index, "image", item.url)}
+                      />
                     </Field>
                     <Field label="Descripción" hint="Texto gris bajo el título. Explica brevemente de qué trata el programa.">
                       <Textarea value={card.description ?? ""} onChange={(e) => updateProgramCard(index, "description", e.target.value)} placeholder="Descripción del programa..." />
