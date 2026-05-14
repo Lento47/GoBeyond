@@ -2856,232 +2856,298 @@ export function AdminWorkspace({
             onClose={closeModal}
             size="wide"
           >
-            <form className="grid gap-6" onSubmit={saveLanding}>
+            <form className="grid gap-3" onSubmit={saveLanding}>
 
-              {/* ── NAVEGACIÓN ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Navegación</p>
-                <Field label="Etiquetas del menú" hint="Escribe las etiquetas separadas por coma. El orden importa.">
-                  <Input value={landingForm.nav ?? ""} onChange={(e) => setLanding("nav", e.target.value)} placeholder="Inicio, Sobre nosotros, Servicios, Cursos, Testimonios, Contacto" />
-                </Field>
-              </div>
+              {/* ── ACORDEÓN HELPER ─────────────────────────────────────────
+                  Each section is a <details> that collapses by default.
+                  Only expand the section you need to edit.
+              ─────────────────────────────────────────────────────────────── */}
 
-              {/* ── HERO ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Hero — Botones</p>
-                <p className="text-[11px] text-[#8899b0]">El título y descripción del hero se editan en el modal "Hero". Aquí solo van los textos de los botones.</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Botón principal">
-                    <Input value={landingForm.heroPrimaryCtaLabel ?? ""} onChange={(e) => setLanding("heroPrimaryCtaLabel", e.target.value)} placeholder="Empezar ahora" />
-                  </Field>
-                  <Field label="Botón secundario">
-                    <Input value={landingForm.heroSecondaryCtaLabel ?? ""} onChange={(e) => setLanding("heroSecondaryCtaLabel", e.target.value)} placeholder="Ver programas" />
-                  </Field>
-                </div>
-              </div>
-
-              {/* ── SOBRE NOSOTROS ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Sobre nosotros</p>
-                <Field label="Etiqueta de sección" hint="Texto pequeño en azul que aparece encima del título (ej. Sobre nosotros).">
-                  <Input value={landingForm.aboutTitle ?? ""} onChange={(e) => setLanding("aboutTitle", e.target.value)} placeholder="Sobre nosotros" />
-                </Field>
-                <Field label="Párrafo principal" hint="Texto que aparece debajo del nombre de la institución, lado izquierdo.">
-                  <Textarea value={landingForm.aboutBody ?? ""} onChange={(e) => setLanding("aboutBody", e.target.value)} placeholder="Breve descripción de la organización..." />
-                </Field>
-                <Field label="Párrafo secundario" hint="Segundo párrafo visible en el panel derecho de la sección.">
-                  <Textarea value={landingForm.aboutBodyTwo ?? ""} onChange={(e) => setLanding("aboutBodyTwo", e.target.value)} placeholder="Más contexto sobre la misión..." />
-                </Field>
-                <Field label="Lista de beneficios / puntos clave" hint="Aparecen como tarjetas en la cuadrícula. Un punto por línea.">
-                  <Textarea value={landingForm.benefits ?? ""} onChange={(e) => setLanding("benefits", e.target.value)} placeholder="Alianza con centros educativos&#10;Preparación para certificaciones&#10;Impacto social concreto" />
-                </Field>
-              </div>
-
-              {/* ── SERVICIOS ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Servicios</p>
-                <Field label="Etiqueta de sección" hint="Texto pequeño en azul encima del encabezado (ej. Nuestros servicios).">
-                  <Input value={landingForm.servicesTitle ?? ""} onChange={(e) => setLanding("servicesTitle", e.target.value)} placeholder="Nuestros servicios" />
-                </Field>
-                <Field label="Encabezado grande" hint="Título grande visible en la sección de servicios.">
-                  <Input value={landingForm.subscriptionLabel ?? ""} onChange={(e) => setLanding("subscriptionLabel", e.target.value)} placeholder="Conocimiento relevante para entorno laboral" />
-                </Field>
-                <Field label="Descripción de relevancia" hint="Párrafo explicativo sobre por qué estas habilidades importan.">
-                  <Textarea value={landingForm.relevanceBody ?? ""} onChange={(e) => setLanding("relevanceBody", e.target.value)} placeholder="Project Management, IA y Scrum se posicionan entre las competencias más demandadas..." />
-                </Field>
-              </div>
-
-              {/* ── PROGRAMAS Y CURSOS ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Programas y cursos</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Etiqueta de sección" hint="Texto pequeño encima del encabezado.">
-                    <Input value={landingForm.coursesTitle ?? ""} onChange={(e) => setLanding("coursesTitle", e.target.value)} placeholder="Programas y cursos" />
-                  </Field>
-                  <Field label="Encabezado grande" hint="Título principal de la sección.">
-                    <Input value={landingForm.coursesHeading ?? ""} onChange={(e) => setLanding("coursesHeading", e.target.value)} placeholder="Creados para el Impacto Real." />
-                  </Field>
-                  <Field label="Etiqueta de resultados" hint="Texto que aparece antes de la lista de resultados en cada tarjeta.">
-                    <Input value={landingForm.courseResultsLabel ?? ""} onChange={(e) => setLanding("courseResultsLabel", e.target.value)} placeholder="Resultados:" />
-                  </Field>
-                </div>
-
-                {/* Program cards */}
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Tarjetas de programas</p>
-                  <SecondaryButton onClick={addProgramCard} type="button">+ Agregar tarjeta</SecondaryButton>
-                </div>
-                <p className="text-[11px] text-[#8899b0]">Cada tarjeta es una carta de programa visible en el sitio público. Solo completa los campos que necesitas.</p>
-
-                {(landingForm.programCards ?? []).map((card, index) => (
-                  <div key={card.id || index} className="grid gap-4 rounded-xl border border-[#dfe6ee] bg-white p-5">
-                    <div className="flex items-center justify-between border-b border-[#eef4ff] pb-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Tarjeta {index + 1}</p>
-                      <SecondaryButton onClick={() => removeProgramCard(index)} type="button">Eliminar</SecondaryButton>
+              {[
+                {
+                  id: "nav",
+                  label: "Navegación",
+                  hint: "Etiquetas del menú",
+                  content: (
+                    <Field label="Etiquetas del menú" hint="Escribe las etiquetas separadas por coma. El orden importa.">
+                      <Input value={landingForm.nav ?? ""} onChange={(e) => setLanding("nav", e.target.value)} placeholder="Inicio, Sobre nosotros, Servicios, Cursos, Testimonios, Contacto" />
+                    </Field>
+                  ),
+                },
+                {
+                  id: "hero",
+                  label: "Hero — Botones",
+                  hint: "Textos de los botones CTA",
+                  content: (
+                    <div className="grid gap-3">
+                      <p className="text-[11px] text-[#8899b0]">El título y descripción del hero se editan en el modal "Hero". Aquí solo van los textos de los botones.</p>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Field label="Botón principal">
+                          <Input value={landingForm.heroPrimaryCtaLabel ?? ""} onChange={(e) => setLanding("heroPrimaryCtaLabel", e.target.value)} placeholder="Empezar ahora" />
+                        </Field>
+                        <Field label="Botón secundario">
+                          <Input value={landingForm.heroSecondaryCtaLabel ?? ""} onChange={(e) => setLanding("heroSecondaryCtaLabel", e.target.value)} placeholder="Ver programas" />
+                        </Field>
+                      </div>
                     </div>
+                  ),
+                },
+                {
+                  id: "about",
+                  label: "Sobre nosotros",
+                  hint: "Párrafos, beneficios",
+                  content: (
+                    <div className="grid gap-3">
+                      <Field label="Etiqueta de sección" hint="Texto pequeño en azul que aparece encima del título.">
+                        <Input value={landingForm.aboutTitle ?? ""} onChange={(e) => setLanding("aboutTitle", e.target.value)} placeholder="Sobre nosotros" />
+                      </Field>
+                      <Field label="Párrafo principal" hint="Texto debajo del nombre, lado izquierdo.">
+                        <Textarea value={landingForm.aboutBody ?? ""} onChange={(e) => setLanding("aboutBody", e.target.value)} placeholder="Breve descripción de la organización..." />
+                      </Field>
+                      <Field label="Párrafo secundario" hint="Panel derecho de la sección.">
+                        <Textarea value={landingForm.aboutBodyTwo ?? ""} onChange={(e) => setLanding("aboutBodyTwo", e.target.value)} placeholder="Más contexto sobre la misión..." />
+                      </Field>
+                      <Field label="Beneficios / puntos clave" hint="Un punto por línea. Aparecen como tarjetas en la cuadrícula.">
+                        <Textarea value={landingForm.benefits ?? ""} onChange={(e) => setLanding("benefits", e.target.value)} placeholder="Alianza con centros educativos&#10;Preparación para certificaciones&#10;Impacto social concreto" />
+                      </Field>
+                    </div>
+                  ),
+                },
+                {
+                  id: "servicios",
+                  label: "Servicios",
+                  hint: "Encabezado y descripción",
+                  content: (
+                    <div className="grid gap-3">
+                      <Field label="Etiqueta de sección">
+                        <Input value={landingForm.servicesTitle ?? ""} onChange={(e) => setLanding("servicesTitle", e.target.value)} placeholder="Nuestros servicios" />
+                      </Field>
+                      <Field label="Encabezado grande">
+                        <Input value={landingForm.subscriptionLabel ?? ""} onChange={(e) => setLanding("subscriptionLabel", e.target.value)} placeholder="Conocimiento relevante para entorno laboral" />
+                      </Field>
+                      <Field label="Descripción de relevancia">
+                        <Textarea value={landingForm.relevanceBody ?? ""} onChange={(e) => setLanding("relevanceBody", e.target.value)} placeholder="Project Management, IA y Scrum..." />
+                      </Field>
+                    </div>
+                  ),
+                },
+                {
+                  id: "testimonios",
+                  label: "Testimonios y confianza",
+                  hint: "Títulos y párrafo introductorio",
+                  content: (
+                    <div className="grid gap-3">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Field label="Etiqueta de sección">
+                          <Input value={landingForm.trustTitle ?? ""} onChange={(e) => setLanding("trustTitle", e.target.value)} placeholder="Confían en nosotros" />
+                        </Field>
+                        <Field label="Título principal">
+                          <Input value={landingForm.testimonialTitle ?? ""} onChange={(e) => setLanding("testimonialTitle", e.target.value)} placeholder="Opiniones de estudiantes" />
+                        </Field>
+                        <Field label="Etiqueta del carrusel">
+                          <Input value={landingForm.testimonialsCarouselLabel ?? ""} onChange={(e) => setLanding("testimonialsCarouselLabel", e.target.value)} placeholder="Rotando testimonios" />
+                        </Field>
+                      </div>
+                      <Field label="Párrafo introductorio" hint="Si se deja vacío, se usa la descripción de Marca.">
+                        <Textarea value={landingForm.trustBody ?? ""} onChange={(e) => setLanding("trustBody", e.target.value)} placeholder="Detrás de cada certificación hay una historia..." />
+                      </Field>
+                    </div>
+                  ),
+                },
+                {
+                  id: "instituciones",
+                  label: "Carrusel de instituciones",
+                  hint: "Título, badge, descripción",
+                  content: (
+                    <div className="grid gap-3">
+                      <Field label="Título del carrusel">
+                        <Input value={landingForm.institutionsCarouselTitle ?? ""} onChange={(e) => setLanding("institutionsCarouselTitle", e.target.value)} placeholder="Instituciones con convenio" />
+                      </Field>
+                      <Field label="Etiqueta de estado" hint="Pequeño badge (ej. Convenios activos).">
+                        <Input value={landingForm.institutionsCarouselLabel ?? ""} onChange={(e) => setLanding("institutionsCarouselLabel", e.target.value)} placeholder="Convenios activos" />
+                      </Field>
+                      <Field label="Descripción">
+                        <Textarea value={landingForm.institutionsCarouselBody ?? ""} onChange={(e) => setLanding("institutionsCarouselBody", e.target.value)} placeholder="Centros educativos y organizaciones aliadas..." />
+                      </Field>
+                    </div>
+                  ),
+                },
+                {
+                  id: "noticias",
+                  label: "Noticias",
+                  hint: "Título y botón ver más",
+                  content: (
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Badge / Etiqueta" hint="Texto pequeño sobre el título (ej. Certificación Internacional).">
-                        <Input value={card.eyebrow ?? ""} onChange={(e) => updateProgramCard(index, "eyebrow", e.target.value)} placeholder="Certificación Internacional" />
+                      <Field label="Título de sección">
+                        <Input value={landingForm.newsTitle ?? ""} onChange={(e) => setLanding("newsTitle", e.target.value)} placeholder="Noticias" />
                       </Field>
-                      <Field label="Título del programa">
-                        <Input value={card.title ?? ""} onChange={(e) => updateProgramCard(index, "title", e.target.value)} placeholder="Nombre del programa" />
-                      </Field>
-                    </div>
-                    <Field label="Imagen de portada" hint="Selecciona de la biblioteca o pega una URL. Deja vacío para gradiente automático.">
-                      <Input value={card.image ?? ""} onChange={(e) => updateProgramCard(index, "image", e.target.value)} placeholder="https://..." />
-                      <MediaLibraryStrip
-                        emptyLabel="Sube imágenes con propósito 'course-cover' para usarlas aquí."
-                        items={imageLibraryItems.filter((item) => item.purpose === "course-cover")}
-                        onSelect={(item) => updateProgramCard(index, "image", item.url)}
-                      />
-                    </Field>
-                    <Field label="Descripción" hint="Texto gris bajo el título. Explica brevemente de qué trata el programa.">
-                      <Textarea value={card.description ?? ""} onChange={(e) => updateProgramCard(index, "description", e.target.value)} placeholder="Descripción del programa..." />
-                    </Field>
-                    <Field label="¿Por qué es relevante?" hint="Aparece en un recuadro destacado con fondo oscuro.">
-                      <Textarea value={card.relevance ?? ""} onChange={(e) => updateProgramCard(index, "relevance", e.target.value)} placeholder="Contexto sobre el valor de mercado..." />
-                    </Field>
-                    <Field label="Resultados (uno por línea)" hint="Lista de lo que el estudiante logra al completar el programa.">
-                      <Textarea value={listToLines(card.outcomes)} onChange={(e) => updateProgramCard(index, "outcomes", linesToList(e.target.value))} placeholder="Fundamentos reales de gestión&#10;Pensamiento estratégico&#10;Preparación para certificación" />
-                    </Field>
-                    <Field label="Programas disponibles (uno por línea)" hint="Lista de cursos incluidos en esta tarjeta (opcional).">
-                      <Textarea value={listToLines(card.availablePrograms)} onChange={(e) => updateProgramCard(index, "availablePrograms", linesToList(e.target.value))} placeholder="Gestión de Proyectos&#10;Metodologías ágiles (Scrum)" />
-                    </Field>
-                    <Field label="Incluye (uno por línea)" hint="Lo que viene incluido en el programa.">
-                      <Textarea value={listToLines(card.includes)} onChange={(e) => updateProgramCard(index, "includes", linesToList(e.target.value))} placeholder="Capacitación práctica&#10;Acceso a certificación" />
-                    </Field>
-                    <Field label="Beneficios adicionales (uno por línea)">
-                      <Textarea value={listToLines(card.benefits)} onChange={(e) => updateProgramCard(index, "benefits", linesToList(e.target.value))} placeholder="5 estudiantes becados&#10;Taller de CV profesional" />
-                    </Field>
-                    <Field label="Requisitos (uno por línea)">
-                      <Textarea value={listToLines(card.requirements)} onChange={(e) => updateProgramCard(index, "requirements", linesToList(e.target.value))} placeholder="Mínimo 10 estudiantes matriculados" />
-                    </Field>
-                    <Field label="Nota de certificación" hint="Aparece al pie de la tarjeta en azul (ej. Certificación Propia de Go Beyond).">
-                      <Input value={card.certificationNote ?? ""} onChange={(e) => updateProgramCard(index, "certificationNote", e.target.value)} placeholder="Certificación Propia de Go Beyond" />
-                    </Field>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Texto del botón">
-                        <Input value={card.ctaLabel ?? ""} onChange={(e) => updateProgramCard(index, "ctaLabel", e.target.value)} placeholder="Aplicar →" />
-                      </Field>
-                      <Field label="Enlace del botón (href)">
-                        <Input value={card.href ?? ""} onChange={(e) => updateProgramCard(index, "href", e.target.value)} placeholder="#contacto o https://..." />
+                      <Field label="Botón 'ver más'">
+                        <Input value={landingForm.newsArchiveLabel ?? ""} onChange={(e) => setLanding("newsArchiveLabel", e.target.value)} placeholder="Ver más noticias" />
                       </Field>
                     </div>
+                  ),
+                },
+                {
+                  id: "contacto",
+                  label: "Contacto",
+                  hint: "Email, teléfono, textos",
+                  content: (
+                    <div className="grid gap-3">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Field label="Etiqueta de sección">
+                          <Input value={landingForm.contactTitle ?? ""} onChange={(e) => setLanding("contactTitle", e.target.value)} placeholder="¿Quieres unirte al cambio?" />
+                        </Field>
+                        <Field label="Texto introductorio">
+                          <Input value={landingForm.contactBody ?? ""} onChange={(e) => setLanding("contactBody", e.target.value)} placeholder="Ponte en contacto con Go Beyond..." />
+                        </Field>
+                        <Field label="Etiqueta Email">
+                          <Input value={landingForm.contactInfo?.emailLabel ?? ""} onChange={(e) => setContactInfo("emailLabel", e.target.value)} placeholder="Email" />
+                        </Field>
+                        <Field label="Dirección de email">
+                          <Input value={landingForm.contactInfo?.emailValue ?? ""} onChange={(e) => setContactInfo("emailValue", e.target.value)} placeholder="info@gobeyondcr.org" />
+                        </Field>
+                        <Field label="Etiqueta Teléfono">
+                          <Input value={landingForm.contactInfo?.phoneLabel ?? ""} onChange={(e) => setContactInfo("phoneLabel", e.target.value)} placeholder="Teléfono" />
+                        </Field>
+                        <Field label="Texto auxiliar teléfono">
+                          <Input value={landingForm.contactInfo?.phonePrompt ?? ""} onChange={(e) => setContactInfo("phonePrompt", e.target.value)} placeholder="Llámanos" />
+                        </Field>
+                        <Field label="Número de teléfono" className="md:col-span-2">
+                          <Input value={landingForm.contactInfo?.phoneValue ?? ""} onChange={(e) => setContactInfo("phoneValue", e.target.value)} placeholder="(+506) 8530 5317" />
+                        </Field>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  id: "redes",
+                  label: "Redes sociales",
+                  hint: "Facebook, LinkedIn, Instagram",
+                  content: (
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <Field label="Facebook">
+                        <Input value={landingForm.socialLinks?.facebook ?? ""} onChange={(e) => setSocialLinks("facebook", e.target.value)} placeholder="https://facebook.com/..." />
+                      </Field>
+                      <Field label="LinkedIn">
+                        <Input value={landingForm.socialLinks?.linkedin ?? ""} onChange={(e) => setSocialLinks("linkedin", e.target.value)} placeholder="https://linkedin.com/..." />
+                      </Field>
+                      <Field label="Instagram">
+                        <Input value={landingForm.socialLinks?.instagram ?? ""} onChange={(e) => setSocialLinks("instagram", e.target.value)} placeholder="https://instagram.com/..." />
+                      </Field>
+                    </div>
+                  ),
+                },
+              ].map(({ id, label, hint, content }) => (
+                <details key={id} className="group rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] overflow-hidden">
+                  <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 hover:bg-[#eef4ff] transition-colors">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">{label}</p>
+                      <p className="text-[11px] text-[#8899b0] mt-0.5">{hint}</p>
+                    </div>
+                    <span className="text-[#1d4ed8] text-sm transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <div className="grid gap-3 border-t border-[#d7e0ea] px-4 pb-4 pt-4">
+                    {content}
                   </div>
-                ))}
-              </div>
+                </details>
+              ))}
 
-              {/* ── TESTIMONIOS Y CONFIANZA ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Testimonios y confianza</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Etiqueta de sección" hint="Texto pequeño encima del título (ej. Confían en nosotros).">
-                    <Input value={landingForm.trustTitle ?? ""} onChange={(e) => setLanding("trustTitle", e.target.value)} placeholder="Confían en nosotros" />
-                  </Field>
-                  <Field label="Título principal">
-                    <Input value={landingForm.testimonialTitle ?? ""} onChange={(e) => setLanding("testimonialTitle", e.target.value)} placeholder="Opiniones de estudiantes" />
-                  </Field>
-                  <Field label="Etiqueta del carrusel" hint="Texto de accesibilidad para el carrusel de testimonios.">
-                    <Input value={landingForm.testimonialsCarouselLabel ?? ""} onChange={(e) => setLanding("testimonialsCarouselLabel", e.target.value)} placeholder="Rotando testimonios" />
-                  </Field>
+              {/* ── PROGRAMAS Y CURSOS (sección separada por complejidad) ── */}
+              <details className="group rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] overflow-hidden">
+                <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 hover:bg-[#eef4ff] transition-colors">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Programas y cursos</p>
+                    <p className="text-[11px] text-[#8899b0] mt-0.5">Encabezados + {(landingForm.programCards ?? []).length} tarjeta(s)</p>
+                  </div>
+                  <span className="text-[#1d4ed8] text-sm transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <div className="grid gap-4 border-t border-[#d7e0ea] px-4 pb-4 pt-4">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Field label="Etiqueta de sección">
+                      <Input value={landingForm.coursesTitle ?? ""} onChange={(e) => setLanding("coursesTitle", e.target.value)} placeholder="Programas y cursos" />
+                    </Field>
+                    <Field label="Encabezado grande">
+                      <Input value={landingForm.coursesHeading ?? ""} onChange={(e) => setLanding("coursesHeading", e.target.value)} placeholder="Creados para el Impacto Real." />
+                    </Field>
+                    <Field label="Etiqueta de resultados">
+                      <Input value={landingForm.courseResultsLabel ?? ""} onChange={(e) => setLanding("courseResultsLabel", e.target.value)} placeholder="Resultados:" />
+                    </Field>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Tarjetas ({(landingForm.programCards ?? []).length})</p>
+                    <SecondaryButton onClick={addProgramCard} type="button">+ Agregar tarjeta</SecondaryButton>
+                  </div>
+
+                  {(landingForm.programCards ?? []).map((card, index) => (
+                    <details key={card.id || index} className="group/card rounded-xl border border-[#dfe6ee] bg-white overflow-hidden">
+                      <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 hover:bg-[#f7f9ff] transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#748197]">Tarjeta {index + 1}</p>
+                          <p className="text-sm font-semibold text-[#172033] truncate">{card.title || "Sin título"}</p>
+                          {card.eyebrow ? <p className="text-[11px] text-[#8899b0] truncate">{card.eyebrow}</p> : null}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-3 ml-4">
+                          <SecondaryButton onClick={(e) => { e.preventDefault(); removeProgramCard(index); }} type="button">Eliminar</SecondaryButton>
+                          <span className="text-[#1d4ed8] text-sm transition-transform group-open/card:rotate-180">▾</span>
+                        </div>
+                      </summary>
+                      <div className="grid gap-4 border-t border-[#eef4ff] px-4 pb-4 pt-4">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <Field label="Badge / Etiqueta" hint="Texto pequeño sobre el título.">
+                            <Input value={card.eyebrow ?? ""} onChange={(e) => updateProgramCard(index, "eyebrow", e.target.value)} placeholder="Certificación Internacional" />
+                          </Field>
+                          <Field label="Título del programa">
+                            <Input value={card.title ?? ""} onChange={(e) => updateProgramCard(index, "title", e.target.value)} placeholder="Nombre del programa" />
+                          </Field>
+                        </div>
+                        <Field label="Imagen de portada" hint="Selecciona de la biblioteca o pega una URL. Vacío = gradiente.">
+                          <Input value={card.image ?? ""} onChange={(e) => updateProgramCard(index, "image", e.target.value)} placeholder="https://..." />
+                          <MediaLibraryStrip
+                            emptyLabel="Sube imágenes con propósito 'course-cover' para usarlas aquí."
+                            items={imageLibraryItems.filter((item) => item.purpose === "course-cover")}
+                            onSelect={(item) => updateProgramCard(index, "image", item.url)}
+                          />
+                        </Field>
+                        <Field label="Descripción" hint="Texto gris bajo el título.">
+                          <Textarea value={card.description ?? ""} onChange={(e) => updateProgramCard(index, "description", e.target.value)} placeholder="Descripción del programa..." />
+                        </Field>
+                        <Field label="¿Por qué es relevante?" hint="Recuadro destacado con fondo oscuro.">
+                          <Textarea value={card.relevance ?? ""} onChange={(e) => updateProgramCard(index, "relevance", e.target.value)} placeholder="Contexto sobre el valor de mercado..." />
+                        </Field>
+                        <Field label="Resultados (uno por línea)">
+                          <Textarea value={listToLines(card.outcomes)} onChange={(e) => updateProgramCard(index, "outcomes", linesToList(e.target.value))} placeholder="Fundamentos reales de gestión&#10;Pensamiento estratégico" />
+                        </Field>
+                        <Field label="Programas disponibles (uno por línea)">
+                          <Textarea value={listToLines(card.availablePrograms)} onChange={(e) => updateProgramCard(index, "availablePrograms", linesToList(e.target.value))} placeholder="Gestión de Proyectos&#10;Metodologías ágiles" />
+                        </Field>
+                        <Field label="Incluye (uno por línea)">
+                          <Textarea value={listToLines(card.includes)} onChange={(e) => updateProgramCard(index, "includes", linesToList(e.target.value))} placeholder="Capacitación práctica&#10;Acceso a certificación" />
+                        </Field>
+                        <Field label="Beneficios adicionales (uno por línea)">
+                          <Textarea value={listToLines(card.benefits)} onChange={(e) => updateProgramCard(index, "benefits", linesToList(e.target.value))} placeholder="5 estudiantes becados&#10;Taller de CV profesional" />
+                        </Field>
+                        <Field label="Requisitos (uno por línea)">
+                          <Textarea value={listToLines(card.requirements)} onChange={(e) => updateProgramCard(index, "requirements", linesToList(e.target.value))} placeholder="Mínimo 10 estudiantes matriculados" />
+                        </Field>
+                        <Field label="Nota de certificación" hint="Al pie de la tarjeta en azul.">
+                          <Input value={card.certificationNote ?? ""} onChange={(e) => updateProgramCard(index, "certificationNote", e.target.value)} placeholder="Certificación Propia de Go Beyond" />
+                        </Field>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <Field label="Texto del botón">
+                            <Input value={card.ctaLabel ?? ""} onChange={(e) => updateProgramCard(index, "ctaLabel", e.target.value)} placeholder="Aplicar →" />
+                          </Field>
+                          <Field label="Enlace del botón">
+                            <Input value={card.href ?? ""} onChange={(e) => updateProgramCard(index, "href", e.target.value)} placeholder="#contacto o https://..." />
+                          </Field>
+                        </div>
+                      </div>
+                    </details>
+                  ))}
                 </div>
-                <Field label="Párrafo introductorio" hint="Si se deja vacío, se usa la descripción de Marca.">
-                  <Textarea value={landingForm.trustBody ?? ""} onChange={(e) => setLanding("trustBody", e.target.value)} placeholder="Detrás de cada certificación hay una historia..." />
-                </Field>
-              </div>
+              </details>
 
-              {/* ── CONVENIOS / INSTITUCIONES ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Carrusel de instituciones</p>
-                <Field label="Título del carrusel">
-                  <Input value={landingForm.institutionsCarouselTitle ?? ""} onChange={(e) => setLanding("institutionsCarouselTitle", e.target.value)} placeholder="Instituciones con convenio" />
-                </Field>
-                <Field label="Etiqueta de estado" hint="Pequeño badge junto al carrusel (ej. Convenios activos).">
-                  <Input value={landingForm.institutionsCarouselLabel ?? ""} onChange={(e) => setLanding("institutionsCarouselLabel", e.target.value)} placeholder="Convenios activos" />
-                </Field>
-                <Field label="Descripción" hint="Párrafo explicativo bajo el título del carrusel.">
-                  <Textarea value={landingForm.institutionsCarouselBody ?? ""} onChange={(e) => setLanding("institutionsCarouselBody", e.target.value)} placeholder="Centros educativos y organizaciones aliadas..." />
-                </Field>
-              </div>
-
-              {/* ── NOTICIAS ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Noticias</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Título de sección">
-                    <Input value={landingForm.newsTitle ?? ""} onChange={(e) => setLanding("newsTitle", e.target.value)} placeholder="Noticias" />
-                  </Field>
-                  <Field label="Botón 'ver más'" hint="Texto del enlace para ver el archivo completo de noticias.">
-                    <Input value={landingForm.newsArchiveLabel ?? ""} onChange={(e) => setLanding("newsArchiveLabel", e.target.value)} placeholder="Ver más noticias" />
-                  </Field>
-                </div>
-              </div>
-
-              {/* ── CONTACTO ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Contacto</p>
-                <Field label="Etiqueta de sección" hint="Texto pequeño encima del título (ej. Contáctanos).">
-                  <Input value={landingForm.contactTitle ?? ""} onChange={(e) => setLanding("contactTitle", e.target.value)} placeholder="¿Quieres unirte al cambio?" />
-                </Field>
-                <Field label="Texto introductorio" hint="Frase o pregunta que invita al visitante a contactarse.">
-                  <Input value={landingForm.contactBody ?? ""} onChange={(e) => setLanding("contactBody", e.target.value)} placeholder="Ponte en contacto con Go Beyond..." />
-                </Field>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Etiqueta Email">
-                    <Input value={landingForm.contactInfo?.emailLabel ?? ""} onChange={(e) => setContactInfo("emailLabel", e.target.value)} placeholder="Email" />
-                  </Field>
-                  <Field label="Dirección de email">
-                    <Input value={landingForm.contactInfo?.emailValue ?? ""} onChange={(e) => setContactInfo("emailValue", e.target.value)} placeholder="info@gobeyondcr.org" />
-                  </Field>
-                  <Field label="Etiqueta Teléfono">
-                    <Input value={landingForm.contactInfo?.phoneLabel ?? ""} onChange={(e) => setContactInfo("phoneLabel", e.target.value)} placeholder="Teléfono" />
-                  </Field>
-                  <Field label="Texto auxiliar teléfono" hint="Texto secundario bajo la etiqueta (ej. Llámanos).">
-                    <Input value={landingForm.contactInfo?.phonePrompt ?? ""} onChange={(e) => setContactInfo("phonePrompt", e.target.value)} placeholder="Llámanos" />
-                  </Field>
-                  <Field label="Número de teléfono" className="md:col-span-2">
-                    <Input value={landingForm.contactInfo?.phoneValue ?? ""} onChange={(e) => setContactInfo("phoneValue", e.target.value)} placeholder="(+506) 8530 5317" />
-                  </Field>
-                </div>
-              </div>
-
-              {/* ── REDES SOCIALES ── */}
-              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Redes sociales</p>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <Field label="Facebook">
-                    <Input value={landingForm.socialLinks?.facebook ?? ""} onChange={(e) => setSocialLinks("facebook", e.target.value)} placeholder="https://facebook.com/..." />
-                  </Field>
-                  <Field label="LinkedIn">
-                    <Input value={landingForm.socialLinks?.linkedin ?? ""} onChange={(e) => setSocialLinks("linkedin", e.target.value)} placeholder="https://linkedin.com/..." />
-                  </Field>
-                  <Field label="Instagram">
-                    <Input value={landingForm.socialLinks?.instagram ?? ""} onChange={(e) => setSocialLinks("instagram", e.target.value)} placeholder="https://instagram.com/..." />
-                  </Field>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-2">
                 <ActionButton type="submit">Guardar landing page</ActionButton>
                 <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
               </div>
