@@ -347,6 +347,7 @@ export const defaultContent = {
       phoneValue: "(+506) 8530 5317",
     },
     contactActions: ["Contacto", "Noticias", "Facebook", "LinkedIn"],
+    contactFormUrl: "",
     socialLinks: {
       facebook: "https://www.facebook.com/profile.php?id=61588185384903",
       linkedin: "https://www.linkedin.com/company/go-beyondcri",
