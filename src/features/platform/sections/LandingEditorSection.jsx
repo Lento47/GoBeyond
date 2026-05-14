@@ -49,14 +49,98 @@ function ProgramList({ title, items }) {
 
 // ── Editor primitives ────────────────────────────────────────────────────────
 
-function EditableField({ value, onChange, as: Tag = "span", className = "", placeholder = "Editar...", multiline = false }) {
+const TOOLBAR_ACTIONS = [
+  { label: "B", title: "Negrita", wrap: ["**", "**"], sample: "texto" },
+  { label: "I", title: "Cursiva", wrap: ["*", "*"], sample: "texto" },
+  { label: "S", title: "Tachado", wrap: ["~~", "~~"], sample: "texto" },
+  { label: "H2", title: "Título grande", line: "## ", sample: "Título" },
+  { label: "H3", title: "Título mediano", line: "### ", sample: "Subtítulo" },
+  { label: "—", title: "Lista", line: "- ", sample: "elemento" },
+  { label: "⸻", title: "Separador", insert: "\n---\n" },
+  { label: "≡", title: "Centrar", wrap: ['<div align="center">', "</div>"], sample: "texto" },
+];
+
+function applyFormat(textarea, action) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const val = textarea.value;
+  const selected = val.slice(start, end);
+  let before = val.slice(0, start);
+  let after = val.slice(end);
+  let inserted = "";
+  let cursor = 0;
+
+  if (action.insert) {
+    inserted = action.insert;
+    cursor = start + inserted.length;
+  } else if (action.wrap) {
+    const [open, close] = action.wrap;
+    inserted = open + (selected || action.sample) + close;
+    cursor = selected ? start + inserted.length : start + open.length + action.sample.length;
+  } else if (action.line) {
+    const lineStart = before.lastIndexOf("\n") + 1;
+    const linePrefix = before.slice(lineStart);
+    before = before.slice(0, lineStart);
+    inserted = action.line + (linePrefix + selected || action.sample);
+    cursor = start + action.line.length + (selected ? selected.length : action.sample.length);
+  }
+
+  const newVal = before + inserted + after;
+  const nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+  nativeInputSetter.call(textarea, newVal);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  textarea.setSelectionRange(cursor, cursor);
+  textarea.focus();
+}
+
+function MarkdownToolbar({ targetRef }) {
+  return (
+    <div className="flex flex-wrap gap-1 mb-1">
+      {TOOLBAR_ACTIONS.map((action) => (
+        <button
+          key={action.label}
+          type="button"
+          title={action.title}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            if (targetRef.current) applyFormat(targetRef.current, action);
+          }}
+          className="px-2 py-0.5 rounded text-[11px] font-bold text-gray-400 bg-white/[0.05] border border-white/10 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          {action.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function EditableField({ value, onChange, as: Tag = "span", className = "", placeholder = "Editar...", multiline = false, toolbar = false }) {
   const ref = useRef(null);
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    if (ref.current && document.activeElement !== ref.current) {
+    if (!multiline && ref.current && document.activeElement !== ref.current) {
       ref.current.textContent = value ?? "";
     }
-  }, [value]);
+  }, [value, multiline]);
+
+  if (multiline) {
+    return (
+      <div className="w-full">
+        {(toolbar || focused) && <MarkdownToolbar targetRef={ref} />}
+        <textarea
+          ref={ref}
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={placeholder}
+          rows={3}
+          className={`w-full resize-y bg-transparent outline-none cursor-text hover:ring-1 hover:ring-white/25 focus:ring-2 focus:ring-blue-400/50 focus:bg-white/[0.06] rounded-sm transition-all ${className}`}
+        />
+      </div>
+    );
+  }
 
   return (
     <Tag
@@ -65,9 +149,7 @@ function EditableField({ value, onChange, as: Tag = "span", className = "", plac
       suppressContentEditableWarning
       data-placeholder={placeholder}
       onBlur={(e) => onChange(e.currentTarget.textContent.trim())}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && !multiline) e.preventDefault();
-      }}
+      onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
       className={`outline-none cursor-text hover:ring-1 hover:ring-white/25 focus:ring-2 focus:ring-blue-400/50 focus:bg-white/[0.06] rounded-sm transition-all [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:opacity-30 [&:empty]:before:pointer-events-none ${className}`}
     />
   );
@@ -317,7 +399,7 @@ export function LandingEditorSection({
                 value={heroForm?.description ?? ""}
                 onChange={(v) => setHero("description", v)}
                 as="p"
-                multiline
+                multiline toolbar
                 className="mt-8 max-w-xl text-sm sm:text-base md:text-lg text-gray-400 font-light leading-relaxed"
                 placeholder="Descripción del Hero..."
               />
@@ -373,7 +455,7 @@ export function LandingEditorSection({
                 value={landingForm?.aboutBodyTwo ?? ""}
                 onChange={(v) => setLanding("aboutBodyTwo", v)}
                 as="p"
-                multiline
+                multiline toolbar
                 className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light"
                 placeholder="Párrafo Sobre nosotros..."
               />
@@ -387,7 +469,7 @@ export function LandingEditorSection({
                       value={item}
                       onChange={(v) => updateBenefit(i, v)}
                       as="p"
-                      multiline
+                      multiline toolbar
                       className="text-sm leading-relaxed text-gray-400 w-full"
                       placeholder="Beneficio..."
                     />
@@ -435,7 +517,7 @@ export function LandingEditorSection({
               value={landingForm?.relevanceBody ?? ""}
               onChange={(v) => setLanding("relevanceBody", v)}
               as="p"
-              multiline
+              multiline toolbar
               className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light"
               placeholder="Descripción de la relevancia laboral..."
             />
@@ -506,7 +588,7 @@ export function LandingEditorSection({
                               value={program.subheading ?? ""}
                               onChange={(v) => updateCard(index, "subheading", v)}
                               as="p"
-                              multiline
+                              multiline toolbar
                               className="mt-1 text-sm text-gray-500"
                               placeholder="Subtítulo o descripción corta..."
                             />
@@ -560,7 +642,7 @@ export function LandingEditorSection({
                             value={program.description ?? ""}
                             onChange={(v) => updateCard(index, "description", v)}
                             as="p"
-                            multiline
+                            multiline toolbar
                             className="mt-5 text-sm leading-relaxed text-gray-400"
                             placeholder="Descripción (texto gris)..."
                           />
@@ -571,7 +653,7 @@ export function LandingEditorSection({
                                 value={program.relevance ?? ""}
                                 onChange={(v) => updateCard(index, "relevance", v)}
                                 as="p"
-                                multiline
+                                multiline toolbar
                                 className="mt-3 text-sm leading-relaxed text-gray-200"
                                 placeholder="Texto de relevancia..."
                               />
@@ -629,7 +711,7 @@ export function LandingEditorSection({
                 value={landingForm?.trustBody ?? ""}
                 onChange={(v) => setLanding("trustBody", v)}
                 as="p"
-                multiline
+                multiline toolbar
                 className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light"
                 placeholder="Párrafo introductorio de testimonios..."
               />
@@ -696,7 +778,7 @@ export function LandingEditorSection({
                   value={landingForm?.institutionsCarouselBody ?? ""}
                   onChange={(v) => setLanding("institutionsCarouselBody", v)}
                   as="p"
-                  multiline
+                  multiline toolbar
                   className="text-base leading-relaxed text-gray-500 sm:text-lg"
                   placeholder="Descripción de instituciones aliadas..."
                 />
