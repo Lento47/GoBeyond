@@ -458,6 +458,14 @@ function StudentAssistant({ courseCount, availableCount, activeCourses }) {
 // --- COMPONENTE: MODAL DE DETALLE DE CURSO ---
 
 function CourseDetailModal({ course, onClose }) {
+  const gcBannerColors = [
+    "from-blue-600 to-blue-800",
+    "from-emerald-600 to-green-800",
+    "from-violet-600 to-purple-800",
+    "from-amber-500 to-orange-700",
+    "from-rose-600 to-pink-800",
+  ];
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -469,144 +477,199 @@ function CourseDetailModal({ course, onClose }) {
 
   if (!course) return null;
 
+  const progress = course.enhancement?.progressPercent ?? 0;
+  const isPassed = course.completionStatus === "passed";
+  const isFailed = course.completionStatus === "failed";
+  const assignments = course.assignments ?? [];
+  const bannerColor = gcBannerColors[0];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#0f172a]/28 px-4 py-4 backdrop-blur-[8px] sm:px-6 sm:py-6">
-      <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100vh-3rem)]">
-        <div className="sticky top-0 z-10 flex shrink-0 flex-col gap-4 border-b border-[#d7e0ea] bg-[#f5f7fb]/95 px-5 py-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-6">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Ficha del programa</p>
-            <h3 className="mt-2 break-words text-3xl font-semibold leading-tight text-[#172033] sm:text-4xl">{course.title}</h3>
-          </div>
-          <button className="rounded-xl bg-[#1d4ed8] px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#1e40af]" onClick={onClose} type="button">
-            Cerrar ficha
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-[#0f172a]/32 backdrop-blur-[8px]">
+      <div className="flex max-h-screen w-full max-w-6xl flex-col overflow-hidden sm:max-h-[calc(100vh-2rem)] sm:mt-4 sm:rounded-[24px] border-0 sm:border sm:border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.22)]">
+
+        {/* Google Classroom-style header banner */}
+        <div className={`relative shrink-0 h-36 sm:h-44 bg-gradient-to-br ${bannerColor} sm:rounded-t-[24px] overflow-hidden`}>
+          {course.coverImage ? (
+            <img alt={course.title} className="absolute inset-0 h-full w-full object-cover" src={course.coverImage} />
+          ) : null}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+          {/* Close button top-right */}
+          <button
+            className="absolute right-4 top-4 rounded-xl border border-white/30 bg-white/20 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white backdrop-blur transition hover:bg-white/30"
+            onClick={onClose}
+            type="button"
+          >
+            Cerrar
           </button>
+
+          {/* Format pill */}
+          {course.format ? (
+            <span className="absolute left-4 top-4 rounded-full border border-white/30 bg-white/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white backdrop-blur">
+              {course.format}
+            </span>
+          ) : null}
+
+          {/* Course title bottom-left */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
+            <h3 className="break-words text-2xl font-black leading-tight text-white drop-shadow sm:text-3xl">{course.title}</h3>
+            {course.duration ? (
+              <p className="mt-1 text-sm text-white/80">{course.duration}</p>
+            ) : null}
+          </div>
         </div>
 
-        <div className="min-h-0 overflow-y-auto">
-        <div className="grid gap-8 p-5 sm:gap-10 sm:p-8 lg:grid-cols-[minmax(0,1.2fr)_22rem]">
-          <div className="space-y-6">
-            {course.coverImage && (
-              <div className="overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white">
-                <img alt={course.title} className="h-[240px] w-full object-cover sm:h-[320px] lg:h-[400px]" src={course.coverImage} />
-              </div>
-            )}
-            <div className={`${workspaceChrome.surface} p-5 sm:p-6`}>
-              <div className="grid gap-5 border-b border-[#e7edf5] pb-5 md:grid-cols-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Formato</p>
-                  <p className="mt-2 text-sm font-semibold text-[#172033]">{course.format || "Academico"}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Duracion</p>
-                  <p className="mt-2 text-sm font-semibold text-[#172033]">{course.duration || "No definida"}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Acceso</p>
-                  <p className="mt-2 text-sm font-semibold text-[#172033]">Vence {formatDisplayDate(course.accessExpiresAt)}</p>
-                </div>
-              </div>
-              <div className="mt-5">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Descripcion</p>
-                <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">{course.description}</MarkdownContent>
-              </div>
-              <div className="mt-5 rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Resultados academicos</p>
-                <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#435066]">
-                  {course.outcomes || "Pendiente de definir desde administracion."}
-                </MarkdownContent>
-              </div>
-            </div>
+        {/* Body */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="grid gap-6 p-5 sm:gap-8 sm:p-8 lg:grid-cols-[minmax(0,1.25fr)_22rem]">
 
-            <div className={`${workspaceChrome.surface} p-5 sm:p-6`}>
-              <div className="flex items-center justify-between gap-4 border-b border-[#e7edf5] pb-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Trabajo pendiente</p>
-                  <h4 className="mt-2 text-xl font-semibold text-[#172033]">Asignaciones activas</h4>
-                </div>
+            {/* Left — Stream */}
+            <div className="min-w-0 space-y-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Materiales del curso</p>
+                <h4 className="mt-1 text-lg font-semibold text-[#172033]">Stream</h4>
               </div>
-              <div className="mt-5 space-y-4">
-              {(course.assignments ?? []).length ? (
-                course.assignments.map((assignment) => (
-                  <div key={assignment.id} className="rounded-[18px] border border-[#d7e0ea] bg-white p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{assignment.dueLabel || "Tarea"}</p>
-                    <h5 className="mt-2 text-lg font-semibold text-[#172033]">{assignment.title}</h5>
-                    <p className="mt-2 text-sm leading-relaxed text-[#536277]">{assignment.instruction}</p>
+
+              {assignments.length ? (
+                assignments.map((assignment) => (
+                  <div key={assignment.id} className="overflow-hidden rounded-[18px] border border-[#d7e0ea] bg-white">
+                    <div className="flex items-start gap-3 p-4">
+                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eef4ff]">
+                        <svg aria-hidden="true" className="h-4 w-4 text-[#1d4ed8]" fill="none" viewBox="0 0 24 24">
+                          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <h5 className="font-semibold text-[#172033]">{assignment.title}</h5>
+                          {assignment.dueLabel ? (
+                            <span className="shrink-0 rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-2.5 py-0.5 text-[10px] font-semibold text-[#6b7a90]">{assignment.dueLabel}</span>
+                          ) : null}
+                        </div>
+                        {assignment.instruction ? (
+                          <p className="mt-2 text-sm leading-relaxed text-[#536277]">{assignment.instruction}</p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Attachments */}
                     {(assignment.attachments ?? []).length ? (
-                      <div className="mt-4 grid gap-2">
-                        {(assignment.attachments ?? []).map((attachment) => (
+                      <div className="border-t border-[#e7edf5] px-4 py-3 flex flex-wrap gap-2">
+                        {assignment.attachments.map((attachment) => (
                           <a
                             key={attachment.id}
-                            className="inline-flex items-center justify-between gap-3 rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3 text-sm font-semibold text-[#1d4ed8]"
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-2 text-xs font-semibold text-[#1d4ed8] transition hover:bg-[#eef4ff]"
                             download={attachment.fileName}
                             href={attachment.fileUrl || attachment.fileData}
                           >
-                            <span className="min-w-0 truncate">{attachment.fileName || "Adjunto"}</span>
-                            <span className="shrink-0 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Descargar</span>
+                            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg>
+                            <span className="min-w-0 truncate max-w-[14rem]">{attachment.fileName || "Adjunto"}</span>
                           </a>
                         ))}
                       </div>
                     ) : assignment.fileUrl || assignment.fileData ? (
-                      <a className="mt-4 inline-flex rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#1d4ed8]" download={assignment.fileName} href={assignment.fileUrl || assignment.fileData}>
-                        Descargar adjunto
-                      </a>
+                      <div className="border-t border-[#e7edf5] px-4 py-3">
+                        <a
+                          className="inline-flex items-center gap-2 rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-2 text-xs font-semibold text-[#1d4ed8] transition hover:bg-[#eef4ff]"
+                          download={assignment.fileName}
+                          href={assignment.fileUrl || assignment.fileData}
+                        >
+                          <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg>
+                          {assignment.fileName || "Descargar adjunto"}
+                        </a>
+                      </div>
                     ) : null}
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-[#5d6b80]">No se registran asignaciones para este periodo.</p>
+                <div className="rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f8fbff] p-8 text-center">
+                  <p className="font-medium text-[#172033]">Sin materiales publicados</p>
+                  <p className="mt-2 text-sm text-[#536277]">El docente no ha publicado materiales en este curso aún.</p>
+                </div>
               )}
-              </div>
-            </div>
-          </div>
 
-          <div className="space-y-6">
-            <div className={`${workspaceChrome.strongSurface} p-5`}>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Progreso</p>
-              <p className="mt-3 text-[2rem] font-semibold leading-none text-[#172033]">{course.enhancement?.progressPercent ?? 0}%</p>
-              <div className="mt-4 h-2 w-full rounded-full bg-white/80">
-                <div
-                  className={`h-2 rounded-full transition-all ${course.completionStatus === "passed" ? "bg-[#15803d]" : course.completionStatus === "failed" ? "bg-[#9a3412]" : "bg-[#1d4ed8]"}`}
-                  style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }}
-                />
-              </div>
-              {course.enhancement?.passingThreshold ? (
-                <p className="mt-2 text-xs text-[#66758c]">Umbral de aprobacion: {course.enhancement.passingThreshold}%</p>
+              {/* Description & outcomes */}
+              {(course.description || course.outcomes) ? (
+                <div className="rounded-[18px] border border-[#d7e0ea] bg-white p-5">
+                  {course.description ? (
+                    <>
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Descripción</p>
+                      <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">{course.description}</MarkdownContent>
+                    </>
+                  ) : null}
+                  {course.outcomes ? (
+                    <div className="mt-5 rounded-[14px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Resultados académicos</p>
+                      <MarkdownContent className="mt-2 text-sm leading-relaxed text-[#435066]">{course.outcomes}</MarkdownContent>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
-              <p className="mt-3 text-sm text-[#435066]">Expiracion de acceso: {formatDisplayDate(course.accessExpiresAt)}</p>
             </div>
 
-            {course.completionStatus === "passed" && (
-              <div className="rounded-[var(--radius-md)] border border-[#bbf7d0] bg-[#dcfce7] p-5">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#15803d]">Resultado</p>
-                <p className="mt-2 text-lg font-semibold text-[#15803d]">Aprobado ✓</p>
-                {course.completedAt ? <p className="mt-1 text-xs text-[#166534]">{formatDisplayDate(course.completedAt)}</p> : null}
-              </div>
-            )}
-            {course.completionStatus === "failed" && (
-              <div className="rounded-[var(--radius-md)] border border-[#fecaca] bg-[#fff7ed] p-5">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#9a3412]">Resultado</p>
-                <p className="mt-2 text-lg font-semibold text-[#9a3412]">No aprobado</p>
-                {course.completedAt ? <p className="mt-1 text-xs text-[#9a3412]">{formatDisplayDate(course.completedAt)}</p> : null}
-              </div>
-            )}
-
-            {course.enhancement?.gamificationEnabled && (
-              <div className={`${workspaceChrome.surface} p-5`}>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Reconocimiento</p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                  <div className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Puntos</p>
-                    <p className="mt-2 text-2xl font-semibold text-[#172033]">{course.enhancement?.points ?? 0}</p>
+            {/* Right — Progress panel */}
+            <div className="space-y-4">
+              {/* Progress card */}
+              <div className="rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Tu progreso</p>
+                <p className="mt-3 text-[2.2rem] font-black leading-none text-[#172033]">{progress}%</p>
+                <div className="mt-3 h-2.5 w-full rounded-full bg-white/70">
+                  <div
+                    className={`h-2.5 rounded-full transition-all ${isPassed ? "bg-[#15803d]" : isFailed ? "bg-[#dc2626]" : "bg-[#1d4ed8]"}`}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                {course.enhancement?.passingThreshold ? (
+                  <p className="mt-2 text-xs text-[#6b7a90]">Umbral de aprobación: {course.enhancement.passingThreshold}%</p>
+                ) : null}
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-[12px] border border-[#c6d4ec] bg-white/60 px-3 py-2">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Formato</p>
+                    <p className="mt-1 text-xs font-semibold text-[#172033]">{course.format || "—"}</p>
                   </div>
-                  <div className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Racha</p>
-                    <p className="mt-2 text-2xl font-semibold text-[#172033]">{course.enhancement?.streakDays ?? 0}d</p>
+                  <div className="rounded-[12px] border border-[#c6d4ec] bg-white/60 px-3 py-2">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Duración</p>
+                    <p className="mt-1 text-xs font-semibold text-[#172033]">{course.duration || "—"}</p>
                   </div>
                 </div>
+                {course.accessExpiresAt ? (
+                  <p className="mt-3 text-xs text-[#6b7a90]">Acceso hasta {formatDisplayDate(course.accessExpiresAt)}</p>
+                ) : null}
               </div>
-            )}
+
+              {/* Completion status */}
+              {isPassed ? (
+                <div className="rounded-[18px] border border-[#bbf7d0] bg-[#dcfce7] p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#15803d]">Resultado</p>
+                  <p className="mt-2 text-lg font-black text-[#15803d]">Aprobado ✓</p>
+                  {course.completedAt ? <p className="mt-1 text-xs text-[#166534]">{formatDisplayDate(course.completedAt)}</p> : null}
+                </div>
+              ) : isFailed ? (
+                <div className="rounded-[18px] border border-[#fecaca] bg-[#fff7ed] p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#9a3412]">Resultado</p>
+                  <p className="mt-2 text-lg font-black text-[#9a3412]">No aprobado</p>
+                  {course.completedAt ? <p className="mt-1 text-xs text-[#9a3412]">{formatDisplayDate(course.completedAt)}</p> : null}
+                </div>
+              ) : null}
+
+              {/* Gamification */}
+              {course.enhancement?.gamificationEnabled ? (
+                <div className="rounded-[18px] border border-[#d7e0ea] bg-white p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Reconocimiento</p>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-[14px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Puntos</p>
+                      <p className="mt-1.5 text-xl font-black text-[#172033]">{course.enhancement?.points ?? 0}</p>
+                    </div>
+                    <div className="rounded-[14px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Racha</p>
+                      <p className="mt-1.5 text-xl font-black text-[#172033]">{course.enhancement?.streakDays ?? 0}d</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
@@ -805,138 +868,351 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
   }
 
   function renderOverviewSection() {
+    const gcColors = [
+      "from-blue-600 to-blue-700",
+      "from-emerald-600 to-green-700",
+      "from-violet-600 to-purple-700",
+      "from-amber-500 to-orange-600",
+      "from-rose-600 to-pink-700",
+      "from-cyan-600 to-sky-700",
+    ];
+    const activeCourses = dashboard.dashboard.courses ?? [];
+
     return (
-      <section className={`${workspaceChrome.elevatedSurface} overflow-hidden`} id="portal-overview">
-        <div className="grid gap-6 border-b border-[#e7edf5] p-5 sm:p-6 xl:grid-cols-[minmax(0,1.3fr)_22rem]">
-          <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#c6d4ec] bg-[#eef4ff] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">
-              <span className="h-2 w-2 rounded-full bg-[#1d4ed8]" />
-              Workspace academico
+      <section id="portal-overview">
+        {/* Welcome banner */}
+        <div className="rounded-[22px] border border-[#c6d4ec] bg-[#eef4ff] p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Tu espacio académico</p>
+              <h1 className="mt-2 text-[1.6rem] font-semibold leading-tight text-[#172033] sm:text-[2rem]">
+                {dashboard.dashboard.welcomeTitle || `Bienvenido, ${dashboard.user?.fullName?.split(" ")[0] || "Estudiante"}`}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#536277]">{dashboard.dashboard.summary}</p>
+              {dashboardError ? <p className="mt-3 text-sm text-[#b45309]">{dashboardError}</p> : null}
             </div>
-            <h1 className="mt-4 text-[2rem] font-semibold leading-tight text-[#172033] sm:text-[2.5rem]">{dashboard.dashboard.welcomeTitle}</h1>
-            <p className="mt-4 max-w-3xl text-base leading-relaxed text-[#536277]">{dashboard.dashboard.summary}</p>
-            {dashboardError ? <p className="mt-4 text-sm text-[#b45309]">{dashboardError}</p> : null}
-          </div>
-          <div className="grid gap-4">
-            <div className="rounded-[18px] border border-[#d7e0ea] bg-white p-4">
+            <div className="shrink-0 text-right">
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cuenta activa</p>
-              <p className="mt-2 text-lg font-semibold text-[#172033]">{dashboard.user?.fullName || "Estudiante GoBeyond"}</p>
-              <p className="mt-1 text-sm text-[#536277]">{dashboard.user?.email || "Sin correo"}</p>
+              <p className="mt-1 text-sm font-semibold text-[#172033]">{dashboard.user?.fullName || "Estudiante GoBeyond"}</p>
+              <p className="text-xs text-[#536277]">{dashboard.user?.email || ""}</p>
             </div>
-            <div className="rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Accion principal</p>
-              <button className="mt-3 w-full rounded-xl bg-[#1d4ed8] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]" onClick={onOpenCommunity} type="button">
-                Entrar a comunidad
-              </button>
+          </div>
+          {/* Metrics strip */}
+          <div className="mt-5 flex flex-wrap divide-x divide-[#c6d4ec] overflow-hidden rounded-[16px] border border-[#c6d4ec] bg-white/70">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Matrículas</p>
+              <p className="text-[1.3rem] font-black leading-none text-[#172033]">{dashboard.dashboard.enrollments.length}</p>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Cursos activos</p>
+              <p className="text-[1.3rem] font-black leading-none text-[#172033]">{activeCourses.length}</p>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Disponibles</p>
+              <p className="text-[1.3rem] font-black leading-none text-[#172033]">{dashboard.dashboard.availableCourses.length}</p>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Ruta</p>
+              <p className="text-[1.3rem] font-black leading-none text-[#172033]">{learningPath.length} hitos</p>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-[repeat(3,minmax(0,1fr))_18rem]">
-          <DashboardCard body="Programas con acceso vigente a la plataforma y tutorías." eyebrow="Inscripciones" icon="enrollments" label="Matrículas" value={dashboard.dashboard.enrollments.length} />
-          <DashboardCard body="Módulos habilitados actualmente en su ruta de aprendizaje." eyebrow="Currículo" icon="curriculum" label="Materias" value={dashboard.dashboard.courses.length} />
-          <DashboardCard body="Nuevas especialidades disponibles para su solicitud inmediata." eyebrow="Exploración" icon="explore" label="Programas" value={dashboard.dashboard.availableCourses.length} />
-          <div className={`${workspaceChrome.surface} p-5`}>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estado del dia</p>
-            <div className="mt-4 space-y-3">
-              <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Cursos activos</p>
-                <p className="mt-2 text-sm font-semibold text-[#172033]">{dashboard.dashboard.courses.length} en seguimiento</p>
-              </div>
-              <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Ruta</p>
-                <p className="mt-2 text-sm font-semibold text-[#172033]">{learningPath.length} hitos registrados</p>
-              </div>
-            </div>
+        {/* Class cards grid — Google Classroom style */}
+        {activeCourses.length ? (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {activeCourses.map((course, index) => {
+              const progress = course.enhancement?.progressPercent ?? 0;
+              const isPassed = course.completionStatus === "passed";
+              const isFailed = course.completionStatus === "failed";
+              const colorClass = gcColors[index % gcColors.length];
+              return (
+                <article key={course.enrollmentId ?? course.id} className="overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white shadow-[0_4px_16px_rgba(15,23,42,0.06)] transition hover:shadow-[0_8px_24px_rgba(15,23,42,0.1)]">
+                  {/* Cover banner */}
+                  <div className={`relative h-32 bg-gradient-to-br ${colorClass}`}>
+                    {course.coverImage ? (
+                      <img alt={course.title} className="absolute inset-0 h-full w-full object-cover" src={course.coverImage} />
+                    ) : null}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    {/* Status badge */}
+                    {isPassed ? (
+                      <span className="absolute right-3 top-3 rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-[#15803d]">Aprobado ✓</span>
+                    ) : isFailed ? (
+                      <span className="absolute right-3 top-3 rounded-full border border-[#fecaca] bg-[#fff7ed] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-[#9a3412]">No aprobado</span>
+                    ) : null}
+                    {/* Course title overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <p className="truncate text-sm font-black leading-tight text-white drop-shadow">{course.title}</p>
+                    </div>
+                  </div>
+
+                  {/* Card body */}
+                  <div className="p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8899b0]">
+                      {course.format || "Programa"}{course.duration ? ` · ${course.duration}` : ""}
+                    </p>
+
+                    {/* Progress bar */}
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-semibold text-[#536277]">Avance</p>
+                        <p className="text-[10px] font-black text-[#172033]">{progress}%</p>
+                      </div>
+                      <div className="mt-1.5 h-1.5 w-full rounded-full bg-[#e7edf5]">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${isPassed ? "bg-[#15803d]" : isFailed ? "bg-[#dc2626]" : "bg-[#1d4ed8]"}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Expiry */}
+                    {course.accessExpiresAt ? (
+                      <p className="mt-2 text-[10px] text-[#8899b0]">Acceso hasta {formatDisplayDate(course.accessExpiresAt)}</p>
+                    ) : null}
+
+                    <button
+                      className="mt-4 w-full rounded-xl bg-[#1d4ed8] py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e40af]"
+                      onClick={() => handleOpenCourse(course)}
+                      type="button"
+                    >
+                      Entrar al aula →
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
+        ) : (
+          <div className="mt-5 rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f8fbff] p-10 text-center text-[#5d6b80]">
+            No se encuentran matrículas activas registradas a tu nombre en este ciclo.
+          </div>
+        )}
+
+        {/* Community CTA */}
+        <div className="mt-5 flex items-center justify-between gap-4 rounded-[18px] border border-[#d7e0ea] bg-white p-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Comunidad GoBeyond</p>
+            <p className="mt-1 text-sm font-semibold text-[#172033]">Conecta con otros estudiantes y comparte tu progreso.</p>
+          </div>
+          <button className="shrink-0 rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-2.5 text-sm font-semibold text-[#1d4ed8] transition hover:bg-[#eef4ff]" onClick={onOpenCommunity} type="button">
+            Entrar a comunidad
+          </button>
         </div>
       </section>
     );
   }
 
   function renderCoursesSection() {
+    const activeCourses = dashboard.dashboard.courses ?? [];
+    const gcColors = [
+      "from-blue-600 to-blue-700",
+      "from-emerald-600 to-green-700",
+      "from-violet-600 to-purple-700",
+      "from-amber-500 to-orange-600",
+      "from-rose-600 to-pink-700",
+      "from-cyan-600 to-sky-700",
+    ];
+
+    // Gather all assignments across courses sorted by dueAt
+    const allDueSoon = activeCourses
+      .flatMap((course) =>
+        (course.assignments ?? [])
+          .filter((a) => a.dueAt)
+          .map((a) => ({ ...a, courseTitle: course.title }))
+      )
+      .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))
+      .slice(0, 5);
+
     return (
-      <section className={`${workspaceChrome.surface} p-5 sm:p-6`} id="portal-courses">
-        <div className="flex flex-col gap-4 border-b border-[#e7edf5] pb-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Operacion academica</p>
-            <h2 className="mt-2 text-[1.6rem] font-semibold text-[#172033] sm:text-[1.9rem]">Cursos en curso</h2>
+      <section id="portal-courses" className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_22rem]">
+        {/* Left — stream grouped by course */}
+        <div className="min-w-0">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Trabajo del curso</p>
+              <h2 className="mt-1 text-[1.4rem] font-semibold text-[#172033]">Mi classwork</h2>
+            </div>
+            <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1.5 text-[11px] font-semibold text-[#435066]">
+              {activeCourses.length} curso{activeCourses.length !== 1 ? "s" : ""} activo{activeCourses.length !== 1 ? "s" : ""}
+            </span>
           </div>
-          <div className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-2 text-[11px] font-semibold text-[#435066]">
-            {dashboard.dashboard.courses.length} acceso{dashboard.dashboard.courses.length === 1 ? "" : "s"} vigente{dashboard.dashboard.courses.length === 1 ? "" : "s"}
-          </div>
-        </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          {dashboard.dashboard.courses.length ? (
-            dashboard.dashboard.courses.map((course) => (
-              <article key={course.enrollmentId} className="rounded-[20px] border border-[#d7e0ea] bg-white p-5">
-                <div className="grid gap-5 md:grid-cols-[13rem_minmax(0,1fr)]">
-                  <div className="overflow-hidden rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc]">
-                    {course.coverImage ? (
-                      <img alt={course.title} className="h-full min-h-[180px] w-full object-cover" src={course.coverImage} />
-                    ) : (
-                      <div className="flex min-h-[180px] items-center justify-center px-6 text-center text-sm font-semibold text-[#6b7a90]">
-                        Programa sin imagen destacada
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.format}</span>
-                      <span className="rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{course.duration}</span>
-                      {course.completionStatus === "passed" && (
-                        <span className="rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#15803d]">Aprobado ✓</span>
-                      )}
-                      {course.completionStatus === "failed" && (
-                        <span className="rounded-full border border-[#fecaca] bg-[#fff7ed] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#9a3412]">No aprobado</span>
-                      )}
-                    </div>
-                    <h3 className="mt-4 break-words text-[1.4rem] font-semibold leading-tight text-[#172033]">{course.title}</h3>
-                    <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">{course.description}</MarkdownContent>
-
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Vencimiento</p>
-                        <p className="mt-2 text-sm font-semibold text-[#172033]">{formatDisplayDate(course.accessExpiresAt)}</p>
-                      </div>
-                      <div className="rounded-[16px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Avance</p>
-                        <p className="mt-2 text-sm font-semibold text-[#172033]">{course.enhancement?.progressPercent ?? 0}% completado</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 h-2 w-full rounded-full bg-[#e7edf5]">
-                      <div
-                        className={`h-2 rounded-full transition-all ${course.completionStatus === "passed" ? "bg-[#15803d]" : course.completionStatus === "failed" ? "bg-[#9a3412]" : "bg-[#1d4ed8]"}`}
-                        style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }}
-                      />
-                    </div>
-
-                    {course.completionStatus === "passed" && (
-                      <div className="mt-4 rounded-xl border border-[#bbf7d0] bg-[#dcfce7] px-4 py-3 text-sm font-semibold text-[#15803d]">
-                        Curso completado exitosamente{course.completedAt ? ` · ${formatDisplayDate(course.completedAt)}` : ""}
-                      </div>
-                    )}
-                    {course.completionStatus === "failed" && (
-                      <div className="mt-4 rounded-xl border border-[#fecaca] bg-[#fff7ed] px-4 py-3 text-sm font-semibold text-[#9a3412]">
-                        Curso no aprobado{course.completedAt ? ` · ${formatDisplayDate(course.completedAt)}` : ""}
-                      </div>
-                    )}
-
-                    <button className="mt-5 w-full rounded-xl bg-[#1d4ed8] py-3 text-sm font-semibold text-white transition hover:bg-[#1e40af]" onClick={() => handleOpenCourse(course)} type="button">
-                      Entrar al aula virtual
+          {/* Notification banner as announcement card */}
+          {activeNotification ? (
+            <div className="mb-4 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1d4ed8] text-white text-xs font-black">!</div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1d4ed8]">Anuncio</p>
+                  <p className="mt-1 font-semibold text-[#172033]">{activeNotification.title}</p>
+                  {activeNotification.body ? <p className="mt-1 text-sm text-[#536277]">{activeNotification.body}</p> : null}
+                  {activeNotification.ctaPath ? (
+                    <button className="mt-2 text-sm font-semibold text-[#1d4ed8] underline-offset-2 hover:underline" onClick={handleNotificationAction} type="button">
+                      Ver más →
                     </button>
-                  </div>
+                  ) : null}
                 </div>
-              </article>
-            ))
+              </div>
+            </div>
+          ) : null}
+
+          {activeCourses.length ? (
+            <div className="space-y-6">
+              {activeCourses.map((course, index) => {
+                const colorClass = gcColors[index % gcColors.length];
+                const assignments = course.assignments ?? [];
+                return (
+                  <div key={course.enrollmentId ?? course.id} className="overflow-hidden rounded-[20px] border border-[#d7e0ea] bg-white">
+                    {/* Course header bar */}
+                    <div className={`relative h-16 bg-gradient-to-r ${colorClass}`}>
+                      {course.coverImage ? (
+                        <img alt={course.title} className="absolute inset-0 h-full w-full object-cover" src={course.coverImage} />
+                      ) : null}
+                      <div className="absolute inset-0 bg-black/30" />
+                      <div className="absolute inset-0 flex items-center justify-between px-4">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black text-white">{course.title}</p>
+                          <p className="text-[10px] text-white/80">{course.format}{course.duration ? ` · ${course.duration}` : ""}</p>
+                        </div>
+                        <button
+                          className="shrink-0 rounded-xl border border-white/30 bg-white/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/30"
+                          onClick={() => handleOpenCourse(course)}
+                          type="button"
+                        >
+                          Abrir aula
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="border-b border-[#e7edf5] px-4 py-2">
+                      <div className="flex items-center gap-3">
+                        <div className="h-1.5 flex-1 rounded-full bg-[#e7edf5]">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${course.completionStatus === "passed" ? "bg-[#15803d]" : course.completionStatus === "failed" ? "bg-[#dc2626]" : "bg-[#1d4ed8]"}`}
+                            style={{ width: `${course.enhancement?.progressPercent ?? 0}%` }}
+                          />
+                        </div>
+                        <span className="shrink-0 text-[10px] font-black text-[#536277]">{course.enhancement?.progressPercent ?? 0}%</span>
+                      </div>
+                    </div>
+
+                    {/* Stream: assignments */}
+                    {assignments.length ? (
+                      <div className="divide-y divide-[#e7edf5]">
+                        {assignments.map((assignment) => (
+                          <div key={assignment.id} className="flex items-start gap-3 p-4 hover:bg-[#f8fbff] transition-colors">
+                            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#d7e0ea] bg-[#f7f9fc]">
+                              <svg aria-hidden="true" className="h-3.5 w-3.5 text-[#6b7a90]" fill="none" viewBox="0 0 24 24">
+                                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <p className="font-semibold text-sm text-[#172033]">{assignment.title}</p>
+                                {assignment.dueLabel ? (
+                                  <span className="shrink-0 rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-2 py-0.5 text-[10px] font-semibold text-[#6b7a90]">{assignment.dueLabel}</span>
+                                ) : null}
+                              </div>
+                              {assignment.instruction ? (
+                                <p className="mt-1 text-xs leading-relaxed text-[#536277] line-clamp-2">{assignment.instruction}</p>
+                              ) : null}
+                              {/* Attachments */}
+                              {(assignment.attachments ?? []).length ? (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {assignment.attachments.map((att) => (
+                                    <a
+                                      key={att.id}
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#d7e0ea] bg-white px-3 py-1.5 text-[10px] font-semibold text-[#1d4ed8] transition hover:bg-[#eef4ff]"
+                                      download={att.fileName}
+                                      href={att.fileUrl || att.fileData}
+                                    >
+                                      <svg aria-hidden="true" className="h-3 w-3" fill="none" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg>
+                                      {att.fileName || "Adjunto"}
+                                    </a>
+                                  ))}
+                                </div>
+                              ) : assignment.fileUrl ? (
+                                <a
+                                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#d7e0ea] bg-white px-3 py-1.5 text-[10px] font-semibold text-[#1d4ed8] transition hover:bg-[#eef4ff]"
+                                  download={assignment.fileName}
+                                  href={assignment.fileUrl}
+                                >
+                                  <svg aria-hidden="true" className="h-3 w-3" fill="none" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /></svg>
+                                  {assignment.fileName || "Descargar adjunto"}
+                                </a>
+                              ) : null}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="px-4 py-4 text-sm text-[#8899b0]">El docente no ha publicado materiales aún.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           ) : (
-            <div className="col-span-full rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f7f9fc] p-10 text-center text-[#5d6b80]">
-              No se encuentran matriculas activas registradas a su nombre en este ciclo.
+            <div className="rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f8fbff] p-10 text-center text-[#5d6b80]">
+              No se encuentran matrículas activas registradas a tu nombre en este ciclo.
             </div>
           )}
+        </div>
+
+        {/* Right — quick access + upcoming */}
+        <div className="grid gap-4 content-start">
+          {/* Course quick access */}
+          <div className="overflow-hidden rounded-[20px] border border-[#d7e0ea] bg-white">
+            <div className="border-b border-[#e7edf5] px-4 py-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Acceso rápido</p>
+            </div>
+            {activeCourses.length ? (
+              activeCourses.map((course, index) => {
+                const colorClass = gcColors[index % gcColors.length];
+                return (
+                  <div key={course.enrollmentId ?? course.id} className="flex items-center gap-3 border-b border-[#f0f4f8] px-4 py-3 last:border-b-0 hover:bg-[#f8fbff] transition-colors">
+                    <div className={`h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br ${colorClass}`}>
+                      {course.coverImage ? (
+                        <img alt={course.title} className="h-full w-full object-cover" src={course.coverImage} />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-[#172033]">{course.title}</p>
+                      <p className="text-[10px] text-[#8899b0]">{course.enhancement?.progressPercent ?? 0}% completado</p>
+                    </div>
+                    <button
+                      className="shrink-0 rounded-lg border border-[#d7e0ea] bg-[#f7f9fc] px-2.5 py-1.5 text-[10px] font-semibold text-[#1d4ed8] transition hover:bg-[#eef4ff]"
+                      onClick={() => handleOpenCourse(course)}
+                      type="button"
+                    >
+                      Abrir
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="px-4 py-4 text-sm text-[#8899b0]">Sin cursos activos.</p>
+            )}
+          </div>
+
+          {/* Upcoming due dates */}
+          {allDueSoon.length ? (
+            <div className="overflow-hidden rounded-[20px] border border-[#d7e0ea] bg-white">
+              <div className="border-b border-[#e7edf5] px-4 py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Próximos vencimientos</p>
+              </div>
+              <div className="divide-y divide-[#f0f4f8]">
+                {allDueSoon.map((item) => (
+                  <div key={item.id} className="px-4 py-3">
+                    <p className="text-xs font-semibold text-[#172033]">{item.title}</p>
+                    <p className="mt-0.5 text-[10px] text-[#8899b0]">{item.courseTitle} · {item.dueLabel || formatDisplayDate(item.dueAt)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
     );

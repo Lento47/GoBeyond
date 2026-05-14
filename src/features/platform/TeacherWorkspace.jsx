@@ -261,6 +261,7 @@ export function TeacherExperience(props) {
   const [submitting, setSubmitting] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   const [actionError, setActionError] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
 
   const teacherName = currentUser?.fullName || "Docente";
   const teacherCourseOptions =
@@ -292,6 +293,7 @@ export function TeacherExperience(props) {
     openCases: supportLoading ? dashboard?.metrics?.openCases ?? 0 : liveOpenCases,
   };
   const teacherSection = activeSection || "teacher-overview";
+  const selectedCourse = (courses ?? []).find((c) => c.id === selectedCourseId) ?? (courses ?? [])[0] ?? null;
 
   function closeModal() {
     setModal("");
@@ -576,14 +578,15 @@ export function TeacherExperience(props) {
   function renderCoursesSection() {
     return (
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]" id="teacher-courses">
-        <div className="grid gap-4">
+        {/* Left column — course list */}
+        <div className="grid gap-4 content-start">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
               <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033]">Clases y grupos</h1>
-              <p className="mt-0.5 text-sm text-[#6b7a90]">Cursos asignados, cohortes activas y acceso rápido a materiales.</p>
+              <p className="mt-0.5 text-sm text-[#6b7a90]">Selecciona un curso para ver sus materiales y grupos en el panel derecho.</p>
             </div>
-            <ActionButton onClick={() => startCreateAssignment()} type="button">
+            <ActionButton onClick={() => startCreateAssignment(selectedCourse?.id)} type="button">
               + Agregar material
             </ActionButton>
           </div>
@@ -591,46 +594,74 @@ export function TeacherExperience(props) {
           <div className="overflow-hidden rounded-[18px] border border-[#d8e2f0] bg-white">
             {coursesLoading ? (
               <p className="px-4 py-3 text-sm text-[#617085]">Cargando cursos asignados…</p>
-            ) : courses.length ? (
-              courses.map((course) => (
-                <div key={course.id} className="border-b border-[#edf1f7] last:border-b-0">
-                  <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#8899b0]">
-                        {course.format || "Formato libre"} · {course.audience || "General"}
-                      </p>
-                      <p className="mt-0.5 truncate text-sm font-semibold text-[#172033]">{course.title}</p>
-                      <p className="mt-0.5 text-xs text-[#66758c]">
-                        {course.enrollmentCount ?? 0} matriculas · {course.cohortCount ?? 0} grupos · {course.activeStudentCount ?? 0} activos
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      <StatusPill status="active" label="Activa" />
-                      <ActionButton className="!py-2 !text-xs" onClick={() => startCreateAssignment(course.id)} type="button">
-                        Entrar al aula
-                      </ActionButton>
-                      <SecondaryButton className="!py-2 !text-xs" onClick={() => startCreateEnrollment(course.id)} type="button">
-                        Matricular
-                      </SecondaryButton>
-                    </div>
-                  </div>
-                  {(course.cohorts ?? []).length ? (
-                    <div className="bg-[#f8fafc] px-4 pb-3">
-                      <div className="flex flex-wrap gap-2">
-                        {(course.cohorts ?? []).slice(0, 3).map((cohort) => (
-                          <span key={cohort.id} className="inline-flex items-center gap-1.5 rounded-full border border-[#d8e2f0] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#536277]">
-                            {cohort.title}
-                            {cohort.startDate ? <span className="text-[#8899b0]">· {formatDate(cohort.startDate)}</span> : null}
-                          </span>
-                        ))}
-                        {(course.cohorts ?? []).length > 3 ? (
-                          <span className="text-[10px] text-[#8899b0]">+{(course.cohorts ?? []).length - 3} grupos</span>
-                        ) : null}
+            ) : (courses ?? []).length ? (
+              (courses ?? []).map((course) => {
+                const isSelected = course.id === (selectedCourse?.id);
+                return (
+                  <div
+                    key={course.id}
+                    className={`border-b border-[#edf1f7] last:border-b-0 cursor-pointer transition-colors ${isSelected ? "bg-[#eef4ff] border-l-2 border-l-[#1d4ed8]" : "hover:bg-[#f7f9fc]"}`}
+                    onClick={() => setSelectedCourseId(course.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCourseId(course.id); }}
+                  >
+                    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#8899b0]">
+                          {course.format || "Formato libre"} · {course.audience || "General"}
+                        </p>
+                        <p className="mt-0.5 truncate text-sm font-semibold text-[#172033]">{course.title}</p>
+                        <p className="mt-0.5 text-xs text-[#66758c]">
+                          {course.enrollmentCount ?? 0} matrículas · {course.cohortCount ?? 0} grupos · {course.activeStudentCount ?? 0} activos
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <StatusPill status={isSelected ? "active" : "draft"} label={isSelected ? "Seleccionado" : "Ver"} />
+                        <ActionButton
+                          className="!py-2 !text-xs"
+                          onClick={() => { setSelectedCourseId(course.id); startCreateAssignment(course.id); }}
+                          type="button"
+                        >
+                          + Material
+                        </ActionButton>
+                        <SecondaryButton className="!py-2 !text-xs" onClick={() => startCreateEnrollment(course.id)} type="button">
+                          Matricular
+                        </SecondaryButton>
                       </div>
                     </div>
-                  ) : null}
-                </div>
-              ))
+
+                    {/* Cohort/group pills with status indication */}
+                    {(course.cohorts ?? []).length ? (
+                      <div className="bg-[#f8fafc] px-4 pb-3">
+                        <p className="mb-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-[#8899b0]">Grupos / Cohortes</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(course.cohorts ?? []).slice(0, 4).map((cohort) => {
+                            const isActive = cohort.status === "active";
+                            return (
+                              <span
+                                key={cohort.id}
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                                  isActive
+                                    ? "border-[#bfdbfe] bg-[#dbeafe] text-[#1d4ed8]"
+                                    : "border-[#d8e2f0] bg-white text-[#536277]"
+                                }`}
+                              >
+                                {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-[#1d4ed8]" /> : null}
+                                {cohort.title}
+                                {cohort.startDate ? <span className="opacity-70">· {formatDate(cohort.startDate)}</span> : null}
+                              </span>
+                            );
+                          })}
+                          {(course.cohorts ?? []).length > 4 ? (
+                            <span className="text-[10px] text-[#8899b0]">+{(course.cohorts ?? []).length - 4} grupos</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
             ) : (
               <div className="px-4 py-6">
                 <EmptyState
@@ -642,51 +673,82 @@ export function TeacherExperience(props) {
           </div>
         </div>
 
+        {/* Right column — selected course aula panel */}
         <div className="grid gap-4 content-start">
           <div className="rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] overflow-hidden">
             <div className="border-b border-[#c6d4ec] px-4 py-3">
               <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Ahora en clase</p>
               <p className="mt-0.5 text-sm font-semibold text-[#172033]">
-                {courses[0]?.title || "Ninguna clase seleccionada"}
+                {selectedCourse?.title || "Ninguna clase seleccionada"}
               </p>
+              {selectedCourse ? (
+                <p className="mt-0.5 text-[10px] text-[#6b7a90]">
+                  {(selectedCourse.cohorts ?? []).filter((c) => c.status === "active").length} grupo{(selectedCourse.cohorts ?? []).filter((c) => c.status === "active").length !== 1 ? "s" : ""} activo{(selectedCourse.cohorts ?? []).filter((c) => c.status === "active").length !== 1 ? "s" : ""}
+                  {" · "}
+                  {(selectedCourse.assignments ?? []).length} material{(selectedCourse.assignments ?? []).length !== 1 ? "es" : ""}
+                </p>
+              ) : null}
             </div>
+
             <div className="divide-y divide-[#d8e8f8]">
-              {(courses[0]?.assignments ?? []).slice(0, 4).map((assignment) => (
+              {(selectedCourse?.assignments ?? []).slice(0, 5).map((assignment) => (
                 <div key={assignment.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#e8f0fd] transition-colors">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-semibold text-[#172033]">{assignment.title}</p>
                     {assignment.dueLabel ? <p className="text-[10px] text-[#6b7a90]">{assignment.dueLabel}</p> : null}
                   </div>
-                  <span className="shrink-0 text-[10px] text-[#1d4ed8] font-semibold">Disponible</span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-[#1d4ed8]">Publicado</span>
+                    <SecondaryButton
+                      className="!py-1 !px-2.5 !text-[10px]"
+                      onClick={() => startEditAssignment(selectedCourse?.id, assignment)}
+                      type="button"
+                    >
+                      Editar
+                    </SecondaryButton>
+                  </div>
                 </div>
               ))}
-              {!(courses[0]?.assignments ?? []).length ? (
-                <p className="px-4 py-3 text-xs text-[#8899b0]">Sin materiales publicados aún.</p>
+              {!(selectedCourse?.assignments ?? []).length ? (
+                <p className="px-4 py-4 text-xs text-[#8899b0]">Sin materiales publicados aún en este curso.</p>
               ) : null}
             </div>
+
             <div className="border-t border-[#c6d4ec] p-3 grid gap-2">
-              <ActionButton className="w-full !justify-center" onClick={() => startCreateAssignment(courses[0]?.id)} type="button">
+              <ActionButton className="w-full justify-center" onClick={() => startCreateAssignment(selectedCourse?.id)} type="button">
                 + Agregar material
               </ActionButton>
-              <SecondaryButton className="w-full !justify-center" onClick={() => startCreateEnrollment(courses[0]?.id)} type="button">
+              <SecondaryButton className="w-full justify-center" onClick={() => startCreateEnrollment(selectedCourse?.id)} type="button">
                 Matricular estudiante
               </SecondaryButton>
             </div>
           </div>
 
-          {courses.length > 1 ? (
+          {/* Quick access to other courses */}
+          {(courses ?? []).length > 1 ? (
             <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
               <div className="border-b border-[#e8eef6] px-4 py-3">
-                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Otros cursos</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cambiar aula</p>
               </div>
-              {courses.slice(1).map((course) => (
-                <div key={course.id} className="flex items-center gap-3 border-b border-[#edf1f7] px-4 py-2.5 last:border-b-0 hover:bg-[#f7f9fc] transition-colors">
+              {(courses ?? []).filter((c) => c.id !== selectedCourse?.id).map((course) => (
+                <div
+                  key={course.id}
+                  className="flex items-center gap-3 border-b border-[#edf1f7] px-4 py-2.5 last:border-b-0 hover:bg-[#f7f9fc] transition-colors cursor-pointer"
+                  onClick={() => setSelectedCourseId(course.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCourseId(course.id); }}
+                >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-semibold text-[#172033]">{course.title}</p>
-                    <p className="text-[10px] text-[#8899b0]">{course.activeStudentCount ?? 0} estudiantes activos</p>
+                    <p className="text-[10px] text-[#8899b0]">{course.activeStudentCount ?? 0} activos · {(course.assignments ?? []).length} materiales</p>
                   </div>
-                  <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startCreateAssignment(course.id)} type="button">
-                    Ver
+                  <SecondaryButton
+                    className="!py-1.5 !text-xs shrink-0"
+                    onClick={(e) => { e.stopPropagation(); setSelectedCourseId(course.id); }}
+                    type="button"
+                  >
+                    Abrir
                   </SecondaryButton>
                 </div>
               ))}
