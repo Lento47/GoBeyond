@@ -1175,8 +1175,16 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
             {activeCourses.length ? (
               activeCourses.map((course, index) => {
                 const colorClass = gcColors[index % gcColors.length];
+                const pct = course.enhancement?.progressPercent ?? 0;
+                const isPassed = course.completionStatus === "passed";
+                const isFailed = course.completionStatus === "failed";
                 return (
-                  <div key={course.enrollmentId ?? course.id} className="flex items-center gap-3 border-b border-[#f0f4f8] px-4 py-3 last:border-b-0 hover:bg-[#f8fbff] transition-colors">
+                  <button
+                    key={course.enrollmentId ?? course.id}
+                    className="flex w-full items-center gap-3 border-b border-[#f0f4f8] px-4 py-3 text-left last:border-b-0 hover:bg-[#f8fbff] transition-colors"
+                    onClick={() => handleOpenCourse(course)}
+                    type="button"
+                  >
                     <div className={`h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br ${colorClass}`}>
                       {course.coverImage ? (
                         <img alt={course.title} className="h-full w-full object-cover" src={course.coverImage} />
@@ -1184,16 +1192,17 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-semibold text-[#172033]">{course.title}</p>
-                      <p className="text-[10px] text-[#8899b0]">{course.enhancement?.progressPercent ?? 0}% completado</p>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <div className="h-1 flex-1 rounded-full bg-[#e7edf5]">
+                          <div
+                            className={`h-1 rounded-full ${isPassed ? "bg-[#15803d]" : isFailed ? "bg-[#dc2626]" : "bg-[#1d4ed8]"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="shrink-0 text-[10px] font-bold text-[#8899b0]">{pct}%</span>
+                      </div>
                     </div>
-                    <button
-                      className="shrink-0 rounded-lg border border-[#d7e0ea] bg-[#f7f9fc] px-2.5 py-1.5 text-[10px] font-semibold text-[#1d4ed8] transition hover:bg-[#eef4ff]"
-                      onClick={() => handleOpenCourse(course)}
-                      type="button"
-                    >
-                      Abrir
-                    </button>
-                  </div>
+                  </button>
                 );
               })
             ) : (
@@ -1202,21 +1211,37 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
           </div>
 
           {/* Upcoming due dates */}
-          {allDueSoon.length ? (
-            <div className="overflow-hidden rounded-[20px] border border-[#d7e0ea] bg-white">
-              <div className="border-b border-[#e7edf5] px-4 py-3">
-                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Próximos vencimientos</p>
-              </div>
-              <div className="divide-y divide-[#f0f4f8]">
-                {allDueSoon.map((item) => (
-                  <div key={item.id} className="px-4 py-3">
-                    <p className="text-xs font-semibold text-[#172033]">{item.title}</p>
-                    <p className="mt-0.5 text-[10px] text-[#8899b0]">{item.courseTitle} · {item.dueLabel || formatDisplayDate(item.dueAt)}</p>
-                  </div>
-                ))}
-              </div>
+          <div className="overflow-hidden rounded-[20px] border border-[#d7e0ea] bg-white">
+            <div className="border-b border-[#e7edf5] px-4 py-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Próximas entregas</p>
             </div>
-          ) : null}
+            {allDueSoon.length ? (
+              <div className="divide-y divide-[#f0f4f8]">
+                {allDueSoon.map((item) => {
+                  const daysLeft = item.dueAt ? Math.ceil((new Date(item.dueAt) - Date.now()) / 86400000) : null;
+                  const urgent = daysLeft !== null && daysLeft <= 2;
+                  const overdue = daysLeft !== null && daysLeft < 0;
+                  return (
+                    <div key={item.id} className="flex items-start gap-3 px-4 py-3">
+                      <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${overdue ? "bg-[#dc2626]" : urgent ? "bg-[#d97706]" : "bg-[#6b7a90]"}`} />
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-[#172033]">{item.title}</p>
+                        <p className="mt-0.5 text-[10px] text-[#8899b0]">{item.courseTitle}</p>
+                        <p className={`mt-0.5 text-[10px] font-semibold ${overdue ? "text-[#dc2626]" : urgent ? "text-[#d97706]" : "text-[#536277]"}`}>
+                          {item.dueLabel || formatDisplayDate(item.dueAt)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="px-4 py-5 text-center">
+                <p className="text-xs font-semibold text-[#172033]">Sin entregas próximas</p>
+                <p className="mt-1 text-[11px] text-[#8899b0]">Al día con el trabajo del curso</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
     );
@@ -1224,36 +1249,28 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
 
   function renderPathSection() {
     return (
-      <section className={`${workspaceChrome.elevatedSurface} overflow-hidden`} id="portal-path">
-        <div className="grid gap-6 border-b border-[#e7edf5] p-5 sm:p-6 xl:grid-cols-[minmax(0,1.2fr)_20rem]">
-          <div className="max-w-3xl">
+      <section className={workspaceChrome.elevatedSurface} id="portal-path">
+        {/* Header */}
+        <div className="flex flex-col gap-4 border-b border-[#e7edf5] p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+          <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#c6d4ec] bg-[#eef4ff] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">
               <span className="h-2 w-2 rounded-full bg-[#1d4ed8]" />
-              Ruta academica
+              Ruta académica
             </div>
-            <h2 className="mt-4 text-[1.8rem] font-semibold leading-tight text-[#172033] sm:text-[2.2rem]">Roadmap de trayectoria</h2>
-            <p className="mt-3 text-sm leading-relaxed text-[#536277]">
-              Cada hito resume la progresion formativa disponible en GoBeyond. La ruta se gestiona desde admin y puede evolucionar
-              sin perder claridad para el estudiante.
+            <h2 className="mt-3 text-[1.6rem] font-semibold leading-tight text-[#172033] sm:text-[2rem]">Roadmap de trayectoria</h2>
+            <p className="mt-2 text-sm leading-relaxed text-[#536277]">
+              Cada hito resume la progresión formativa disponible en GoBeyond. Avanza de arriba hacia abajo: cada etapa es independiente y complementaria.
             </p>
           </div>
-
-          <div className="grid gap-4">
-            <div className="rounded-[20px] border border-[#d7e0ea] bg-white p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estado de la ruta</p>
-              <p className="mt-2 text-lg font-semibold text-[#172033]">{learningPath.length} etapas visibles</p>
-              <p className="mt-2 text-sm leading-relaxed text-[#536277]">Un recorrido editorial claro para ubicar tu siguiente foco de aprendizaje.</p>
-            </div>
-            <div className="rounded-[20px] border border-[#c6d4ec] bg-[#eef4ff] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Lectura sugerida</p>
-              <p className="mt-2 text-sm leading-relaxed text-[#435066]">
-                Avanza de arriba hacia abajo: cada bloque funciona como una etapa independiente y complementaria.
-              </p>
-            </div>
+          <div className="shrink-0 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] px-5 py-4 text-right sm:min-w-[10rem]">
+            <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Progreso</p>
+            <p className="mt-1.5 text-[2rem] font-black leading-none text-[#172033]">{learningPath.length}</p>
+            <p className="mt-0.5 text-[11px] text-[#536277]">etapa{learningPath.length !== 1 ? "s" : ""} en ruta</p>
           </div>
         </div>
 
-        <div className="p-5 sm:p-6">
+        {/* Scrollable cards area */}
+        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto p-5 sm:p-6">
           {learningPath.length ? (
             <div className="grid gap-5">
               {learningPath.map((item, index) => (
@@ -1261,8 +1278,9 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
               ))}
             </div>
           ) : (
-            <div className="rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f7f9fc] p-10 text-center text-[#5d6b80]">
-              Los hitos publicados desde admin apareceran aqui como roadmap academico.
+            <div className="rounded-[18px] border border-dashed border-[#d7e0ea] bg-[#f7f9fc] p-10 text-center">
+              <p className="font-semibold text-[#172033]">Ruta no configurada</p>
+              <p className="mt-2 text-sm text-[#5d6b80]">Los hitos publicados desde admin aparecerán aquí como roadmap académico.</p>
             </div>
           )}
         </div>
