@@ -19,6 +19,7 @@ import {
   StatusPill,
   Textarea,
 } from "./components/admin/AdminUI";
+import { defaultContent } from "../../data/defaultContent";
 import { getEmbedDescriptor } from "./embedUtils";
 import { CatalogSection } from "./sections/CatalogSection";
 import { getLearningPathThemeClasses, normalizeLearningPathItem } from "./learningPath";
@@ -267,7 +268,7 @@ function normalizeLandingState(landing = {}) {
     // Testimonios
     testimonialsCarouselLabel: landing?.testimonialsCarouselLabel ?? "Rotando testimonios",
     // Tarjetas de programas
-    programCards: Array.isArray(landing?.programCards) ? landing.programCards : [],
+    programCards: (Array.isArray(landing?.programCards) && landing.programCards.length) ? landing.programCards : (defaultContent.landing?.programCards ?? []),
     // Contacto
     contactInfo: {
       emailLabel: landing?.contactInfo?.emailLabel ?? "Email",
@@ -1735,6 +1736,23 @@ export function AdminWorkspace({
     }));
   }
 
+  function addProgramCard() {
+    setLandingForm((current) => ({
+      ...current,
+      programCards: [
+        ...(current.programCards ?? []),
+        { id: `card-${Date.now()}`, eyebrow: "", title: "", description: "", relevance: "", outcomes: [], certificationNote: "", ctaLabel: "Aplicar →", href: "#contacto" },
+      ],
+    }));
+  }
+
+  function removeProgramCard(index) {
+    setLandingForm((current) => ({
+      ...current,
+      programCards: (current.programCards ?? []).filter((_, i) => i !== index),
+    }));
+  }
+
   function updateParticipationOption(index, key, value) {
     setParticipationOptionsForm((current) =>
       (current ?? []).map((option, optionIndex) =>
@@ -2878,10 +2896,16 @@ export function AdminWorkspace({
                   <Input value={landingForm.courseResultsLabel ?? ""} onChange={(e) => setLanding("courseResultsLabel", e.target.value)} placeholder="Etiqueta de resultados (Resultados:)" />
                 </div>
                 {/* Program cards */}
-                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#748197]">Tarjetas de programas</p>
+                <div className="flex items-center justify-between">
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#748197]">Tarjetas de programas</p>
+                  <SecondaryButton onClick={addProgramCard} type="button">+ Agregar tarjeta</SecondaryButton>
+                </div>
                 {(landingForm.programCards ?? []).map((card, index) => (
                   <div key={card.id || index} className="grid gap-3 rounded-xl border border-[#dfe6ee] bg-white p-4">
-                    <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Tarjeta {index + 1}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Tarjeta {index + 1}</p>
+                      <SecondaryButton onClick={() => removeProgramCard(index)} type="button">Eliminar</SecondaryButton>
+                    </div>
                     <div className="grid gap-3 md:grid-cols-2">
                       <Input value={card.eyebrow ?? ""} onChange={(e) => updateProgramCard(index, "eyebrow", e.target.value)} placeholder="Etiqueta (ej. Certificación Internacional)" />
                       <Input value={card.title ?? ""} onChange={(e) => updateProgramCard(index, "title", e.target.value)} placeholder="Título del curso" />
