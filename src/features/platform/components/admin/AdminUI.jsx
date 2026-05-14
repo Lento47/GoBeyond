@@ -54,6 +54,16 @@ export function Textarea(props) {
   );
 }
 
+export function Field({ label, hint, children, className = "" }) {
+  return (
+    <div className={`grid gap-1.5 ${className}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b7a90]">{label}</p>
+      {children}
+      {hint ? <p className="text-[11px] text-[#8899b0] leading-relaxed">{hint}</p> : null}
+    </div>
+  );
+}
+
 export function Select(props) {
   return (
     <select
