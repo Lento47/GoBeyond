@@ -31,6 +31,7 @@ import {
 } from "../../services/contentApi";
 import { adminNavigationGroups, adminViewIcons, adminViewLabels } from "./adminNavigation";
 import { workspaceChrome } from "./workspaceTheme";
+import { CookieBanner } from "../../shared/CookieBanner";
 
 const AdminExperience = lazy(() => import("./AdminExperience").then((module) => ({ default: module.AdminExperience })));
 const LegalPage = lazy(() => import("./LegalPages").then((module) => ({ default: module.LegalPage })));
@@ -1612,6 +1613,8 @@ export default function GoBeyondApp() {
           {publicError}
         </div>
       ) : null}
+
+      <CookieBanner />
       </div>
     </Suspense>
   );
