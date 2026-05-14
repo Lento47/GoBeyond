@@ -341,7 +341,7 @@ export function PublicExperience({
   );
   const courses = useMemo(() => (content?.courses ?? []).filter((item) => !isSixSigmaLandingItem(item)), [content?.courses]);
   const programCards = useMemo(
-    () => (Array.isArray(landing?.programCards) && landing.programCards.length ? landing.programCards : (defaultContent.landing?.programCards ?? [])),
+    () => (Array.isArray(landing?.programCards) && landing.programCards.length ? landing.programCards : []),
     [landing?.programCards]
   );
   const liveSessions = useMemo(() => (content?.liveSessions ?? []).filter((item) => !isSixSigmaLandingItem(item)), [content?.liveSessions]);
@@ -379,7 +379,7 @@ export function PublicExperience({
   const metrics = useMemo(() => (hero.metrics ?? []).map((item) => normalizeHeroMetric(item)), [hero.metrics]);
   const navLabels = landing.nav?.length
     ? landing.nav
-    : ["Inicio", "Sobre nosotros", "Servicios", "Impacto", "Testimonios", "Contacto"];
+    : ["Inicio", "Sobre nosotros", "Servicios", "Cursos", "Testimonios", "Contacto"];
   const navItems = useMemo(
     () =>
       navLabels.map((label) => ({
@@ -546,8 +546,8 @@ export function PublicExperience({
                 <a href="#contacto" className="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all hover:bg-blue-500 hover:shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:-translate-y-1 active:scale-95 active:opacity-90 text-center">
                   {landing.heroPrimaryCtaLabel || "Empezar ahora"}
                 </a>
-                <a href="#servicios" className="px-8 py-4 bg-transparent text-white border border-white/10 font-bold rounded-xl text-sm transition-all hover:bg-white/5 active:scale-95 active:opacity-80 text-center">
-                  {landing.heroSecondaryCtaLabel || "Explorar catalogo"}
+                <a href="#cursos" className="px-8 py-4 bg-transparent text-white border border-white/10 font-bold rounded-xl text-sm transition-all hover:bg-white/5 active:scale-95 active:opacity-80 text-center">
+                  {landing.heroSecondaryCtaLabel || "Ver programas"}
                 </a>
               </div>
 
@@ -629,7 +629,7 @@ export function PublicExperience({
         </section>
 
         {/* PROGRAMAS Y CURSOS */}
-        <section id="programas" className="py-20 sm:py-24 lg:py-32 bg-[#080808]">
+        <section id="cursos" className="py-20 sm:py-24 lg:py-32 bg-[#080808]">
           <div className="container mx-auto px-5 sm:px-6 md:px-8">
             <div className="text-center mb-20 gobeyond-reveal opacity-0 translate-y-10 transition-all">
               <SectionTag>{landing.coursesTitle || "Programas y cursos"}</SectionTag>
@@ -637,7 +637,7 @@ export function PublicExperience({
                 {landing.coursesHeading || "Creados para el Impacto Real."}
               </h2>
             </div>
-            <div className={programCards.length ? "grid gap-6 xl:grid-cols-3" : "grid gap-8 lg:grid-cols-2"}>
+            <div className={(programCards.length || courses.length) ? "grid gap-6 xl:grid-cols-3" : "grid gap-8 lg:grid-cols-2"}>
               {programCards.length ? programCards.map((program, index) => {
                 const external = isExternalHref(program.href);
                 const programImage = normalizePublicMediaUrl(program.image || "");
@@ -756,7 +756,7 @@ export function PublicExperience({
                   </GlassCard>
                 );
               }) : (
-                <div className={programCards.length ? "xl:col-span-3" : "lg:col-span-2"}>
+                <div className="lg:col-span-2 xl:col-span-3">
                   <EmptyState
                     body="Los programas y cursos publicados desde admin apareceran aqui."
                     title="Sin cursos publicados"
