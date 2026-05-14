@@ -364,6 +364,41 @@ function ServicesSection({ landing, content, learningPath }) {
   );
 }
 
+function ProgramCardGrid({ programCards, landing }) {
+  const groups = [];
+  let current = { label: null, cards: [] };
+  for (const card of programCards) {
+    if (card.type === "section") {
+      groups.push(current);
+      current = { label: card.title, cards: [] };
+    } else {
+      current.cards.push(card);
+    }
+  }
+  groups.push(current);
+
+  const nonEmpty = groups.filter((g) => g.cards.length > 0);
+
+  return (
+    <div className="space-y-12">
+      {nonEmpty.map((group, gi) => (
+        <div key={gi}>
+          {group.label ? (
+            <p className="mb-6 text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400">
+              {group.label}
+            </p>
+          ) : null}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {group.cards.map((p, i) => (
+              <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CoursesSection({ landing, programCards, courses, liveSessions }) {
   const hasCourseContent = programCards.length || courses.length;
 
@@ -377,39 +412,21 @@ function CoursesSection({ landing, programCards, courses, liveSessions }) {
           </h2>
         </div>
 
-        {!hasCourseContent ? (
+        {hasCourseContent ? (
+          programCards.length
+            ? <ProgramCardGrid programCards={programCards} landing={landing} />
+            : (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {courses.map((c, i) => (
+                  <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
+                ))}
+              </div>
+            )
+        ) : (
           <EmptyState
             body="Los programas y cursos publicados desde admin apareceran aqui."
             title="Sin cursos publicados"
           />
-        ) : (
-          <>
-            {courses.length ? (
-              <div>
-                <p className="mb-6 text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400">
-                  {landing.coursesSubLabel || "Cursos"}
-                </p>
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {courses.map((c, i) => (
-                    <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {programCards.length ? (
-              <div className={courses.length ? "mt-16" : ""}>
-                <p className="mb-6 text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400">
-                  {landing.programsSubLabel || "Programas"}
-                </p>
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {programCards.map((p, i) => (
-                    <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </>
         )}
 
         {liveSessions.length ? (
