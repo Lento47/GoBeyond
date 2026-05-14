@@ -34,20 +34,7 @@ export const defaultContent = {
     "Impacto social concreto para reducir brechas de acceso a formacion especializada.",
     "Herramientas practicas que amplian oportunidades dentro y fuera de Limon.",
   ],
-  liveSessions: [
-    {
-      id: "live-1",
-      title: "Project Management",
-      date: "Formacion estructurada",
-      format: "Servicio",
-    },
-    {
-      id: "live-3",
-      title: "Scrum",
-      date: "Agilidad aplicada",
-      format: "Servicio",
-    },
-  ],
+  liveSessions: [],
   learningPath: [
     {
       id: "path-1",
