@@ -233,7 +233,9 @@ function normalizeLandingState(landing = {}) {
       ? landing.nav.join(", ")
       : "Inicio, Sobre nosotros, Servicios, Impacto, Testimonios, Contacto",
     // Sobre nosotros
-    benefits: Array.isArray(landing?.benefits) ? landing.benefits.join("\n") : "",
+    benefits: Array.isArray(landing?.benefits) && landing.benefits.length
+      ? landing.benefits.join("\n")
+      : "Alianza con centros educativos y apertura para jovenes independientes.\nPreparacion orientada a certificaciones internacionales con valor real de empleabilidad.\nImpacto social concreto para reducir brechas de acceso a formacion especializada.\nHerramientas practicas que amplian oportunidades dentro y fuera de Limon.",
     // Servicios
     servicesTitle: landing?.servicesTitle ?? "Nuestros servicios",
     subscriptionLabel: landing?.subscriptionLabel ?? "",
