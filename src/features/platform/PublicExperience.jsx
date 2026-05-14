@@ -377,21 +377,39 @@ function CoursesSection({ landing, programCards, courses, liveSessions }) {
           </h2>
         </div>
 
-        {hasCourseContent ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {programCards.length
-              ? programCards.map((p, i) => (
-                  <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
-                ))
-              : courses.map((c, i) => (
-                  <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
-                ))}
-          </div>
-        ) : (
+        {!hasCourseContent ? (
           <EmptyState
             body="Los programas y cursos publicados desde admin apareceran aqui."
             title="Sin cursos publicados"
           />
+        ) : (
+          <>
+            {courses.length ? (
+              <div>
+                <p className="mb-6 text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400">
+                  {landing.coursesSubLabel || "Cursos"}
+                </p>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {courses.map((c, i) => (
+                    <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {programCards.length ? (
+              <div className={courses.length ? "mt-16" : ""}>
+                <p className="mb-6 text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400">
+                  {landing.programsSubLabel || "Programas"}
+                </p>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {programCards.map((p, i) => (
+                    <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </>
         )}
 
         {liveSessions.length ? (
