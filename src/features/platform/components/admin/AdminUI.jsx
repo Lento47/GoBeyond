@@ -16,27 +16,19 @@ export function SectionCard({
   const padding = density === "compact" ? "p-4 sm:p-5" : "p-5 sm:p-6";
   const frame =
     accent === "dark"
-      ? "rounded-2xl border border-[#d8e2f0] bg-[#0f1b33] text-white shadow-sm"
+      ? "rounded-2xl border border-[#c6d4ec] bg-[#eef4ff] text-[#172033] shadow-sm"
       : accent === "strong"
         ? "rounded-2xl border border-[#c6d4ec] bg-[#f3f7ff] text-[#172033] shadow-sm"
         : "rounded-2xl border border-[#d8e2f0] bg-white text-[#172033] shadow-sm";
-  const divider = accent === "dark" ? "border-white/10" : "border-[#e8eef6]";
+  const divider = "border-[#e8eef6]";
 
   return (
     <section className={`${frame} overflow-hidden ${variant === "flat" ? "shadow-none" : ""} ${padding}`}>
       <div className={`mb-5 border-b ${divider} pb-4`}>
-        <p
-          className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
-            accent === "dark" ? "text-[#9fb0c9]" : "text-[#6b7a90]"
-          }`}
-        >
-          {eyebrow}
-        </p>
-        <h3 className={`mt-2 text-[1.05rem] font-semibold leading-tight sm:text-[1.3rem] ${accent === "dark" ? "text-white" : "text-[#172033]"}`}>
-          {title}
-        </h3>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">{eyebrow}</p>
+        <h3 className="mt-2 text-[1.05rem] font-semibold leading-tight text-[#172033] sm:text-[1.3rem]">{title}</h3>
         {description ? (
-          <p className={`mt-2 max-w-3xl text-sm leading-relaxed ${accent === "dark" ? "text-[#c2cfdf]" : "text-[#536277]"}`}>{description}</p>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#536277]">{description}</p>
         ) : null}
       </div>
       {children}
@@ -71,7 +63,16 @@ export function Select(props) {
   );
 }
 
-export function SmallStat({ label, value, help, tone = "default" }) {
+export function SmallStat({ label, value, help, tone = "default", variant = "default" }) {
+  if (variant === "band") {
+    return (
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
+        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">{label}</p>
+        <p className="text-[1.35rem] font-black leading-none text-[#172033]">{value ?? "—"}</p>
+        {help ? <p className="mt-0.5 text-[10px] leading-snug text-[#8899b0]">{help}</p> : null}
+      </div>
+    );
+  }
   const toneClass =
     tone === "accent"
       ? "rounded-xl border border-[#c6d4ec] bg-[#f3f7ff]"
@@ -85,6 +86,33 @@ export function SmallStat({ label, value, help, tone = "default" }) {
       <p className="mt-2 text-[1.45rem] font-semibold leading-none text-[#172033]">{value}</p>
       {help ? <p className="mt-1.5 text-xs leading-relaxed text-[#66758c]">{help}</p> : null}
     </div>
+  );
+}
+
+export function CompactBand({ children }) {
+  return (
+    <div className="flex divide-x divide-[#d8e2f0] overflow-hidden rounded-[18px] border border-[#d8e2f0] bg-white">
+      {children}
+    </div>
+  );
+}
+
+const statusPillMap = {
+  pending:  { bg: "bg-amber-50",  border: "border-amber-200",  text: "text-amber-700" },
+  active:   { bg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700" },
+  draft:    { bg: "bg-slate-50",  border: "border-slate-200",  text: "text-slate-600" },
+  urgent:   { bg: "bg-red-50",    border: "border-red-200",    text: "text-red-700" },
+  ready:    { bg: "bg-emerald-50",border: "border-emerald-200",text: "text-emerald-700" },
+  review:   { bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
+  progress: { bg: "bg-sky-50",    border: "border-sky-200",    text: "text-sky-700" },
+};
+
+export function StatusPill({ status = "draft", label }) {
+  const s = statusPillMap[status] ?? statusPillMap.draft;
+  return (
+    <span className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${s.bg} ${s.border} ${s.text}`}>
+      {label}
+    </span>
   );
 }
 
@@ -246,8 +274,21 @@ export function EmptyState({ title, body }) {
 }
 
 export function RowCard({ eyebrow, title, meta, body, children, density = "comfortable" }) {
+  if (density === "compact") {
+    return (
+      <div className="flex min-w-0 items-center gap-3 border-b border-[#edf1f7] bg-white px-3 py-3 last:border-b-0 transition hover:bg-[#f7f9fc]">
+        <div className="min-w-0 flex-1">
+          {eyebrow ? <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#8899b0]">{eyebrow}</p> : null}
+          <p className={`${eyebrow ? "mt-0.5" : ""} truncate text-sm font-semibold leading-tight text-[#172033]`}>{title}</p>
+          {meta ? <p className="mt-0.5 truncate text-xs leading-relaxed text-[#66758c]">{meta}</p> : null}
+          {body ? <MarkdownContent className="mt-1 text-xs leading-relaxed text-[#435066]">{body}</MarkdownContent> : null}
+        </div>
+        {children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
+      </div>
+    );
+  }
   return (
-    <div className={`min-w-0 rounded-2xl border border-[#d8e2f0] bg-white ${density === "compact" ? "p-3.5" : "p-4"} transition hover:border-[#bbc8d9] hover:bg-[#fbfdff]`}>
+    <div className="min-w-0 rounded-2xl border border-[#d8e2f0] bg-white p-4 transition hover:border-[#bbc8d9] hover:bg-[#fbfdff]">
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           {eyebrow ? <p className="break-words text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">{eyebrow}</p> : null}

@@ -3,6 +3,7 @@ import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX, extractEmbedUrl } from "../..
 import { MarkdownContent } from "../../shared/MarkdownContent";
 import {
   ActionButton,
+  CompactBand,
   EmptyState,
   FilterInput,
   Input,
@@ -15,6 +16,7 @@ import {
   SectionToolbar,
   Select,
   SmallStat,
+  StatusPill,
   Textarea,
 } from "./components/admin/AdminUI";
 import { getEmbedDescriptor } from "./embedUtils";
@@ -2241,113 +2243,146 @@ export function AdminWorkspace({
     const followUpCount = filteredQueueItems.filter((item) => item.attention === "seguimiento").length;
 
     return (
-      <div className="grid gap-6">
-        <SectionCard
-          title="Queue operativa"
-          description="Una bandeja unica para revisar trabajo pendiente de cuentas, solicitudes, soporte, comunidad y moderacion sin saltar entre modulos en cada paso."
-        >
-          <div className="grid gap-4 md:grid-cols-4">
-            <SmallStat label="En bandeja" value={filteredQueueItems.length} help="Elementos visibles con los filtros actuales." tone="accent" />
-            <SmallStat label="Criticos" value={criticalCount} help="Casos que bloquean acceso o requieren accion prioritaria." />
-            <SmallStat label="Nuevos" value={newCount} help="Entradas nuevas que aun no reciben gestion." />
-            <SmallStat label="Seguimiento" value={followUpCount} help="Elementos en observacion o con proxima accion." />
+      <div className="grid gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación administrativa</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033] sm:text-3xl">Centro de administración</h1>
+          <p className="mt-1 text-sm leading-relaxed text-[#6b7a90]">
+            Monitorea solicitudes, comunidad, soporte y estado del sistema desde una sola vista.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <FilterInput
+              onChange={(event) => updateQueueFilter("query", event.target.value)}
+              placeholder="Buscar estudiantes, cursos o tickets…"
+              value={queueFilters.query}
+            />
           </div>
-        </SectionCard>
-
-        <SectionCard
-          title="Filtro de cola"
-          description="Combina filtros como haria una consola de operaciones: tipo de caso, estado, nivel de atencion y texto libre."
-        >
-          <SectionToolbar
-            helper={`${queueItems.length} items totales · ${filteredQueueItems.length} visibles · ${criticalCount} criticos con la vista actual.`}
-            action={
-              <SecondaryButton
-                onClick={() =>
-                  setQueueFilters({
-                    query: "",
-                    kind: "all",
-                    state: "all",
-                    attention: "all",
-                  })
-                }
-                type="button"
-              >
-                Limpiar filtros
-              </SecondaryButton>
-            }
+          <Select className="w-auto" value={queueFilters.kind} onChange={(event) => updateQueueFilter("kind", event.target.value)}>
+            <option value="all">Todo</option>
+            <option value="Cuenta">Cuentas</option>
+            <option value="Ticket">Tickets</option>
+            <option value="Solicitud">Solicitudes</option>
+            <option value="Hilo">Hilos</option>
+            <option value="Cambio SOP">SOPs</option>
+            <option value="Moderacion">Moderacion</option>
+          </Select>
+          <SecondaryButton
+            onClick={() => setQueueFilters({ query: "", kind: "all", state: "all", attention: "all" })}
+            type="button"
           >
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,0.7fr))]">
-              <FilterInput
-                onChange={(event) => updateQueueFilter("query", event.target.value)}
-                placeholder="Busca por usuario, correo, curso, ticket, solicitud, SOP o nota"
-                value={queueFilters.query}
-              />
-              <Select value={queueFilters.kind} onChange={(event) => updateQueueFilter("kind", event.target.value)}>
-                <option value="all">Todos los tipos</option>
-                <option value="Cuenta">Cuentas</option>
-                <option value="Ticket">Tickets</option>
-                <option value="Solicitud">Solicitudes</option>
-                <option value="Hilo">Hilos</option>
-                <option value="Cambio SOP">Cambios SOP</option>
-                <option value="Moderacion">Moderacion</option>
-              </Select>
-              <Select value={queueFilters.state} onChange={(event) => updateQueueFilter("state", event.target.value)}>
-                <option value="all">Todos los estados</option>
-                <option value="open">open</option>
-                <option value="in_progress">in_progress</option>
-                <option value="resolved">resolved</option>
-                <option value="closed">closed</option>
-                <option value="reviewing">reviewing</option>
-                <option value="waitlist">waitlist</option>
-                <option value="pending_verification">pending_verification</option>
-                <option value="password_expired">password_expired</option>
-                <option value="hidden">hidden</option>
-                <option value="pending_review">pending_review</option>
-                <option value="inactive">inactive</option>
-              </Select>
-              <Select value={queueFilters.attention} onChange={(event) => updateQueueFilter("attention", event.target.value)}>
-                <option value="all">Toda atencion</option>
-                <option value="critica">Critica</option>
-                <option value="nueva">Nueva</option>
-                <option value="seguimiento">Seguimiento</option>
-                <option value="operativa">Operativa</option>
-              </Select>
-            </div>
-          </SectionToolbar>
+            Limpiar
+          </SecondaryButton>
+        </div>
 
-          <ScrollArea>
-            <div className="grid gap-4">
-              {filteredQueueItems.length ? (
-                filteredQueueItems.map((item) => (
-                  <RowCard
-                    key={item.id}
-                    eyebrow={`${item.kind} · ${item.state} · ${item.attention}`}
-                    title={item.title}
-                    meta={item.subtitle}
-                    body={item.body}
-                  >
-                    <ActionButton onClick={() => handleQueueItemManage(item)} type="button">
-                      {item.manageLabel}
-                    </ActionButton>
-                    <SecondaryButton onClick={() => handleQueueItemOpenSection(item)} type="button">
-                      Abrir seccion
-                    </SecondaryButton>
-                    {item.kind === "Moderacion" ? (
-                      <SecondaryButton onClick={() => approveTestimonialSubmission(item.source)} type="button">
-                        Aprobar
-                      </SecondaryButton>
-                    ) : null}
-                  </RowCard>
-                ))
-              ) : (
-                <EmptyState
-                  title="No hay coincidencias en la queue"
-                  body="Ajusta los filtros o limpia la consulta para volver a ver toda la bandeja operativa."
-                />
-              )}
+        <CompactBand>
+          <SmallStat variant="band" label="Solicitudes" value={filteredQueueItems.length} help="En bandeja" />
+          <SmallStat variant="band" label="Críticos" value={criticalCount} help="Requieren acción" />
+          <SmallStat variant="band" label="Nuevos" value={newCount} help="Sin gestión aún" />
+          <SmallStat variant="band" label="Seguimiento" value={followUpCount} help="En observación" />
+        </CompactBand>
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.4fr)]">
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-t-[18px] border border-b-0 border-[#d8e2f0] bg-[#f8fafc] px-4 py-2.5">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Queue operativa</p>
+              <div className="flex gap-2">
+                <Select value={queueFilters.state} onChange={(event) => updateQueueFilter("state", event.target.value)}>
+                  <option value="all">Todos los estados</option>
+                  <option value="open">open</option>
+                  <option value="in_progress">in_progress</option>
+                  <option value="resolved">resolved</option>
+                  <option value="closed">closed</option>
+                  <option value="reviewing">reviewing</option>
+                  <option value="waitlist">waitlist</option>
+                  <option value="pending_verification">pending_verification</option>
+                  <option value="password_expired">password_expired</option>
+                  <option value="hidden">hidden</option>
+                  <option value="pending_review">pending_review</option>
+                  <option value="inactive">inactive</option>
+                </Select>
+                <Select value={queueFilters.attention} onChange={(event) => updateQueueFilter("attention", event.target.value)}>
+                  <option value="all">Toda atención</option>
+                  <option value="critica">Crítica</option>
+                  <option value="nueva">Nueva</option>
+                  <option value="seguimiento">Seguimiento</option>
+                  <option value="operativa">Operativa</option>
+                </Select>
+              </div>
             </div>
-          </ScrollArea>
-        </SectionCard>
+            <div className="overflow-hidden rounded-b-[18px] border border-[#d8e2f0] bg-white">
+              <ScrollArea>
+                {filteredQueueItems.length ? (
+                  filteredQueueItems.map((item) => (
+                    <RowCard
+                      density="compact"
+                      key={item.id}
+                      eyebrow={`${item.kind} · ${item.subtitle || ""}`}
+                      title={item.title}
+                      meta={item.body}
+                    >
+                      <StatusPill
+                        status={
+                          item.attention === "critica" ? "urgent"
+                          : item.attention === "nueva" ? "pending"
+                          : item.state === "resolved" ? "ready"
+                          : "progress"
+                        }
+                        label={item.attention === "critica" ? "Urgente" : item.attention === "nueva" ? "Pendiente" : String(item.state ?? "").replace(/_/g, " ")}
+                      />
+                      <ActionButton className="!py-1.5 !text-xs" onClick={() => handleQueueItemManage(item)} type="button">
+                        {item.manageLabel}
+                      </ActionButton>
+                      <SecondaryButton className="!py-1.5 !text-xs" onClick={() => handleQueueItemOpenSection(item)} type="button">
+                        Ver
+                      </SecondaryButton>
+                      {item.kind === "Moderacion" ? (
+                        <SecondaryButton className="!py-1.5 !text-xs" onClick={() => approveTestimonialSubmission(item.source)} type="button">
+                          Aprobar
+                        </SecondaryButton>
+                      ) : null}
+                    </RowCard>
+                  ))
+                ) : (
+                  <div className="px-4 py-6">
+                    <EmptyState
+                      title="No hay coincidencias en la queue"
+                      body="Ajusta los filtros o limpia la consulta para ver toda la bandeja."
+                    />
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          </div>
+
+          <div className="grid gap-4 content-start">
+            <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+              <div className="border-b border-[#e8eef6] px-4 py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Resumen rápido</p>
+              </div>
+              <div className="divide-y divide-[#edf1f7] px-4">
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs text-[#536277]">Pendientes hoy</span>
+                  <span className="text-sm font-black text-[#172033]">{filteredQueueItems.filter(i => i.attention === "nueva").length}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs text-[#536277]">Casos críticos</span>
+                  <span className="text-sm font-black text-red-600">{criticalCount}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs text-[#536277]">En seguimiento</span>
+                  <span className="text-sm font-black text-[#172033]">{followUpCount}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs text-[#536277]">Total bandeja</span>
+                  <span className="text-sm font-black text-[#172033]">{queueItems.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -4277,26 +4312,19 @@ export function AdminWorkspace({
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-2xl border border-[#d8e2f0] bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#1d4ed8]">Operacion administrativa</p>
-            <h2 className="mt-2 text-2xl font-semibold leading-tight text-[#172033] sm:text-3xl">
-              Centro de administracion
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#536277]">
-              Monitorea solicitudes, comunidad, soporte y estado del sistema desde una sola vista.
-            </p>
-          </div>
-          <div className="rounded-xl border border-[#d8e2f0] bg-[#f8fbff] px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Vista activa</p>
-            <p className="mt-1 text-sm font-semibold text-[#172033]">{adminViewLabels[activeView]}</p>
-          </div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación administrativa</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033] sm:text-3xl">Portal administrador</h1>
+          <p className="mt-0.5 text-sm text-[#6b7a90]">Monitorea solicitudes, comunidad, soporte y estado del sistema.</p>
         </div>
-      </section>
+        <span className="inline-flex items-center rounded-full border border-[#d8e2f0] bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#536277]">
+          {adminViewLabels[activeView]}
+        </span>
+      </div>
 
-      <section className="rounded-2xl border border-[#d8e2f0] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 xl:grid-cols-[minmax(18rem,1fr)_auto_minmax(32rem,1.45fr)] xl:items-center">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
           <FilterInput
             onChange={(event) => {
               const nextQuery = event.target.value;
@@ -4305,54 +4333,40 @@ export function AdminWorkspace({
                 setActiveView("search");
               }
             }}
-            placeholder="Buscar estudiantes, cursos o tickets..."
+            placeholder="Buscar estudiantes, cursos o tickets…"
             value={globalSearchQuery}
           />
-          <SecondaryButton
-            className="px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em]"
-            onClick={() => {
-              setGlobalSearchQuery("");
-              if (activeView === "search") {
-                setActiveView("queue");
-              }
-            }}
-            type="button"
-          >
-            Limpiar
-          </SecondaryButton>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <SmallStat label="Cursos" value={content.courses?.length ?? 0} help="Catalogo" tone="accent" />
-            <SmallStat label="Usuarios" value={users.length} help="Cuentas" />
-            <SmallStat label="Matriculas" value={enrollments.length} help="Accesos" />
-            <SmallStat label="Queue" value={queueItems.length} help="Pendientes" />
-          </div>
         </div>
-      </section>
+        <SecondaryButton
+          className="shrink-0"
+          onClick={() => {
+            setGlobalSearchQuery("");
+            if (activeView === "search") {
+              setActiveView("queue");
+            }
+          }}
+          type="button"
+        >
+          Limpiar
+        </SecondaryButton>
+      </div>
 
-      <section className="rounded-[18px] border border-[#d7e0ea] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7edf5] pb-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estado del sistema</p>
-            <p className="mt-2 text-lg font-semibold text-[#172033]">
-              {systemMessage ? "Seguimiento operativo activo" : "Sin alertas activas"}
-            </p>
-          </div>
-          <div
-            className={`rounded-full border px-4 py-2 text-[11px] font-semibold ${
-              systemMessageTone === "warning"
-                ? "border-[#fed7aa] bg-[#fff7ed] text-[#9a3412]"
-                : systemMessageTone === "accent"
-                  ? "border-[#c6d4ec] bg-[#eef4ff] text-[#1d4ed8]"
-                  : "border-[#d7e0ea] bg-[#f7f9fc] text-[#536277]"
-            }`}
-          >
-            {globalSearchQuery.trim() ? "Busqueda focalizada" : "Modo de trabajo normal"}
-          </div>
+      <CompactBand>
+        <SmallStat variant="band" label="Cursos" value={content.courses?.length ?? 0} help="Catálogo" />
+        <SmallStat variant="band" label="Usuarios" value={users.length} help="Cuentas" />
+        <SmallStat variant="band" label="Matrículas" value={enrollments.length} help="Accesos" />
+        <SmallStat variant="band" label="Queue" value={queueItems.length} help="Pendientes" />
+      </CompactBand>
+
+      {systemMessage ? (
+        <div className={`rounded-[14px] border px-4 py-3 text-sm leading-relaxed ${
+          systemMessageTone === "warning"
+            ? "border-[#fed7aa] bg-[#fff7ed] text-[#9a3412]"
+            : "border-[#c6d4ec] bg-[#eef4ff] text-[#1d4ed8]"
+        }`}>
+          {systemMessage}
         </div>
-        <p className="mt-4 text-sm leading-6 text-[#617085]">
-          {systemMessage || "Los mensajes de guardado, validacion y seguimiento apareceran aqui para darte contexto rapido mientras operas el panel."}
-        </p>
-      </section>
+      ) : null}
 
       {activeView === "queue" ? renderQueueView() : null}
       {activeView === "identity" ? renderIdentityView() : null}

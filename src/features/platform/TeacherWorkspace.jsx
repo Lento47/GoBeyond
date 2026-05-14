@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ActionButton,
+  CompactBand,
   EmptyState,
   Input,
   ModalShell,
@@ -10,6 +11,7 @@ import {
   SectionCard,
   Select,
   SmallStat,
+  StatusPill,
   Textarea,
 } from "./components/admin/AdminUI";
 import { uploadAdminAsset } from "../../services/contentApi";
@@ -520,129 +522,178 @@ export function TeacherExperience(props) {
 
   function renderOverviewSection() {
     return (
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)]" id="teacher-overview">
-        <SectionCard
-          description={dashboard?.summary || "Gestiona cursos, materiales, matriculas e incidencias desde un mismo frente docente."}
-          title={dashboard?.welcomeTitle || `Panel docente de ${teacherName}`}
-        >
-          <div className="grid overflow-hidden rounded-2xl border border-[#d8e2f0] bg-[#fbfdff] sm:grid-cols-2 xl:grid-cols-5">
-            <SmallStat help="Programas bajo tu alcance docente." label="Cursos asignados" value={dashboardLoading ? "..." : metrics.assignedCourses} />
-            <SmallStat help="Grupos activos configurados para tus cursos." label="Cohortes activas" value={dashboardLoading ? "..." : metrics.activeCohorts} />
-            <SmallStat help="Estudiantes activos en tus cohortes." label="Estudiantes activos" value={dashboardLoading ? "..." : metrics.activeStudents} />
-            <SmallStat help="Materiales publicados para seguimiento." label="Materiales" value={dashboardLoading ? "..." : metrics.pendingAssignments} />
-            <SmallStat help="Tickets, solicitudes e hilos que requieren atencion." label="Casos abiertos" value={dashboardLoading ? "..." : metrics.openCases} />
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.55fr)]" id="teacher-overview">
+        <div className="grid gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033] sm:text-3xl">
+              {dashboard?.welcomeTitle || `Workspace docente`}
+            </h1>
+            <p className="mt-1 text-sm leading-relaxed text-[#6b7a90]">
+              {dashboard?.summary || "Tu espacio operativo para gestionar clases, contenidos, estudiantes y actividades académicas."}
+            </p>
           </div>
-        </SectionCard>
 
-        <SectionCard description="Ultimos movimientos operativos ligados a tus cursos y grupos." title="Casos recientes" density="compact">
+          <CompactBand>
+            <SmallStat variant="band" label="Clases activas" value={dashboardLoading ? "…" : metrics.assignedCourses} help="Programas bajo tu alcance" />
+            <SmallStat variant="band" label="Cohortes activas" value={dashboardLoading ? "…" : metrics.activeCohorts} help="Grupos configurados" />
+            <SmallStat variant="band" label="Estudiantes" value={dashboardLoading ? "…" : metrics.activeStudents} help="Activos en tus cohortes" />
+            <SmallStat variant="band" label="Materiales" value={dashboardLoading ? "…" : metrics.pendingAssignments} help="Publicados" />
+            <SmallStat variant="band" label="Casos abiertos" value={dashboardLoading ? "…" : metrics.openCases} help="Requieren atención" />
+          </CompactBand>
+        </div>
+
+        <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+          <div className="border-b border-[#e8eef6] px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Actividad reciente</p>
+          </div>
           {dashboardLoading ? (
-            <p className="text-sm text-[#617085]">Cargando actividad docente...</p>
+            <p className="px-4 py-3 text-sm text-[#617085]">Cargando actividad…</p>
           ) : dashboard?.recentCases?.length ? (
             <ScrollArea className="max-h-[22rem]">
-              <div className="grid gap-3">
-                {dashboard.recentCases.map((item) => (
-                  <RowCard
-                    density="compact"
-                    eyebrow={titleCase(item.kind)}
-                    key={`${item.kind}-${item.id}`}
-                    meta={`${item.subtitle || "Sin referencia"} · ${titleCase(item.status)}`}
-                    title={item.title}
-                    body={`Ultima actualizacion: ${formatDateTime(item.updatedAt)}`}
-                  />
-                ))}
-              </div>
+              {dashboard.recentCases.map((item) => (
+                <RowCard
+                  density="compact"
+                  eyebrow={titleCase(item.kind)}
+                  key={`${item.kind}-${item.id}`}
+                  meta={`${item.subtitle || "Sin referencia"} · ${formatDateTime(item.updatedAt)}`}
+                  title={item.title}
+                >
+                  <StatusPill status={item.status === "open" ? "pending" : item.status === "closed" ? "draft" : "progress"} label={titleCase(item.status)} />
+                </RowCard>
+              ))}
             </ScrollArea>
           ) : (
-            <EmptyState body="Todavia no hay actividad reciente dentro de tu alcance docente." title="Sin casos recientes" />
+            <div className="px-4 py-6">
+              <EmptyState body="Todavia no hay actividad reciente dentro de tu alcance docente." title="Sin actividad" />
+            </div>
           )}
-        </SectionCard>
+        </div>
       </section>
     );
   }
 
   function renderCoursesSection() {
     return (
-      <SectionCard
-        description="Cursos asignados, cohortes activas y acceso rapido para abrir nuevos materiales o matriculas."
-        title="Cursos y grupos"
-      >
-        <div className="grid gap-3" id="teacher-courses">
-          {coursesLoading ? (
-            <p className="text-sm text-[#617085]">Cargando cursos asignados...</p>
-          ) : courses.length ? (
-            courses.map((course) => (
-              <RowCard
-                body={course.description || course.detailSummary || "Curso listo para operacion docente."}
-                key={course.id}
-                meta={`${course.format || "Formato libre"} · ${course.duration || "Duracion abierta"} · ${course.audience || "Audiencia general"}`}
-                title={course.title}
-              >
-                <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.55fr)]">
-                  <div className="grid gap-3">
-                    <div className="grid overflow-hidden rounded-2xl border border-[#d8e2f0] bg-[#fbfdff] sm:grid-cols-2 xl:grid-cols-4">
-                      <SmallStat help="Matriculas registradas." label="Matriculas" value={course.enrollmentCount ?? 0} />
-                      <SmallStat help="Grupos configurados para este curso." label="Cohortes" value={course.cohortCount ?? 0} />
-                      <SmallStat help="Estudiantes con acceso activo." label="Activos" value={course.activeStudentCount ?? 0} />
-                      <SmallStat help="Materiales creados." label="Materiales" value={course.assignmentCount ?? 0} />
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]" id="teacher-courses">
+        <div className="grid gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
+              <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033]">Clases y grupos</h1>
+              <p className="mt-0.5 text-sm text-[#6b7a90]">Cursos asignados, cohortes activas y acceso rápido a materiales.</p>
+            </div>
+            <ActionButton onClick={() => startCreateAssignment()} type="button">
+              + Agregar material
+            </ActionButton>
+          </div>
+
+          <div className="overflow-hidden rounded-[18px] border border-[#d8e2f0] bg-white">
+            {coursesLoading ? (
+              <p className="px-4 py-3 text-sm text-[#617085]">Cargando cursos asignados…</p>
+            ) : courses.length ? (
+              courses.map((course) => (
+                <div key={course.id} className="border-b border-[#edf1f7] last:border-b-0">
+                  <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#8899b0]">
+                        {course.format || "Formato libre"} · {course.audience || "General"}
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-semibold text-[#172033]">{course.title}</p>
+                      <p className="mt-0.5 text-xs text-[#66758c]">
+                        {course.enrollmentCount ?? 0} matriculas · {course.cohortCount ?? 0} grupos · {course.activeStudentCount ?? 0} activos
+                      </p>
                     </div>
-                    <div className="grid gap-3 rounded-2xl border border-[#d8e2f0] bg-[#f8fbff] p-4">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Estudiantes visibles</p>
-                      <CourseStudentsPreview students={course.students ?? []} />
-                    </div>
-                  </div>
-                  <div className="grid gap-3 rounded-2xl border border-[#d8e2f0] bg-[#f8fbff] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Cohortes visibles</p>
-                      <span className="rounded-full border border-[#d8e2f0] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#66758c]">
-                        {(course.cohorts ?? []).length} grupos
-                      </span>
-                    </div>
-                    {(course.cohorts ?? []).length ? (
-                      <div className="grid gap-2">
-                        {(course.cohorts ?? []).slice(0, 4).map((cohort) => (
-                          <div className="rounded-xl border border-[#d8e2f0] bg-white px-3 py-2.5" key={cohort.id}>
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-[#172033]">{cohort.title}</p>
-                                <p className="truncate text-xs text-[#617085]">
-                                  {cohort.status || "planned"}
-                                  {cohort.startDate ? ` · inicia ${formatDate(cohort.startDate)}` : ""}
-                                  {cohort.endDate ? ` · cierra ${formatDate(cohort.endDate)}` : ""}
-                                </p>
-                              </div>
-                              {cohort.capacity ? (
-                                <span className="shrink-0 text-xs text-[#617085]">{cohort.capacity} cupos</span>
-                              ) : null}
-                            </div>
-                          </div>
-                        ))}
-                        {(course.cohorts ?? []).length > 4 ? (
-                          <p className="text-xs uppercase tracking-[0.18em] text-[#6b7a90]">+ {(course.cohorts ?? []).length - 4} cohortes adicionales</p>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[#617085]">Todavia no hay cohortes configuradas para este curso.</p>
-                    )}
-                    <div className="mt-1 grid gap-2">
-                      <ActionButton onClick={() => startCreateAssignment(course.id)} type="button">
-                        Nuevo material
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <StatusPill status="active" label="Activa" />
+                      <ActionButton className="!py-2 !text-xs" onClick={() => startCreateAssignment(course.id)} type="button">
+                        Entrar al aula
                       </ActionButton>
-                      <SecondaryButton onClick={() => startCreateEnrollment(course.id)} type="button">
-                        Matricular estudiante
+                      <SecondaryButton className="!py-2 !text-xs" onClick={() => startCreateEnrollment(course.id)} type="button">
+                        Matricular
                       </SecondaryButton>
                     </div>
                   </div>
+                  {(course.cohorts ?? []).length ? (
+                    <div className="bg-[#f8fafc] px-4 pb-3">
+                      <div className="flex flex-wrap gap-2">
+                        {(course.cohorts ?? []).slice(0, 3).map((cohort) => (
+                          <span key={cohort.id} className="inline-flex items-center gap-1.5 rounded-full border border-[#d8e2f0] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#536277]">
+                            {cohort.title}
+                            {cohort.startDate ? <span className="text-[#8899b0]">· {formatDate(cohort.startDate)}</span> : null}
+                          </span>
+                        ))}
+                        {(course.cohorts ?? []).length > 3 ? (
+                          <span className="text-[10px] text-[#8899b0]">+{(course.cohorts ?? []).length - 3} grupos</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              </RowCard>
-            ))
-          ) : (
-            <EmptyState
-              body="Asigna cursos a esta cuenta desde el panel administrativo para habilitar la operacion docente real."
-              title="Sin cursos asignados"
-            />
-          )}
+              ))
+            ) : (
+              <div className="px-4 py-6">
+                <EmptyState
+                  body="Asigna cursos a esta cuenta desde el panel administrativo para habilitar la operacion docente real."
+                  title="Sin cursos asignados"
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </SectionCard>
+
+        <div className="grid gap-4 content-start">
+          <div className="rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] overflow-hidden">
+            <div className="border-b border-[#c6d4ec] px-4 py-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Ahora en clase</p>
+              <p className="mt-0.5 text-sm font-semibold text-[#172033]">
+                {courses[0]?.title || "Ninguna clase seleccionada"}
+              </p>
+            </div>
+            <div className="divide-y divide-[#d8e8f8]">
+              {(courses[0]?.assignments ?? []).slice(0, 4).map((assignment) => (
+                <div key={assignment.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#e8f0fd] transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-[#172033]">{assignment.title}</p>
+                    {assignment.dueLabel ? <p className="text-[10px] text-[#6b7a90]">{assignment.dueLabel}</p> : null}
+                  </div>
+                  <span className="shrink-0 text-[10px] text-[#1d4ed8] font-semibold">Disponible</span>
+                </div>
+              ))}
+              {!(courses[0]?.assignments ?? []).length ? (
+                <p className="px-4 py-3 text-xs text-[#8899b0]">Sin materiales publicados aún.</p>
+              ) : null}
+            </div>
+            <div className="border-t border-[#c6d4ec] p-3 grid gap-2">
+              <ActionButton className="w-full !justify-center" onClick={() => startCreateAssignment(courses[0]?.id)} type="button">
+                + Agregar material
+              </ActionButton>
+              <SecondaryButton className="w-full !justify-center" onClick={() => startCreateEnrollment(courses[0]?.id)} type="button">
+                Matricular estudiante
+              </SecondaryButton>
+            </div>
+          </div>
+
+          {courses.length > 1 ? (
+            <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+              <div className="border-b border-[#e8eef6] px-4 py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Otros cursos</p>
+              </div>
+              {courses.slice(1).map((course) => (
+                <div key={course.id} className="flex items-center gap-3 border-b border-[#edf1f7] px-4 py-2.5 last:border-b-0 hover:bg-[#f7f9fc] transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-[#172033]">{course.title}</p>
+                    <p className="text-[10px] text-[#8899b0]">{course.activeStudentCount ?? 0} estudiantes activos</p>
+                  </div>
+                  <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startCreateAssignment(course.id)} type="button">
+                    Ver
+                  </SecondaryButton>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </section>
     );
   }
 
@@ -704,94 +755,124 @@ export function TeacherExperience(props) {
 
   function renderOperationsSection() {
     return (
-      <section className="grid gap-6 xl:items-start xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]" id="teacher-operations">
-        <SectionCard
-          description="Matricula estudiantes en tus cursos asignados y ajusta progreso o vigencia de acceso."
-          title="Matriculas"
-        >
-          <div className="mb-4 flex justify-end">
-            <ActionButton onClick={() => startCreateEnrollment()} type="button">
-              Nueva matricula
-            </ActionButton>
-          </div>
-          {enrollmentsLoading ? (
-            <p className="text-sm text-[#617085]">Cargando matriculas...</p>
-          ) : enrollmentsView?.enrollments?.length ? (
-            <ScrollArea className="max-h-[34rem]">
-              <div className="grid gap-3">
-                {enrollmentsView.enrollments.map((enrollment) => (
-                  <RowCard
-                    body={`Acceso hasta ${formatDate(enrollment.accessExpiresAt)} · ${enrollment.enhancement?.progressPercent ?? 0}% progreso · ${enrollment.enhancement?.points ?? 0} puntos`}
-                    density="compact"
-                    eyebrow={titleCase(enrollment.status)}
-                    key={enrollment.id}
-                    meta={`${enrollment.course?.title || enrollment.courseId} · ${enrollment.student?.email || "Sin correo"}`}
-                    title={enrollment.student?.fullName || "Estudiante"}
-                  >
-                    <SecondaryButton onClick={() => startEditEnrollment(enrollment)} type="button">
-                      Gestionar
-                    </SecondaryButton>
-                  </RowCard>
-                ))}
-              </div>
-            </ScrollArea>
-          ) : (
-            <EmptyState body="Aun no hay estudiantes matriculados dentro de tu alcance." title="Sin matriculas" />
-          )}
-        </SectionCard>
+      <section className="grid gap-4" id="teacher-operations">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033]">Operaciones</h1>
+          <p className="mt-0.5 text-sm text-[#6b7a90]">Matriculas, soporte y comunidad ligados a tus cursos.</p>
+        </div>
 
-        <SectionCard
-          description="Supervisa tickets, solicitudes de apertura y hilos de comunidad relacionados con tus grupos."
-          title="Soporte y comunidad"
-        >
-          {supportLoading ? (
-            <p className="text-sm text-[#617085]">Cargando incidencias docentes...</p>
-          ) : (
-            <div className="grid gap-5">
-              <div className="grid gap-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Tickets de soporte</p>
-                <SupportList
-                  actionLabel="Gestionar ticket"
-                  emptyBody="No hay tickets ligados a tus cursos asignados."
-                  emptyTitle="Sin tickets"
-                  items={support?.tickets ?? []}
-                  onAction={(item) => startManageSupport("ticket", item)}
-                  renderMeta={(item) =>
-                    `${item.student?.fullName || item.student?.email || "Estudiante"} · ${item.courseTitle || "Curso"} · Prioridad ${titleCase(item.priority)}`
-                  }
-                />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="grid gap-4 content-start">
+            <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+              <div className="flex items-center justify-between border-b border-[#e8eef6] px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Matriculas</p>
+                <ActionButton className="!py-1.5 !text-xs" onClick={() => startCreateEnrollment()} type="button">
+                  + Nueva matricula
+                </ActionButton>
               </div>
-
-              <div className="grid gap-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Solicitudes de apertura</p>
-                <SupportList
-                  actionLabel="Gestionar solicitud"
-                  emptyBody="No hay solicitudes de ingreso o apertura en tus programas."
-                  emptyTitle="Sin solicitudes"
-                  items={support?.courseRequests ?? []}
-                  onAction={(item) => startManageSupport("course-request", item)}
-                  renderMeta={(item) =>
-                    `${item.student?.fullName || item.student?.email || "Estudiante"} · ${item.contactChannel || "Canal libre"}`
-                  }
-                />
-              </div>
-
-              <div className="grid gap-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Hilos de comunidad</p>
-                <SupportList
-                  actionLabel="Gestionar hilo"
-                  emptyBody="No hay hilos de comunidad dentro de tu alcance docente."
-                  emptyTitle="Sin hilos"
-                  items={support?.threads ?? []}
-                  onAction={(item) => startManageSupport("thread", item)}
-                  renderMeta={(item) =>
-                    `${item.authorName || item.authorEmail || "Autor"} · ${item.courseTitle || "Curso"} · ${item.replies?.length ?? 0} respuestas`
-                  }
-                />
-              </div>
+              {enrollmentsLoading ? (
+                <p className="px-4 py-3 text-sm text-[#617085]">Cargando matriculas…</p>
+              ) : enrollmentsView?.enrollments?.length ? (
+                <ScrollArea className="max-h-[28rem]">
+                  {enrollmentsView.enrollments.map((enrollment) => (
+                    <RowCard
+                      density="compact"
+                      eyebrow={enrollment.course?.title || enrollment.courseId}
+                      key={enrollment.id}
+                      meta={`${enrollment.student?.email || "Sin correo"} · Acceso hasta ${formatDate(enrollment.accessExpiresAt)}`}
+                      title={enrollment.student?.fullName || "Estudiante"}
+                    >
+                      <StatusPill
+                        status={enrollment.status === "active" ? "active" : enrollment.status === "completed" ? "ready" : "draft"}
+                        label={titleCase(enrollment.status)}
+                      />
+                      <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startEditEnrollment(enrollment)} type="button">
+                        Gestionar
+                      </SecondaryButton>
+                    </RowCard>
+                  ))}
+                </ScrollArea>
+              ) : (
+                <div className="px-4 py-6">
+                  <EmptyState body="Aun no hay estudiantes matriculados dentro de tu alcance." title="Sin matriculas" />
+                </div>
+              )}
             </div>
-          )}
-        </SectionCard>
+          </div>
+
+          <div className="grid gap-4 content-start">
+            <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+              <div className="border-b border-[#e8eef6] px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Soporte y comunidad</p>
+              </div>
+              {supportLoading ? (
+                <p className="px-4 py-3 text-sm text-[#617085]">Cargando incidencias…</p>
+              ) : (
+                <div>
+                  {(support?.tickets ?? []).length ? (
+                    <div>
+                      <p className="border-b border-[#edf1f7] bg-[#f8fafc] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Tickets</p>
+                      {(support.tickets).map((item) => (
+                        <RowCard
+                          density="compact"
+                          eyebrow={`${item.courseTitle || "Curso"} · Prioridad ${titleCase(item.priority)}`}
+                          key={item.id}
+                          meta={item.student?.fullName || item.student?.email || "Estudiante"}
+                          title={item.subject || "Ticket"}
+                        >
+                          <StatusPill status={item.status === "open" ? "pending" : item.status === "resolved" ? "ready" : "draft"} label={titleCase(item.status)} />
+                          <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startManageSupport("ticket", item)} type="button">Gestionar</SecondaryButton>
+                        </RowCard>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {(support?.courseRequests ?? []).length ? (
+                    <div>
+                      <p className="border-b border-[#edf1f7] bg-[#f8fafc] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Solicitudes</p>
+                      {(support.courseRequests).map((item) => (
+                        <RowCard
+                          density="compact"
+                          eyebrow={item.contactChannel || "Canal libre"}
+                          key={item.id}
+                          meta={item.student?.fullName || item.student?.email || "Estudiante"}
+                          title={item.courseTitle || "Solicitud de apertura"}
+                        >
+                          <StatusPill status="pending" label={titleCase(item.status)} />
+                          <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startManageSupport("course-request", item)} type="button">Gestionar</SecondaryButton>
+                        </RowCard>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {(support?.threads ?? []).length ? (
+                    <div>
+                      <p className="border-b border-[#edf1f7] bg-[#f8fafc] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Comunidad</p>
+                      {(support.threads).map((item) => (
+                        <RowCard
+                          density="compact"
+                          eyebrow={`${item.courseTitle || "Curso"} · ${item.replies?.length ?? 0} respuestas`}
+                          key={item.id}
+                          meta={item.authorName || item.authorEmail || "Autor"}
+                          title={item.subject || item.title || "Hilo"}
+                        >
+                          <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startManageSupport("thread", item)} type="button">Gestionar</SecondaryButton>
+                        </RowCard>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {!(support?.tickets ?? []).length && !(support?.courseRequests ?? []).length && !(support?.threads ?? []).length ? (
+                    <div className="px-4 py-6">
+                      <EmptyState body="No hay incidencias activas dentro de tu alcance docente." title="Sin incidencias" />
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </section>
     );
   }
