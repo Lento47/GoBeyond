@@ -372,7 +372,10 @@ export function PublicExperience({
   );
   const hero = content?.hero ?? {};
   const brand = content?.brand ?? {};
-  const benefits = useMemo(() => content?.benefits ?? [], [content?.benefits]);
+  const benefits = useMemo(
+    () => (landing?.benefits?.length ? landing.benefits : content?.benefits ?? []),
+    [landing?.benefits, content?.benefits]
+  );
   const learningPath = useMemo(
     () => normalizeLearningPath(content?.learningPath ?? []).filter((item) => !isSixSigmaLandingItem(item)),
     [content?.learningPath]
@@ -646,7 +649,7 @@ export function PublicExperience({
           <div className="max-w-4xl gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
             <SectionTag>{landing.servicesTitle || "Nuestros servicios"}</SectionTag>
             <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-              {content?.subscription?.label || "Ruta de desarrollo continuo."}
+              {landing.subscriptionLabel || content?.subscription?.label || "Ruta de desarrollo continuo."}
             </h2>
             <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
               {landing.relevanceBody || content?.subscription?.description}
