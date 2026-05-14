@@ -239,6 +239,7 @@ function normalizeLandingState(landing = {}) {
     subscriptionLabel: landing?.subscriptionLabel ?? "",
     // Testimonios / Confianza
     trustTitle: landing?.trustTitle ?? "Red de confianza",
+    trustBody: landing?.trustBody ?? "",
     // Contacto
     contactTitle: landing?.contactTitle ?? "Contacto",
     // Convenios
@@ -1220,6 +1221,7 @@ export function AdminWorkspace({
       servicesTitle: String(landingForm.servicesTitle ?? "").trim(),
       subscriptionLabel: String(landingForm.subscriptionLabel ?? "").trim(),
       trustTitle: String(landingForm.trustTitle ?? "").trim(),
+      trustBody: String(landingForm.trustBody ?? "").trim(),
       contactTitle: String(landingForm.contactTitle ?? "").trim(),
       trustItems: String(landingForm.trustItems ?? "")
         .split(",")
@@ -2749,9 +2751,10 @@ export function AdminWorkspace({
           onClose={closeModal}
         >
           <form className="grid gap-4" onSubmit={saveBrand}>
+            <p className="text-xs text-[#6b7a90] leading-relaxed">La descripción de Marca aparece en "Sobre nosotros" y como respaldo en la sección de Testimonios. El Hero del landing tiene su propia descripción independiente.</p>
             <Input value={brandForm.name} onChange={(event) => setBrandForm({ ...brandForm, name: event.target.value })} placeholder="Nombre del proyecto" />
-            <Input value={brandForm.tagline} onChange={(event) => setBrandForm({ ...brandForm, tagline: event.target.value })} placeholder="Tagline" />
-            <Textarea value={brandForm.description} onChange={(event) => setBrandForm({ ...brandForm, description: event.target.value })} placeholder="Descripcion" />
+            <Input value={brandForm.tagline} onChange={(event) => setBrandForm({ ...brandForm, tagline: event.target.value })} placeholder="Tagline (aparece en footer y como respaldo del título del Hero)" />
+            <Textarea value={brandForm.description} onChange={(event) => setBrandForm({ ...brandForm, description: event.target.value })} placeholder="Descripcion institucional (Sobre nosotros)" />
             <div className="flex gap-3">
               <ActionButton type="submit">Guardar marca</ActionButton>
               <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
@@ -2769,9 +2772,10 @@ export function AdminWorkspace({
           onClose={closeModal}
         >
           <form className="grid gap-4" onSubmit={saveHero}>
-            <Input value={heroForm.eyebrow} onChange={(event) => setHeroForm({ ...heroForm, eyebrow: event.target.value })} placeholder="Eyebrow" />
-            <Input value={heroForm.title} onChange={(event) => setHeroForm({ ...heroForm, title: event.target.value })} placeholder="Titulo" />
-            <Textarea value={heroForm.description} onChange={(event) => setHeroForm({ ...heroForm, description: event.target.value })} placeholder="Descripcion" />
+            <p className="text-xs text-[#6b7a90] leading-relaxed">Estos campos son exclusivos del landing page y no afectan la Marca. Si el título está vacío se usa el tagline de Marca como respaldo.</p>
+            <Input value={heroForm.eyebrow} onChange={(event) => setHeroForm({ ...heroForm, eyebrow: event.target.value })} placeholder="Eyebrow (encima del título)" />
+            <Input value={heroForm.title} onChange={(event) => setHeroForm({ ...heroForm, title: event.target.value })} placeholder="Título principal del Hero" />
+            <Textarea value={heroForm.description} onChange={(event) => setHeroForm({ ...heroForm, description: event.target.value })} placeholder="Descripción del Hero (independiente de la descripción de Marca)" />
             <Textarea
               value={metricsToLines(heroForm.metrics)}
               onChange={(event) => setHeroForm({ ...heroForm, metrics: linesToMetrics(event.target.value) })}
@@ -2887,6 +2891,7 @@ export function AdminWorkspace({
                   <Input value={landingForm.testimonialTitle ?? ""} onChange={(e) => setLanding("testimonialTitle", e.target.value)} placeholder="Título principal (Testimonios)" />
                   <Input value={landingForm.testimonialsCarouselLabel ?? ""} onChange={(e) => setLanding("testimonialsCarouselLabel", e.target.value)} placeholder="Etiqueta del carrusel" />
                 </div>
+                <Textarea value={landingForm.trustBody ?? ""} onChange={(e) => setLanding("trustBody", e.target.value)} placeholder="Párrafo introductorio de la sección Testimonios (si está vacío se usa la descripción de Marca)" />
               </div>
 
               {/* ── CONVENIOS / INSTITUCIONES ── */}

@@ -586,7 +586,7 @@ export function PublicExperience({
                 {hero.title || brand.tagline || brand.name}
               </h1>
               <MarkdownContent className="mt-8 max-w-xl text-sm sm:text-base md:text-lg text-gray-400 font-light leading-relaxed">
-                {hero.description || brand.description}
+                {hero.description}
               </MarkdownContent>
               <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                 <a href="#contacto" className="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all hover:bg-blue-500 hover:shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:-translate-y-1 active:scale-95 active:opacity-90 text-center">
@@ -923,7 +923,7 @@ export function PublicExperience({
                 {landing.testimonialTitle || "Testimonios"}
               </h2>
               <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
-                {brand.description}
+                {landing.trustBody || brand.description}
               </MarkdownContent>
             </div>
 
