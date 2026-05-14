@@ -123,6 +123,9 @@ export function LandingEditorSection({
   const socialLinks = landingForm?.socialLinks ?? {};
 
   // ── Setters ──
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
   const setLanding = (key, val) => setLandingForm((prev) => ({ ...prev, [key]: val }));
   const setHero = (key, val) => setHeroForm((prev) => ({ ...prev, [key]: val }));
   const setBrand = (key, val) => setBrandForm((prev) => ({ ...prev, [key]: val }));
@@ -133,6 +136,31 @@ export function LandingEditorSection({
       programCards: (prev.programCards ?? []).map((card, i) =>
         i === index ? { ...card, [key]: val } : card
       ),
+    }));
+
+  const removeCard = (index) =>
+    setLandingForm((prev) => ({
+      ...prev,
+      programCards: (prev.programCards ?? []).filter((_, i) => i !== index),
+    }));
+
+  const moveCard = (from, to) => {
+    if (from === to) return;
+    setLandingForm((prev) => {
+      const cards = [...(prev.programCards ?? [])];
+      const [moved] = cards.splice(from, 1);
+      cards.splice(to, 0, moved);
+      return { ...prev, programCards: cards };
+    });
+  };
+
+  const addSection = () =>
+    setLandingForm((prev) => ({
+      ...prev,
+      programCards: [
+        ...(prev.programCards ?? []),
+        { id: `section-${Date.now()}`, type: "section", title: "Nueva sección" },
+      ],
     }));
 
   const updateBenefit = (i, val) => {
@@ -440,79 +468,122 @@ export function LandingEditorSection({
               </h2>
             </div>
 
-            {programCards.length ? (
-              <div className="grid gap-6 xl:grid-cols-3">
+            <div className="grid gap-6 xl:grid-cols-3">
                 {programCards.map((program, index) => {
+                  const isDragging = dragIndex === index;
+                  const isOver = dragOverIndex === index;
+
+                  if (program.type === "section") {
+                    return (
+                      <div
+                        key={program.id || index}
+                        className={`col-span-full group relative flex items-center gap-4 rounded-2xl border px-6 py-4 transition-all cursor-grab active:cursor-grabbing ${isDragging ? "opacity-40" : ""} ${isOver ? "border-blue-500/40 bg-blue-600/5" : "border-white/10 bg-white/[0.02]"}`}
+                        draggable
+                        onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; setDragIndex(index); }}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
+                        onDrop={(e) => { e.preventDefault(); moveCard(dragIndex, index); setDragIndex(null); setDragOverIndex(null); }}
+                        onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                      >
+                        <span className="text-gray-600 select-none">⠿</span>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400 mr-2 shrink-0">Sección:</p>
+                        <EditableField
+                          value={program.title ?? ""}
+                          onChange={(v) => updateCard(index, "title", v)}
+                          as="span"
+                          className="text-sm font-bold text-white flex-1"
+                          placeholder="Nombre de la sección..."
+                        />
+                        <button
+                          onClick={() => removeCard(index)}
+                          className="hidden group-hover:flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-gray-500 text-xs hover:bg-red-900/30 hover:text-red-400 transition-all"
+                          type="button"
+                        >×</button>
+                      </div>
+                    );
+                  }
+
                   const initials = String(program.title ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
                   return (
-                    <GlassCard
+                    <div
                       key={program.id || index}
-                      className={`flex h-full flex-col justify-between overflow-hidden ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""}`}
+                      className={`transition-all ${isDragging ? "opacity-40 scale-95" : ""} ${isOver ? "ring-2 ring-blue-500/40 rounded-[2.5rem]" : ""}`}
+                      draggable
+                      onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; setDragIndex(index); }}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
+                      onDrop={(e) => { e.preventDefault(); moveCard(dragIndex, index); setDragIndex(null); setDragOverIndex(null); }}
+                      onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                     >
-                      <div>
-                        {/* Cover image */}
-                        <div className="mb-7 overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0b0f17]">
-                          {program.image ? (
-                            <img alt={program.title} className="h-52 w-full object-cover" src={program.image} />
-                          ) : (
-                            <div className="relative flex h-52 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-6">
-                              <div className="absolute right-5 top-5 text-5xl font-black tracking-tighter text-white/10">{initials || "GB"}</div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Agregar imagen desde formulario avanzado</p>
-                            </div>
-                          )}
-                        </div>
-
-                        <Badge>
-                          <EditableField value={program.eyebrow ?? ""} onChange={(v) => updateCard(index, "eyebrow", v)} as="span" placeholder="Badge" />
-                        </Badge>
-                        <h3 className="mt-5 text-3xl font-black leading-tight tracking-tight text-white">
-                          <EditableField value={program.title ?? ""} onChange={(v) => updateCard(index, "title", v)} as="span" placeholder="Título del curso" />
-                        </h3>
-                        <EditableField
-                          value={program.description ?? ""}
-                          onChange={(v) => updateCard(index, "description", v)}
-                          as="p"
-                          multiline
-                          className="mt-5 text-sm leading-relaxed text-gray-400"
-                          placeholder="Descripción (texto gris)..."
-                        />
-                        {(program.relevance || true) ? (
-                          <div className="mt-6 rounded-[1.4rem] border border-white/8 bg-white/[0.04] p-5">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
-                            <EditableField
-                              value={program.relevance ?? ""}
-                              onChange={(v) => updateCard(index, "relevance", v)}
-                              as="p"
-                              multiline
-                              className="mt-3 text-sm leading-relaxed text-gray-200"
-                              placeholder="Texto de relevancia..."
-                            />
+                      <GlassCard className={`group relative flex h-full flex-col justify-between overflow-hidden cursor-grab active:cursor-grabbing ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""}`}>
+                        <button
+                          onClick={() => removeCard(index)}
+                          className="absolute right-4 top-4 hidden group-hover:flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-gray-500 text-xs hover:bg-red-900/30 hover:text-red-400 transition-all z-10"
+                          type="button"
+                        >×</button>
+                        <div className="absolute left-4 top-4 text-gray-700 select-none text-lg">⠿</div>
+                        <div>
+                          <div className="mb-7 overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0b0f17]">
+                            {program.image ? (
+                              <img alt={program.title} className="h-52 w-full object-cover" src={program.image} />
+                            ) : (
+                              <div className="relative flex h-52 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-6">
+                                <div className="absolute right-5 top-5 text-5xl font-black tracking-tighter text-white/10">{initials || "GB"}</div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Agregar imagen desde formulario avanzado</p>
+                              </div>
+                            )}
                           </div>
-                        ) : null}
-                        <ProgramList items={program.outcomes} title="Resultados" />
-                        <ProgramList items={program.availablePrograms} title="Programas disponibles" />
-                        <ProgramList items={program.includes} title="Incluye" />
-                        <ProgramList items={program.benefits} title="Beneficios adicionales" />
-                        {program.certificationNote ? (
-                          <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{program.certificationNote}</p>
-                        ) : null}
-                      </div>
-                      <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-gray-600">
-                          Imagen, resultados, URL y CTA → formulario avanzado
-                        </p>
-                      </div>
-                    </GlassCard>
+                          <Badge>
+                            <EditableField value={program.eyebrow ?? ""} onChange={(v) => updateCard(index, "eyebrow", v)} as="span" placeholder="Badge" />
+                          </Badge>
+                          <h3 className="mt-5 text-3xl font-black leading-tight tracking-tight text-white">
+                            <EditableField value={program.title ?? ""} onChange={(v) => updateCard(index, "title", v)} as="span" placeholder="Título del curso" />
+                          </h3>
+                          <EditableField
+                            value={program.description ?? ""}
+                            onChange={(v) => updateCard(index, "description", v)}
+                            as="p"
+                            multiline
+                            className="mt-5 text-sm leading-relaxed text-gray-400"
+                            placeholder="Descripción (texto gris)..."
+                          />
+                          {(program.relevance || true) ? (
+                            <div className="mt-6 rounded-[1.4rem] border border-white/8 bg-white/[0.04] p-5">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
+                              <EditableField
+                                value={program.relevance ?? ""}
+                                onChange={(v) => updateCard(index, "relevance", v)}
+                                as="p"
+                                multiline
+                                className="mt-3 text-sm leading-relaxed text-gray-200"
+                                placeholder="Texto de relevancia..."
+                              />
+                            </div>
+                          ) : null}
+                          <ProgramList items={program.outcomes} title="Resultados" />
+                          <ProgramList items={program.availablePrograms} title="Programas disponibles" />
+                          <ProgramList items={program.includes} title="Incluye" />
+                          <ProgramList items={program.benefits} title="Beneficios adicionales" />
+                          {program.certificationNote ? (
+                            <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{program.certificationNote}</p>
+                          ) : null}
+                        </div>
+                        <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-gray-600">
+                            Imagen, resultados, URL y CTA → formulario avanzado
+                          </p>
+                        </div>
+                      </GlassCard>
+                    </div>
                   );
                 })}
+
+                <button
+                  onClick={addSection}
+                  className="col-span-full rounded-2xl border border-dashed border-blue-500/20 bg-transparent py-3 text-[10px] font-bold uppercase tracking-widest text-blue-500/60 transition hover:border-blue-500/50 hover:text-blue-400"
+                  type="button"
+                >
+                  + Nueva sección
+                </button>
               </div>
-            ) : (
-              <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/[0.01] p-8 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-gray-600">
-                  Agrega tarjetas de programa desde el Formulario avanzado
-                </p>
-              </div>
-            )}
           </div>
         </section>
 
