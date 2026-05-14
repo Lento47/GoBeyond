@@ -181,6 +181,9 @@ export function LandingEditorSection({
   setBrandForm,
   onSaveAll,
   onOpenAdvancedForm,
+  onCreateInstitution,
+  onEditInstitution,
+  onDeleteInstitution,
 }) {
   const [saving, setSaving] = useState(false);
 
@@ -817,12 +820,63 @@ export function LandingEditorSection({
                   placeholder="Descripción de instituciones aliadas..."
                 />
               </div>
-              <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/[0.01] p-8 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">
-                  {institutions.length
-                    ? `${institutions.length} institución(es) · gestionadas en Marca e identidad`
-                    : "Sin instituciones publicadas · gestionadas en Marca e identidad"}
-                </p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {institutions.map((inst) => (
+                  <div
+                    key={inst.id}
+                    className="relative flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center hover:border-white/20 transition-colors"
+                  >
+                    {inst.image ? (
+                      <img
+                        alt={inst.name}
+                        className="h-14 w-14 rounded-xl object-contain bg-white p-1 border border-white/10"
+                        src={inst.image}
+                      />
+                    ) : (
+                      <div className="h-14 w-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                        <span className="text-xs text-gray-600">Logo</span>
+                      </div>
+                    )}
+                    <p className="text-sm font-medium text-gray-300 leading-tight">{inst.name}</p>
+                    {inst.featured && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-full px-2 py-0.5">
+                        Destacada
+                      </span>
+                    )}
+                    <div className="flex gap-2 mt-1">
+                      {onEditInstitution && (
+                        <button
+                          className="text-[11px] text-gray-400 hover:text-white transition-colors px-2 py-0.5 rounded border border-white/10 hover:border-white/25"
+                          onClick={() => onEditInstitution(inst)}
+                          type="button"
+                        >
+                          Editar
+                        </button>
+                      )}
+                      {onDeleteInstitution && (
+                        <button
+                          className="text-[11px] text-red-400 hover:text-red-300 transition-colors px-2 py-0.5 rounded border border-red-400/20 hover:border-red-400/40"
+                          onClick={() => {
+                            if (window.confirm(`¿Eliminar "${inst.name}"?`)) onDeleteInstitution(inst.id);
+                          }}
+                          type="button"
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {onCreateInstitution && (
+                  <button
+                    className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-transparent p-5 text-gray-500 hover:border-blue-500/40 hover:text-blue-400 transition-colors min-h-[120px]"
+                    onClick={onCreateInstitution}
+                    type="button"
+                  >
+                    <span className="text-2xl leading-none">+</span>
+                    <span className="text-[11px] font-bold uppercase tracking-widest">Agregar</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

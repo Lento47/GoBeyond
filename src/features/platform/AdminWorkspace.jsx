@@ -184,6 +184,7 @@ const initialSocialSourceForm = {
 const initialInstitutionForm = {
   id: "",
   name: "",
+  image: "",
   link: "",
   embed: "",
   featured: true,
@@ -1688,6 +1689,7 @@ export function AdminWorkspace({
     setInstitutionForm({
       id: item.id,
       name: item.name ?? "",
+      image: item.image ?? "",
       link: item.link ?? "",
       embed: item.embed ?? "",
       featured: item.featured !== false,
@@ -2102,6 +2104,7 @@ export function AdminWorkspace({
     const payload = {
       id: institutionForm.id || createItemId("institution"),
       name: institutionForm.name,
+      image: institutionForm.image,
       link: institutionForm.link,
       embed: institutionForm.embed,
       featured: institutionForm.featured,
@@ -2180,6 +2183,9 @@ export function AdminWorkspace({
         setBrandForm={setBrandForm}
         onSaveAll={handleSaveLandingAll}
         onOpenAdvancedForm={() => openModal("landing")}
+        onCreateInstitution={startCreateInstitution}
+        onEditInstitution={startEditInstitution}
+        onDeleteInstitution={(id) => deleteCollectionItem("institutions", id)}
       />
     );
   }
@@ -4460,7 +4466,7 @@ export function AdminWorkspace({
         return (
           <ModalShell
             title={institutionForm.id ? "Editar institucion" : "Agregar institucion"}
-            subtitle="Cada institucion puede resolverse con nombre, enlace y un embed pegado desde la fuente original. Sin subir imagenes manualmente."
+            subtitle="Nombre, logo, enlace y embed opcionales para personalizar la ficha de la institucion."
             onClose={closeModal}
           >
             <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -4470,6 +4476,45 @@ export function AdminWorkspace({
                   onChange={(event) => setInstitutionForm({ ...institutionForm, name: event.target.value })}
                   placeholder="Nombre de la institucion"
                 />
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[#748197]">Logo de la institucion</p>
+                  {institutionForm.image && (
+                    <div className="mb-3 flex items-center gap-3">
+                      <img
+                        alt={institutionForm.name || "Logo"}
+                        className="h-16 w-16 rounded-xl border border-[#dbe3ec] object-contain bg-white p-1"
+                        src={institutionForm.image}
+                      />
+                      <button
+                        className="text-xs text-red-500 hover:text-red-700"
+                        onClick={() => setInstitutionForm({ ...institutionForm, image: "" })}
+                        type="button"
+                      >
+                        Quitar logo
+                      </button>
+                    </div>
+                  )}
+                  <Input
+                    accept="image/*"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const asset = await uploadMedia(file, "institution-image");
+                        setInstitutionForm((current) => ({ ...current, image: asset.url }));
+                        setWorkspaceMessage(asset.deduplicated ? "Logo reutilizado desde la biblioteca." : "Logo subido correctamente.");
+                      } catch (uploadError) {
+                        setWorkspaceError(uploadError.message);
+                      }
+                    }}
+                    type="file"
+                  />
+                  <MediaLibraryStrip
+                    emptyLabel="Los logos subidos apareceran aqui para reutilizarlos."
+                    items={imageLibraryItems.filter((item) => item.purpose === "institution-image")}
+                    onSelect={(item) => setInstitutionForm((current) => ({ ...current, image: item.url }))}
+                  />
+                </div>
                   <Input
                     value={institutionForm.link}
                     onChange={(event) => setInstitutionForm({ ...institutionForm, link: event.target.value })}
