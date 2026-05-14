@@ -125,19 +125,24 @@ function EmptyState({ title, body }) {
 }
 
 function ProgramList({ title, items }) {
-  const visibleItems = Array.isArray(items) ? items.filter((item) => String(item ?? "").trim()) : [];
+  const allItems = Array.isArray(items) ? items : [];
+  const hasContent = allItems.some((item) => String(item ?? "").trim());
 
-  if (!visibleItems.length) return null;
+  if (!hasContent) return null;
 
   return (
     <div className="mt-7">
       <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">{title}</p>
       <ul className="mt-4 grid gap-3 text-sm leading-relaxed text-gray-300">
-        {visibleItems.map((item) => (
-          <li key={item} className="flex gap-3">
-            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-            <span>{item}</span>
-          </li>
+        {allItems.map((item, i) => (
+          String(item ?? "").trim() ? (
+            <li key={i} className="flex gap-3">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+              <span>{item}</span>
+            </li>
+          ) : (
+            <li key={i} className="h-2" />
+          )
         ))}
       </ul>
     </div>
