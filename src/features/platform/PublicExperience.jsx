@@ -20,7 +20,7 @@ function slugifySectionLabel(value) {
   return String(value ?? "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
@@ -29,7 +29,7 @@ function normalizeText(value) {
   return String(value ?? "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[̀-ͯ]/g, "");
 }
 
 function isSixSigmaLandingItem(item) {
@@ -55,15 +55,9 @@ function getActionHref(label, news, institutions, socialLinks) {
 
   if (normalized.includes("noticia")) return "/noticias";
   if (normalized.includes("contact")) return "#contacto";
-  if (normalized.includes("facebook")) {
-    return socialLinks?.facebook || externalReference || "#testimonios";
-  }
-  if (normalized.includes("linkedin")) {
-    return socialLinks?.linkedin || externalReference || "#testimonios";
-  }
-  if (normalized.includes("instagram")) {
-    return socialLinks?.instagram || externalReference || "#testimonios";
-  }
+  if (normalized.includes("facebook")) return socialLinks?.facebook || externalReference || "#testimonios";
+  if (normalized.includes("linkedin")) return socialLinks?.linkedin || externalReference || "#testimonios";
+  if (normalized.includes("instagram")) return socialLinks?.instagram || externalReference || "#testimonios";
 
   return "#inicio";
 }
@@ -95,29 +89,31 @@ function shortBrandName(name) {
   return raw.split(":")[0].trim() || "GoBeyond";
 }
 
+// --- ATOMIC COMPONENTS ---
 
-// --- COMPONENTES ATÓMICOS ---
 const SectionTag = ({ children }) => (
-  <span className="text-[11px] font-bold uppercase tracking-[0.5em] text-blue-500 mb-6 block">
+  <span className="text-[11px] font-bold uppercase tracking-[0.5em] text-blue-500 mb-4 block">
     {children}
   </span>
 );
 
 const GlassCard = ({ children, className = "" }) => (
-  <div className={`border border-white/10 bg-white/[0.02] backdrop-blur-3xl p-8 rounded-[2.5rem] shadow-2xl transition-all duration-500 hover:border-blue-500/30 hover:bg-white/[0.04] ${className}`}>
+  <div
+    className={`border border-white/10 bg-white/[0.02] backdrop-blur-3xl p-8 rounded-[2rem] shadow-2xl transition-all duration-500 hover:border-blue-500/30 hover:bg-white/[0.04] ${className}`}
+  >
     {children}
   </div>
 );
 
 const Badge = ({ children }) => (
-  <span className="px-3 py-1 bg-blue-600/10 border border-blue-600/20 text-blue-400 text-[11px] font-bold uppercase tracking-widest rounded-full">
+  <span className="inline-block px-3 py-1 bg-blue-600/10 border border-blue-600/20 text-blue-400 text-[11px] font-bold uppercase tracking-widest rounded-full">
     {children}
   </span>
 );
 
 function EmptyState({ title, body }) {
   return (
-    <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/[0.02] p-8 text-sm text-gray-500">
+    <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] p-8 text-sm text-gray-500">
       <p className="font-semibold text-white">{title}</p>
       <p className="mt-3 leading-relaxed">{body}</p>
     </div>
@@ -127,25 +123,41 @@ function EmptyState({ title, body }) {
 function ProgramList({ title, items }) {
   const allItems = Array.isArray(items) ? items : [];
   const hasContent = allItems.some((item) => String(item ?? "").trim());
-
   if (!hasContent) return null;
 
   return (
-    <div className="mt-7">
+    <div className="mt-6">
       <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">{title}</p>
-      <ul className="mt-4 grid gap-3 text-sm leading-relaxed text-gray-300">
-        {allItems.map((item, i) => (
+      <ul className="mt-3 grid gap-2 text-sm leading-relaxed text-gray-300">
+        {allItems.map((item, i) =>
           String(item ?? "").trim() ? (
             <li key={i} className="flex gap-3">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-              <span>{item}</span>
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+              <span className="min-w-0 break-words">{item}</span>
             </li>
           ) : (
             <li key={i} className="h-2" />
           )
-        ))}
+        )}
       </ul>
     </div>
+  );
+}
+
+function EmbedFrame({ src, title, className = "" }) {
+  return (
+    <iframe
+      allow={EMBED_IFRAME_ALLOW}
+      allowFullScreen
+      className={`h-full w-full border-0 ${className}`}
+      height="100%"
+      loading="lazy"
+      referrerPolicy="strict-origin-when-cross-origin"
+      sandbox={EMBED_IFRAME_SANDBOX}
+      src={src}
+      title={title}
+      width="100%"
+    />
   );
 }
 
@@ -169,21 +181,19 @@ function NewsSection({
   }
 
   if (noticiasError) {
-    return (
-      <EmptyState
-        body={noticiasError}
-        title="No pudimos cargar las noticias automaticas"
-      />
-    );
+    return <EmptyState body={noticiasError} title="No pudimos cargar las noticias automaticas" />;
   }
 
   if (!publishedNews.length) return null;
 
   return (
     <div className="grid gap-6">
-      <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-blue-400">{landing.newsTitle || "Noticias"}</p>
+      <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-blue-400">
+        {landing.newsTitle || "Noticias"}
+      </p>
+
       {featuredNews ? (
-        <article className="overflow-hidden rounded-[1.9rem] border border-white/10 bg-white/[0.03] shadow-[0_24px_60px_rgba(0,0,0,0.16)] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30">
+        <article className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.03] shadow-[0_24px_60px_rgba(0,0,0,0.16)] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30">
           <div className="aspect-[16/8] overflow-hidden bg-[#0b0f17]">
             <PublicImageWithFallback
               alt={featuredNews.title}
@@ -197,7 +207,7 @@ function NewsSection({
                       {getDomainLabel(featuredNews.link || featuredNewsEmbed.externalUrl) || "Referencia externa"}
                     </p>
                     <p className="mt-3 max-w-md text-sm leading-relaxed text-gray-300">
-                      Este contenido se abre mejor como referencia externa. GoBeyond muestra aqui una vista editorial para evitar iframes bloqueados.
+                      Este contenido se abre mejor como referencia externa.
                     </p>
                   </div>
                 )
@@ -205,15 +215,21 @@ function NewsSection({
               src={featuredNews.image}
             />
           </div>
-          <div className="p-6 sm:p-7">
+          <div className="p-6 sm:p-8">
             <p className="text-[11px] uppercase tracking-[0.28em] text-blue-400">
               {featuredNews.source || featuredNews.category || "Noticia"}
               {featuredNews.featured ? " · Destacada" : " · Reciente"}
-              {featuredNews.publishedAt ? ` · ${new Date(featuredNews.publishedAt).toLocaleDateString("es-CR")}` : ""}
+              {featuredNews.publishedAt
+                ? ` · ${new Date(featuredNews.publishedAt).toLocaleDateString("es-CR")}`
+                : ""}
             </p>
-            <h3 className="mt-4 text-3xl font-black tracking-tight text-white">{featuredNews.title}</h3>
+            <h3 className="mt-4 text-2xl font-black tracking-tight text-white sm:text-3xl">
+              {featuredNews.title}
+            </h3>
             {featuredNews.summary ? (
-              <MarkdownContent className="mt-4 text-sm leading-relaxed text-gray-400 sm:text-base">{featuredNews.summary}</MarkdownContent>
+              <MarkdownContent className="mt-4 text-sm leading-relaxed text-gray-400 sm:text-base">
+                {featuredNews.summary}
+              </MarkdownContent>
             ) : null}
             {featuredNews.link ? (
               <a
@@ -222,8 +238,7 @@ function NewsSection({
                 rel="noreferrer"
                 target="_blank"
               >
-                Ver referencia
-                <span>&rarr;</span>
+                Ver referencia <span>&rarr;</span>
               </a>
             ) : null}
           </div>
@@ -235,9 +250,9 @@ function NewsSection({
           {secondaryNewsCards.map(({ item, embed, externalDomain }) => (
             <article
               key={item.id}
-              className="overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.03] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30"
+              className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.03] transition-all duration-500 hover:-translate-y-0.5 hover:border-blue-500/30"
             >
-              <div className="grid gap-0 sm:grid-cols-[6.5rem_minmax(0,1fr)]">
+              <div className="grid sm:grid-cols-[6.5rem_minmax(0,1fr)]">
                 <div className="h-full min-h-[6.5rem] overflow-hidden bg-[#0b0f17]">
                   <PublicImageWithFallback
                     alt={item.title}
@@ -250,23 +265,26 @@ function NewsSection({
                           <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-300">
                             {externalDomain || "Referencia"}
                           </p>
-                          <p className="mt-2 text-[11px] text-gray-500">Vista externa</p>
                         </div>
                       )
                     }
                     src={item.image}
                   />
                 </div>
-                <div className="flex items-center justify-between gap-4 p-4">
+                <div className="flex min-w-0 items-center justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <p className="text-[11px] uppercase tracking-[0.22em] text-blue-400">
                       {item.source || item.category || "Noticia"}
-                      {item.publishedAt ? ` · ${new Date(item.publishedAt).toLocaleDateString("es-CR")}` : ""}
+                      {item.publishedAt
+                        ? ` · ${new Date(item.publishedAt).toLocaleDateString("es-CR")}`
+                        : ""}
                     </p>
-                    <h4 className="mt-2 text-base font-black tracking-tight text-white sm:text-[1.05rem]">{item.title}</h4>
+                    <h4 className="mt-2 truncate text-base font-black tracking-tight text-white">
+                      {item.title}
+                    </h4>
                     {item.summary ? (
-                      <MarkdownContent className="mt-2 text-[13px] leading-relaxed text-gray-400">
-                        {truncateText(item.summary, 150)}
+                      <MarkdownContent className="mt-1 text-[13px] leading-relaxed text-gray-400">
+                        {truncateText(item.summary, 140)}
                       </MarkdownContent>
                     ) : null}
                   </div>
@@ -298,23 +316,6 @@ function NewsSection({
   );
 }
 
-function EmbedFrame({ src, title, className = "" }) {
-  return (
-    <iframe
-      allow={EMBED_IFRAME_ALLOW}
-      allowFullScreen
-      className={`h-full w-full border-0 ${className}`}
-      height="100%"
-      loading="lazy"
-      referrerPolicy="strict-origin-when-cross-origin"
-      sandbox={EMBED_IFRAME_SANDBOX}
-      src={src}
-      title={title}
-      width="100%"
-    />
-  );
-}
-
 // --- MAIN PAGE ---
 export function PublicExperience({
   content,
@@ -341,21 +342,40 @@ export function PublicExperience({
     [landing?.benefits, content?.benefits]
   );
   const learningPath = useMemo(
-    () => normalizeLearningPath(content?.learningPath ?? []).filter((item) => !isSixSigmaLandingItem(item)),
+    () =>
+      normalizeLearningPath(content?.learningPath ?? []).filter(
+        (item) => !isSixSigmaLandingItem(item)
+      ),
     [content?.learningPath]
   );
-  const courses = useMemo(() => (content?.courses ?? []).filter((item) => !isSixSigmaLandingItem(item)), [content?.courses]);
+  const courses = useMemo(
+    () => (content?.courses ?? []).filter((item) => !isSixSigmaLandingItem(item)),
+    [content?.courses]
+  );
   const programCards = useMemo(
-    () => (Array.isArray(landing?.programCards) && landing.programCards.length ? landing.programCards : []),
+    () =>
+      Array.isArray(landing?.programCards) && landing.programCards.length
+        ? landing.programCards
+        : [],
     [landing?.programCards]
   );
-  const liveSessions = useMemo(() => (content?.liveSessions ?? []).filter((item) => !isSixSigmaLandingItem(item)), [content?.liveSessions]);
+  const liveSessions = useMemo(
+    () => (content?.liveSessions ?? []).filter((item) => !isSixSigmaLandingItem(item)),
+    [content?.liveSessions]
+  );
   const institutions = useMemo(() => content?.institutions ?? [], [content?.institutions]);
-  const featuredInstitutions = useMemo(() => institutions.filter((item) => item.featured), [institutions]);
-  const visibleInstitutions = featuredInstitutions.length > 1 ? featuredInstitutions : institutions;
+  const featuredInstitutions = useMemo(
+    () => institutions.filter((item) => item.featured),
+    [institutions]
+  );
+  const visibleInstitutions =
+    featuredInstitutions.length > 1 ? featuredInstitutions : institutions;
   const news = useMemo(() => content?.news ?? [], [content?.news]);
   const publishedNews = useMemo(
-    () => (noticiasPosts.length ? noticiasPosts.map((item) => normalizeSocialNewsItem(item)) : getPublishedNews(news)),
+    () =>
+      noticiasPosts.length
+        ? noticiasPosts.map((item) => normalizeSocialNewsItem(item))
+        : getPublishedNews(news),
     [news, noticiasPosts]
   );
   const institutionFeedbackCards = useMemo(
@@ -363,51 +383,60 @@ export function PublicExperience({
       visibleInstitutions.map((item, index) => {
         const embed = getEmbedDescriptor(item.embed);
         const href = item.link || embed.externalUrl || "";
-
         return {
           id: item.id || `institution-${index}`,
           title: item.name,
-          label: embed.embedUrl ? "Institucion aliada · Embed" : href ? "Institucion aliada · Referencia" : "Institucion aliada",
+          label: embed.embedUrl
+            ? "Institucion aliada · Embed"
+            : href
+            ? "Institucion aliada · Referencia"
+            : "Institucion aliada",
           href,
           embedUrl: embed.embedUrl,
           domainLabel: getDomainLabel(href) || embed.domainLabel,
           image: normalizePublicMediaUrl(item.image),
-          fallbackBody: "Esta institucion aparecera aqui cuando el administrador publique su vista principal.",
+          fallbackBody:
+            "Esta institucion aparecera aqui cuando el administrador publique su vista principal.",
         };
       }),
     [visibleInstitutions]
   );
   const testimonials = useMemo(
-    () => (content?.testimonials ?? []).filter((item) => !item.status || item.status === "approved"),
+    () =>
+      (content?.testimonials ?? []).filter(
+        (item) => !item.status || item.status === "approved"
+      ),
     [content?.testimonials]
   );
-  const metrics = useMemo(() => (hero.metrics ?? []).map((item) => normalizeHeroMetric(item)), [hero.metrics]);
+  const metrics = useMemo(
+    () => (hero.metrics ?? []).map((item) => normalizeHeroMetric(item)),
+    [hero.metrics]
+  );
+
   const navLabels = landing.nav?.length
     ? landing.nav
     : ["Inicio", "Sobre nosotros", "Servicios", "Cursos", "Testimonios", "Contacto"];
   const navItems = useMemo(
-    () =>
-      navLabels.map((label) => ({
-        label,
-        id: slugifySectionLabel(label),
-      })),
+    () => navLabels.map((label) => ({ label, id: slugifySectionLabel(label) })),
     [navLabels]
   );
+
   const [activeSection, setActiveSection] = useState(navItems[0]?.id ?? "inicio");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [testimonialStartIndex, setTestimonialStartIndex] = useState(0);
+
   const featuredNews = publishedNews[0] ?? null;
   const secondaryNews = publishedNews.slice(1, 5);
-  const featuredNewsEmbed = useMemo(() => getEmbedDescriptor(featuredNews?.embed), [featuredNews?.embed]);
+  const featuredNewsEmbed = useMemo(
+    () => getEmbedDescriptor(featuredNews?.embed),
+    [featuredNews?.embed]
+  );
   const secondaryNewsCards = useMemo(
     () =>
       secondaryNews.map((item) => {
         const embed = getEmbedDescriptor(item.embed);
         return {
-          item: {
-            ...item,
-            image: normalizePublicMediaUrl(item.image),
-          },
+          item: { ...item, image: normalizePublicMediaUrl(item.image) },
           embed,
           externalDomain: getDomainLabel(item.link || embed.externalUrl),
         };
@@ -416,13 +445,13 @@ export function PublicExperience({
   );
 
   const rotatingTestimonials = useMemo(() => {
-    if (testimonials.length <= 3) {
-      return testimonials;
-    }
-
-    return Array.from({ length: 3 }, (_, offset) => testimonials[(testimonialStartIndex + offset) % testimonials.length]);
+    if (testimonials.length <= 3) return testimonials;
+    return Array.from({ length: 3 }, (_, offset) =>
+      testimonials[(testimonialStartIndex + offset) % testimonials.length]
+    );
   }, [testimonialStartIndex, testimonials]);
 
+  // Reveal animation observer
   useEffect(() => {
     const revealObserver = new IntersectionObserver(
       (entries) => {
@@ -432,13 +461,14 @@ export function PublicExperience({
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
+      { threshold: 0.08, rootMargin: "0px 0px -4% 0px" }
     );
 
-    document.querySelectorAll(".gobeyond-reveal").forEach((element) => revealObserver.observe(element));
+    document.querySelectorAll(".gobeyond-reveal").forEach((el) => revealObserver.observe(el));
     return () => revealObserver.disconnect();
   }, []);
 
+  // Active section tracker
   useEffect(() => {
     const sections = navItems.map((item) => document.getElementById(item.id)).filter(Boolean);
     if (!sections.length) return undefined;
@@ -446,17 +476,14 @@ export function PublicExperience({
     const sectionObserver = new IntersectionObserver(
       (entries) => {
         const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
-
-        if (visible?.target?.id) {
-          setActiveSection(visible.target.id);
-        }
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target?.id) setActiveSection(visible.target.id);
       },
       { threshold: [0.15, 0.35, 0.55], rootMargin: "-20% 0px -45% 0px" }
     );
 
-    sections.forEach((section) => sectionObserver.observe(section));
+    sections.forEach((s) => sectionObserver.observe(s));
     return () => sectionObserver.disconnect();
   }, [navItems]);
 
@@ -469,60 +496,74 @@ export function PublicExperience({
       setTestimonialStartIndex(0);
       return undefined;
     }
-
-    const intervalId = window.setInterval(() => {
-      setTestimonialStartIndex((current) => (current + 1) % testimonials.length);
+    const id = window.setInterval(() => {
+      setTestimonialStartIndex((c) => (c + 1) % testimonials.length);
     }, 5000);
-
-    return () => window.clearInterval(intervalId);
+    return () => window.clearInterval(id);
   }, [testimonials]);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-blue-500/30 font-sans overflow-x-hidden">
-      
+
       {/* NAVBAR */}
-      <header className="fixed top-0 left-0 right-0 z-[100] bg-[#050505]/60 backdrop-blur-xl border-b border-white/5 safe-top">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6 md:px-8 py-4 sm:py-5 flex items-center justify-between gap-3">
-          <a className="flex items-center gap-3 min-w-0" href="#inicio">
-            <img alt="Logo de GoBeyond" className="h-9 w-9 object-contain md:h-10 md:w-10" src="/logo-icon.png" />
-            <span className="truncate text-[11px] sm:text-[12px] font-black uppercase tracking-[0.24em] sm:tracking-[0.3em]">
+      <header className="fixed top-0 left-0 right-0 z-[100] bg-[#050505]/70 backdrop-blur-xl border-b border-white/5 safe-top">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+          <a className="flex items-center gap-3 min-w-0 shrink-0" href="#inicio">
+            <img
+              alt="Logo de GoBeyond"
+              className="h-9 w-9 object-contain shrink-0"
+              src="/logo-icon.png"
+            />
+            <span className="truncate text-[11px] sm:text-[12px] font-black uppercase tracking-[0.28em]">
               {shortBrandName(brand.name)}
             </span>
           </a>
-          <nav className="hidden md:flex gap-8">
+
+          <nav className="hidden md:flex items-center gap-7">
             {navItems.map((item) => (
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${activeSection === item.id ? 'text-blue-500' : 'text-gray-500 hover:text-white'}`}
+                className={`text-[10px] uppercase tracking-[0.22em] font-bold transition-colors whitespace-nowrap ${
+                  activeSection === item.id
+                    ? "text-blue-400"
+                    : "text-gray-500 hover:text-white"
+                }`}
               >
                 {item.label}
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-2 sm:gap-3">
+
+          <div className="flex items-center gap-2 shrink-0">
             <button
               aria-expanded={mobileMenuOpen}
               aria-label="Abrir menu"
-              className="md:hidden inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-all hover:bg-white/10"
-              onClick={() => setMobileMenuOpen((current) => !current)}
+              className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
+              onClick={() => setMobileMenuOpen((v) => !v)}
               type="button"
             >
               {mobileMenuOpen ? "×" : "≡"}
             </button>
-            <button onClick={onRequestLogin} className="min-h-11 rounded-full bg-white px-4 sm:px-6 py-2.5 text-[10px] font-bold uppercase tracking-widest text-black hover:bg-[#dbeafe] hover:text-[#1d4ed8] transition-all">
+            <button
+              onClick={onRequestLogin}
+              className="h-11 rounded-full bg-white px-5 sm:px-6 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-[#dbeafe] hover:text-[#1d4ed8]"
+            >
               Ingresar
             </button>
           </div>
         </div>
+
         {mobileMenuOpen ? (
           <div className="border-t border-white/5 bg-[#050505]/95 px-5 py-4 md:hidden">
             <nav className="grid gap-2">
               {navItems.map((item) => (
                 <a
                   key={item.id}
-                  className={`rounded-2xl px-4 py-3 text-xs font-bold uppercase tracking-[0.24em] transition-all ${
-                    activeSection === item.id ? "bg-blue-600 text-white" : "bg-white/5 text-gray-300"
+                  className={`rounded-2xl px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] transition-all ${
+                    activeSection === item.id
+                      ? "bg-blue-600 text-white"
+                      : "bg-white/5 text-gray-300 hover:bg-white/10"
                   }`}
                   href={`#${item.id}`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -536,250 +577,359 @@ export function PublicExperience({
       </header>
 
       <main>
-        {/* HERO */}
-        <section id="inicio" className="relative flex min-h-screen items-center pb-16 pt-28 sm:pb-20 sm:pt-32">
-          <div className="container mx-auto grid items-center gap-10 px-5 sm:px-6 md:px-8 lg:grid-cols-[1.02fr_0.98fr]">
-            <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-1000 z-10">
+        {/* ── HERO ── */}
+        <section
+          id="inicio"
+          className="relative flex min-h-screen items-center pb-16 pt-28 sm:pb-20 sm:pt-32"
+        >
+          <div className="container mx-auto grid items-center gap-10 px-5 sm:px-6 lg:px-8 lg:grid-cols-2">
+            {/* Text column — always visible, no reveal on hero */}
+            <div className="z-10">
               <SectionTag>{hero.eyebrow || "Aprende con nosotros"}</SectionTag>
-              <h1 className="max-w-4xl text-[3rem] sm:text-[3.6rem] md:text-[5rem] lg:text-[6.2rem] font-[900] leading-[0.9] tracking-[-0.06em]">
+              <h1 className="text-[clamp(2.6rem,8vw,6rem)] font-[900] leading-[0.9] tracking-[-0.05em] break-words">
                 {hero.title || brand.name}
               </h1>
-              <MarkdownContent className="mt-8 max-w-xl text-sm sm:text-base md:text-lg text-gray-400 font-light leading-relaxed">
+              <MarkdownContent className="mt-8 max-w-xl text-base sm:text-lg text-gray-400 font-light leading-relaxed">
                 {hero.description}
               </MarkdownContent>
-              <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-                <a href="#contacto" className="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all hover:bg-blue-500 hover:shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:-translate-y-1 active:scale-95 active:opacity-90 text-center">
+              <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <a
+                  href="#contacto"
+                  className="inline-flex items-center justify-center px-8 py-4 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all hover:bg-blue-500 hover:shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 active:scale-95"
+                >
                   {landing.heroPrimaryCtaLabel || "Empezar ahora"}
                 </a>
-                <a href="#cursos" className="px-8 py-4 bg-transparent text-white border border-white/10 font-bold rounded-xl text-sm transition-all hover:bg-white/5 active:scale-95 active:opacity-80 text-center">
+                <a
+                  href="#cursos"
+                  className="inline-flex items-center justify-center px-8 py-4 border border-white/15 text-white font-bold rounded-xl text-sm transition-all hover:bg-white/5 hover:-translate-y-0.5 active:scale-95"
+                >
                   {landing.heroSecondaryCtaLabel || "Ver programas"}
                 </a>
               </div>
 
               {metrics.length ? (
-                <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {metrics.map((item, index) => (
-                    <div key={`${item.label}-${index}`} className="rounded-[1.7rem] border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-blue-400">{item.label}</p>
-                      <p className="mt-4 text-xl font-black tracking-tight text-white">{item.value}</p>
-                      <p className="mt-3 text-sm leading-relaxed text-gray-400">{item.description}</p>
+                    <div
+                      key={`${item.label}-${index}`}
+                      className="rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl"
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-blue-400">
+                        {item.label}
+                      </p>
+                      <p className="mt-3 text-lg font-black tracking-tight text-white">
+                        {item.value}
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed text-gray-400">
+                        {item.description}
+                      </p>
                     </div>
                   ))}
                 </div>
               ) : null}
             </div>
-            <div className="relative flex h-[280px] items-center justify-center gobeyond-reveal opacity-0 transition-all duration-1000 delay-300 sm:h-[360px] md:h-[500px] lg:h-[600px]">
-              <div className="h-full w-full max-w-[320px] sm:max-w-[420px] md:max-w-[560px] lg:max-w-[640px]">
+
+            {/* Visual column */}
+            <div className="gobeyond-reveal relative flex h-[280px] items-center justify-center sm:h-[380px] md:h-[500px] lg:h-[580px]">
+              <div className="h-full w-full">
                 <HeroArcadePanel />
               </div>
             </div>
           </div>
         </section>
 
-        {/* SOBRE NOSOTROS */}
-        <section id="sobre-nosotros" className="py-20 sm:py-24 lg:py-32 container mx-auto px-5 sm:px-6 md:px-8">
-          <div className="grid gap-10 items-start lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-              <SectionTag>{landing.aboutTitle || "Sobre nosotros"}</SectionTag>
-              <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-                {landing.aboutHeading || brand.tagline}
+        {/* ── SOBRE NOSOTROS ── */}
+        <section
+          id="sobre-nosotros"
+          className="py-24 sm:py-28 lg:py-36"
+        >
+          <div className="container mx-auto px-5 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:gap-16 items-start lg:grid-cols-2">
+              <div className="gobeyond-reveal">
+                <SectionTag>{landing.aboutTitle || "Sobre nosotros"}</SectionTag>
+                <h2 className="text-[clamp(2rem,5vw,4.5rem)] font-black tracking-tighter leading-[0.95] break-words">
+                  {landing.aboutHeading || brand.tagline}
+                </h2>
+                <MarkdownContent className="mt-6 text-base sm:text-lg text-gray-500 leading-relaxed font-light">
+                  {landing.aboutBodyTwo || landing.aboutBody || brand.description}
+                </MarkdownContent>
+              </div>
+
+              {benefits.length ? (
+                <GlassCard className="gobeyond-reveal">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-blue-400 mb-6">
+                    {landing.aboutBenefitsTitle || "¿Por qué GoBeyond?"}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {benefits.map((item, i) => (
+                      <div
+                        key={i}
+                        className="rounded-[1.25rem] border border-white/8 bg-white/[0.03] p-4"
+                      >
+                        <p className="text-sm leading-relaxed text-gray-300 break-words">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </GlassCard>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        {/* ── SERVICIOS ── */}
+        <section id="servicios" className="py-24 sm:py-28 lg:py-36 bg-[#080808]">
+          <div className="container mx-auto px-5 sm:px-6 lg:px-8">
+            <div className="max-w-4xl gobeyond-reveal">
+              <SectionTag>{landing.servicesTitle || "Nuestros servicios"}</SectionTag>
+              <h2 className="text-[clamp(2rem,5vw,4.5rem)] font-black tracking-tighter leading-[0.95] break-words">
+                {landing.subscriptionLabel ||
+                  content?.subscription?.label ||
+                  "Ruta de desarrollo continuo."}
               </h2>
-              <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
-                {landing.aboutBodyTwo || brand.description}
+              <MarkdownContent className="mt-6 text-base sm:text-lg text-gray-500 leading-relaxed font-light">
+                {landing.relevanceBody || content?.subscription?.description}
               </MarkdownContent>
             </div>
 
-            <GlassCard className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-              {benefits.length ? (
-                <div className="mt-8 grid gap-4 md:grid-cols-2">
-                  {benefits.map((item) => (
-                    <div key={item} className="rounded-[1.5rem] border border-white/8 bg-white/[0.02] p-5">
-                      <p className="text-sm leading-relaxed text-gray-400">{item}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </GlassCard>
-          </div>
-        </section>
-
-        {/* SERVICIOS */}
-        <section id="servicios" className="py-20 sm:py-24 lg:py-32 container mx-auto px-5 sm:px-6 md:px-8">
-          <div className="max-w-4xl gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-            <SectionTag>{landing.servicesTitle || "Nuestros servicios"}</SectionTag>
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-              {landing.subscriptionLabel || content?.subscription?.label || "Ruta de desarrollo continuo."}
-            </h2>
-            <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
-              {landing.relevanceBody || content?.subscription?.description}
-            </MarkdownContent>
-          </div>
-          <div className="mt-14 sm:mt-16 lg:mt-20 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {learningPath.length ? learningPath.map((item, index) => (
-              <GlassCard key={item.id || `${item.title}-${index}`} className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-                <Badge>{item.track}</Badge>
-                <h3 className="text-2xl font-bold mt-6 mb-4">{item.title}</h3>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/45">{item.stageLabel}</p>
-                <p className="mt-3 text-gray-500 text-sm leading-relaxed">{item.description}</p>
-              </GlassCard>
-            )) : (
-              <div className="md:col-span-3">
-                <EmptyState
-                  body="Las rutas de aprendizaje publicadas desde admin apareceran aqui."
-                  title="Sin servicios publicados"
-                />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* PROGRAMAS Y CURSOS */}
-        <section id="cursos" className="py-20 sm:py-24 lg:py-32 bg-[#080808]">
-          <div className="container mx-auto px-5 sm:px-6 md:px-8">
-            <div className="text-center mb-20 gobeyond-reveal opacity-0 translate-y-10 transition-all">
-              <SectionTag>{landing.coursesTitle || "Programas y cursos"}</SectionTag>
-              <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter">
-                {landing.coursesHeading || "Creados para el Impacto Real."}
-              </h2>
-            </div>
-            <div className={(programCards.length || courses.length) ? "grid gap-6 xl:grid-cols-3" : "grid gap-8 lg:grid-cols-2"}>
-              {programCards.length ? programCards.map((program, index) => {
-                const external = isExternalHref(program.href);
-                const programImage = normalizePublicMediaUrl(program.image || "");
-                const initials = String(program.title ?? "")
-                  .trim().split(/\s+/).filter(Boolean).slice(0, 2)
-                  .map((p) => p[0]?.toUpperCase() ?? "").join("");
-
-                return (
+            <div className="mt-14 lg:mt-20 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {learningPath.length ? (
+                learningPath.map((item, index) => (
                   <GlassCard
-                    key={program.id || `${program.title}-${index}`}
-                    className={`flex h-full flex-col justify-between overflow-hidden ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""}`}
+                    key={item.id || `${item.title}-${index}`}
+                    className="gobeyond-reveal flex flex-col"
                   >
-                    <div>
-                      {/* Cover image */}
-                      <div className="mb-7 overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0b0f17]">
-                        {programImage ? (
-                          <img alt={program.title} className="h-52 w-full object-cover" src={programImage} />
-                        ) : (
-                          <div className="relative flex h-52 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-6">
-                            <div className="absolute right-5 top-5 text-5xl font-black tracking-tighter text-white/10">{initials || "GB"}</div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Go Beyond</p>
-                          </div>
-                        )}
-                      </div>
-
-                      <Badge>{program.eyebrow}</Badge>
-                      <h3 className="mt-5 text-3xl font-black leading-tight tracking-tight text-white">{program.title}</h3>
-
-                      {program.description ? (
-                        <MarkdownContent className="mt-5 text-sm leading-relaxed text-gray-400">
-                          {program.description}
-                        </MarkdownContent>
-                      ) : null}
-
-                      {program.relevance ? (
-                        <div className="mt-6 rounded-[1.4rem] border border-white/8 bg-white/[0.04] p-5">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
-                          <p className="mt-3 text-sm leading-relaxed text-gray-200">{program.relevance}</p>
-                        </div>
-                      ) : null}
-
-                      <ProgramList items={program.outcomes} title="Resultados" />
-                      <ProgramList items={program.availablePrograms} title="Programas disponibles" />
-                      <ProgramList items={program.includes} title="Incluye" />
-                      <ProgramList items={program.benefits} title="Beneficios adicionales" />
-                      <ProgramList items={program.requirements} title="Requisitos del programa" />
-
-                      {program.certificationNote ? (
-                        <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{program.certificationNote}</p>
-                      ) : null}
-                    </div>
-
-                    <a
-                      className="mt-8 inline-flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition-all hover:border-blue-500/30 hover:bg-white/[0.08] hover:text-blue-200"
-                      href={program.href || "#contacto"}
-                      rel={external ? "noreferrer" : undefined}
-                      target={external ? "_blank" : undefined}
-                    >
-                      <span>{program.ctaLabel || "Aplicar"}</span>
-                      <span>&rarr;</span>
-                    </a>
+                    <Badge>{item.track}</Badge>
+                    <h3 className="mt-5 text-2xl font-bold tracking-tight break-words">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1 text-[10px] font-black uppercase tracking-[0.22em] text-white/40">
+                      {item.stageLabel}
+                    </p>
+                    <p className="mt-4 text-gray-500 text-sm leading-relaxed flex-1">
+                      {item.description}
+                    </p>
                   </GlassCard>
-                );
-              }) : courses.length ? courses.map((course, index) => {
-                const courseImage = normalizePublicMediaUrl(course.coverImage || course.image || "");
-                const initials = String(course.title ?? "")
-                  .trim()
-                  .split(/\s+/)
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((part) => part[0]?.toUpperCase() ?? "")
-                  .join("");
-
-                return (
-                  <GlassCard
-                    key={course.id || `${course.title}-${index}`}
-                    className={`flex flex-col justify-between overflow-hidden ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.01]" : ""}`}
-                  >
-                    <div>
-                      <div className="mb-8 overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0b0f17]">
-                        {courseImage ? (
-                          <img alt={course.title} className="h-56 w-full object-cover" src={courseImage} />
-                        ) : (
-                          <div className="relative flex h-56 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-6">
-                            <div className="absolute right-5 top-5 text-5xl font-black tracking-tighter text-white/12">
-                              {initials || "GB"}
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-300">Go Beyond</p>
-                              <p className="mt-3 max-w-[14rem] text-lg font-semibold leading-tight text-white">
-                                Imagen del curso disponible al publicar una portada desde admin.
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex justify-between items-start mb-8 gap-4">
-                        <Badge>{[course.format, course.duration].filter(Boolean).join(" · ")}</Badge>
-                        <span className={`font-bold tracking-tighter text-2xl ${index === 0 ? "text-blue-500" : "text-gray-600"}`}>
-                          {initials || "GB"}
-                        </span>
-                      </div>
-                      <h3 className="text-3xl font-black mb-4">{course.title}</h3>
-                      {course.audience ? <p className="text-gray-400 text-sm mb-6 font-medium">{course.audience}</p> : null}
-                      {course.description ? (
-                        <MarkdownContent className="mb-8 text-gray-500 leading-relaxed">{course.description}</MarkdownContent>
-                      ) : null}
-                    </div>
-                    {course.outcomes ? (
-                      <div className="pt-6 border-t border-white/5">
-                        <p className={`text-[10px] uppercase tracking-widest font-bold ${index === 0 ? "text-blue-400" : "text-gray-400"}`}>{landing.courseResultsLabel || "Resultados:"}</p>
-                        <MarkdownContent className="mt-2 text-sm text-gray-300">{course.outcomes}</MarkdownContent>
-                      </div>
-                    ) : null}
-                  </GlassCard>
-                );
-              }) : (
-                <div className="lg:col-span-2 xl:col-span-3">
+                ))
+              ) : (
+                <div className="md:col-span-2 lg:col-span-3">
                   <EmptyState
-                    body="Los programas y cursos publicados desde admin apareceran aqui."
-                    title="Sin cursos publicados"
+                    body="Las rutas de aprendizaje publicadas desde admin apareceran aqui."
+                    title="Sin servicios publicados"
                   />
                 </div>
               )}
             </div>
+          </div>
+        </section>
+
+        {/* ── PROGRAMAS Y CURSOS ── */}
+        <section id="cursos" className="py-24 sm:py-28 lg:py-36">
+          <div className="container mx-auto px-5 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-16 gobeyond-reveal">
+              <SectionTag>{landing.coursesTitle || "Programas y cursos"}</SectionTag>
+              <h2 className="text-[clamp(2rem,5vw,4rem)] font-black tracking-tighter leading-[0.95]">
+                {landing.coursesHeading || "Creados para el Impacto Real."}
+              </h2>
+            </div>
+
+            <div
+              className={
+                programCards.length || courses.length
+                  ? "grid gap-6 lg:grid-cols-2 xl:grid-cols-3"
+                  : "grid gap-8"
+              }
+            >
+              {programCards.length ? (
+                programCards.map((program, index) => {
+                  const external = isExternalHref(program.href);
+                  const programImage = normalizePublicMediaUrl(program.image || "");
+                  const initials = String(program.title ?? "")
+                    .trim()
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((p) => p[0]?.toUpperCase() ?? "")
+                    .join("");
+
+                  return (
+                    <GlassCard
+                      key={program.id || `${program.title}-${index}`}
+                      className={`gobeyond-reveal flex flex-col justify-between ${
+                        index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""
+                      }`}
+                    >
+                      <div>
+                        <div className="mb-6 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#0b0f17]">
+                          {programImage ? (
+                            <img
+                              alt={program.title}
+                              className="h-48 w-full object-cover"
+                              src={programImage}
+                            />
+                          ) : (
+                            <div className="relative flex h-48 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-5">
+                              <div className="absolute right-4 top-4 text-4xl font-black tracking-tighter text-white/10">
+                                {initials || "GB"}
+                              </div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">
+                                Go Beyond
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <Badge>{program.eyebrow}</Badge>
+                        <h3 className="mt-4 text-2xl font-black leading-tight tracking-tight text-white break-words">
+                          {program.title}
+                        </h3>
+
+                        {program.description ? (
+                          <MarkdownContent className="mt-4 text-sm leading-relaxed text-gray-400">
+                            {program.description}
+                          </MarkdownContent>
+                        ) : null}
+
+                        {program.relevance ? (
+                          <div className="mt-5 rounded-[1.25rem] border border-white/8 bg-white/[0.04] p-4">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">
+                              ¿Por qué es relevante?
+                            </p>
+                            <p className="mt-2 text-sm leading-relaxed text-gray-200 break-words">
+                              {program.relevance}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        <ProgramList items={program.outcomes} title="Resultados" />
+                        <ProgramList items={program.availablePrograms} title="Programas disponibles" />
+                        <ProgramList items={program.includes} title="Incluye" />
+                        <ProgramList items={program.benefits} title="Beneficios adicionales" />
+                        <ProgramList items={program.requirements} title="Requisitos del programa" />
+
+                        {program.certificationNote ? (
+                          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">
+                            {program.certificationNote}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <a
+                        className="mt-7 inline-flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition-all hover:border-blue-500/30 hover:bg-white/[0.08] hover:text-blue-200"
+                        href={program.href || "#contacto"}
+                        rel={external ? "noreferrer" : undefined}
+                        target={external ? "_blank" : undefined}
+                      >
+                        <span>{program.ctaLabel || "Aplicar"}</span>
+                        <span>&rarr;</span>
+                      </a>
+                    </GlassCard>
+                  );
+                })
+              ) : courses.length ? (
+                courses.map((course, index) => {
+                  const courseImage = normalizePublicMediaUrl(
+                    course.coverImage || course.image || ""
+                  );
+                  const initials = String(course.title ?? "")
+                    .trim()
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((p) => p[0]?.toUpperCase() ?? "")
+                    .join("");
+
+                  return (
+                    <GlassCard
+                      key={course.id || `${course.title}-${index}`}
+                      className={`gobeyond-reveal flex flex-col justify-between ${
+                        index === 0 ? "border-blue-500/20 bg-blue-600/[0.01]" : ""
+                      }`}
+                    >
+                      <div>
+                        <div className="mb-7 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#0b0f17]">
+                          {courseImage ? (
+                            <img
+                              alt={course.title}
+                              className="h-52 w-full object-cover"
+                              src={courseImage}
+                            />
+                          ) : (
+                            <div className="relative flex h-52 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-5">
+                              <div className="absolute right-4 top-4 text-4xl font-black tracking-tighter text-white/10">
+                                {initials || "GB"}
+                              </div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-300">
+                                Go Beyond
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-start justify-between gap-4 mb-6">
+                          <Badge>
+                            {[course.format, course.duration].filter(Boolean).join(" · ")}
+                          </Badge>
+                          <span
+                            className={`font-black tracking-tighter text-xl shrink-0 ${
+                              index === 0 ? "text-blue-500" : "text-gray-600"
+                            }`}
+                          >
+                            {initials || "GB"}
+                          </span>
+                        </div>
+
+                        <h3 className="text-2xl font-black tracking-tight mb-3 break-words">
+                          {course.title}
+                        </h3>
+                        {course.audience ? (
+                          <p className="text-gray-400 text-sm mb-5 font-medium break-words">
+                            {course.audience}
+                          </p>
+                        ) : null}
+                        {course.description ? (
+                          <MarkdownContent className="text-gray-500 text-sm leading-relaxed">
+                            {course.description}
+                          </MarkdownContent>
+                        ) : null}
+                      </div>
+
+                      {course.outcomes ? (
+                        <div className="mt-6 pt-5 border-t border-white/5">
+                          <p
+                            className={`text-[10px] uppercase tracking-widest font-bold ${
+                              index === 0 ? "text-blue-400" : "text-gray-400"
+                            }`}
+                          >
+                            {landing.courseResultsLabel || "Resultados:"}
+                          </p>
+                          <MarkdownContent className="mt-2 text-sm text-gray-300">
+                            {course.outcomes}
+                          </MarkdownContent>
+                        </div>
+                      ) : null}
+                    </GlassCard>
+                  );
+                })
+              ) : (
+                <EmptyState
+                  body="Los programas y cursos publicados desde admin apareceran aqui."
+                  title="Sin cursos publicados"
+                />
+              )}
+            </div>
 
             {liveSessions.length ? (
-              <div className="mt-14 sm:mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-14 lg:mt-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {liveSessions.map((item, index) => (
                   <div
                     key={item.id || `${item.title}-${index}`}
-                    className="gobeyond-reveal rounded-[1.7rem] border border-white/8 bg-white/[0.02] p-6 opacity-0 translate-y-10 transition-all duration-700"
+                    className="gobeyond-reveal rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-6"
                   >
-                    <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">{item.date}</p>
-                    <h3 className="mt-4 text-xl font-bold text-white">{item.title}</h3>
-                    <p className="mt-3 text-sm text-gray-500">{item.format}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">
+                      {item.date}
+                    </p>
+                    <h3 className="mt-4 text-xl font-bold text-white break-words">{item.title}</h3>
+                    <p className="mt-2 text-sm text-gray-500">{item.format}</p>
                   </div>
                 ))}
               </div>
@@ -787,93 +937,112 @@ export function PublicExperience({
           </div>
         </section>
 
-        {/* TESTIMONIOS */}
-        <section id="testimonios" className="py-20 sm:py-24 lg:py-32 bg-[#080808]">
-          <div className="container mx-auto px-5 sm:px-6 md:px-8">
-            <div className="max-w-4xl gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
+        {/* ── TESTIMONIOS ── */}
+        <section id="testimonios" className="py-24 sm:py-28 lg:py-36 bg-[#080808]">
+          <div className="container mx-auto px-5 sm:px-6 lg:px-8">
+            <div className="max-w-4xl gobeyond-reveal">
               <SectionTag>{landing.trustTitle || "Red de confianza"}</SectionTag>
-              <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
+              <h2 className="text-[clamp(2rem,5vw,4.5rem)] font-black tracking-tighter leading-[0.95] break-words">
                 {landing.testimonialTitle || "Testimonios"}
               </h2>
-              <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
+              <MarkdownContent className="mt-6 text-base sm:text-lg text-gray-500 leading-relaxed font-light">
                 {landing.trustBody || brand.description}
               </MarkdownContent>
             </div>
 
-            <div className="mt-14 sm:mt-16 lg:mt-20 grid gap-4 xl:grid-cols-3">
-                {testimonials.length > 3 ? (
-                  <div className="mb-2 flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-4 py-3 xl:col-span-3">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">
-                      {landing.testimonialsCarouselLabel || "Rotando testimonios"}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        aria-label="Testimonio anterior"
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition hover:border-blue-500/30 hover:bg-white/[0.06]"
-                        onClick={() =>
-                          setTestimonialStartIndex((current) => (current - 1 + testimonials.length) % testimonials.length)
-                        }
-                        type="button"
-                      >
-                        ←
-                      </button>
-                      <button
-                        aria-label="Siguiente testimonio"
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition hover:border-blue-500/30 hover:bg-white/[0.06]"
-                        onClick={() => setTestimonialStartIndex((current) => (current + 1) % testimonials.length)}
-                        type="button"
-                      >
-                        →
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {testimonials.length ? rotatingTestimonials.map((item, index) => {
-                  const initials = String(item.author ?? "")
-                    .trim()
-                    .split(/\s+/)
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((part) => part[0]?.toUpperCase() ?? "")
-                    .join("");
-
-                  return (
-                    <article
-                      key={item.id || `${item.author}-${index}`}
-                      className={`rounded-[1.9rem] border p-7 transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30 ${
-                        index === 0 && rotatingTestimonials.length > 1
-                          ? "border-l-4 border-l-blue-500 bg-white/[0.05] shadow-2xl"
-                          : "border-white/10 bg-white/[0.02]"
-                      }`}
+            <div className="mt-14 lg:mt-20">
+              {testimonials.length > 3 ? (
+                <div className="mb-4 flex items-center justify-between gap-4 rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">
+                    {landing.testimonialsCarouselLabel || "Rotando testimonios"}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      aria-label="Testimonio anterior"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition hover:border-blue-500/30"
+                      onClick={() =>
+                        setTestimonialStartIndex(
+                          (c) => (c - 1 + testimonials.length) % testimonials.length
+                        )
+                      }
+                      type="button"
                     >
-                      <span className="mb-[-1.5rem] block font-['Georgia'] text-[5rem] leading-none text-blue-900 select-none">"</span>
-                      <blockquote className="font-['Georgia'] text-[1.35rem] leading-relaxed text-white sm:text-[1.5rem]">
-                        <MarkdownContent>{item.quote}</MarkdownContent>
-                      </blockquote>
-                      <div className="mt-6 flex items-center gap-4 border-t border-white/10 pt-5">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-blue-500/30 bg-blue-600/10 text-sm font-semibold text-blue-200">
-                          {initials}
+                      ←
+                    </button>
+                    <button
+                      aria-label="Siguiente testimonio"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition hover:border-blue-500/30"
+                      onClick={() =>
+                        setTestimonialStartIndex((c) => (c + 1) % testimonials.length)
+                      }
+                      type="button"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="grid gap-5 xl:grid-cols-3">
+                {testimonials.length ? (
+                  rotatingTestimonials.map((item, index) => {
+                    const initials = String(item.author ?? "")
+                      .trim()
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((p) => p[0]?.toUpperCase() ?? "")
+                      .join("");
+
+                    return (
+                      <article
+                        key={item.id || `${item.author}-${index}`}
+                        className={`gobeyond-reveal rounded-[1.75rem] border p-7 transition-all duration-500 hover:-translate-y-0.5 ${
+                          index === 0 && rotatingTestimonials.length > 1
+                            ? "border-l-4 border-l-blue-500 border-t-white/10 border-r-white/10 border-b-white/10 bg-white/[0.05] shadow-xl"
+                            : "border-white/10 bg-white/[0.02]"
+                        }`}
+                      >
+                        <span className="block font-serif text-[4rem] leading-none text-blue-900 select-none -mb-4">
+                          "
+                        </span>
+                        <blockquote className="font-serif text-xl leading-relaxed text-white sm:text-2xl break-words">
+                          <MarkdownContent>{item.quote}</MarkdownContent>
+                        </blockquote>
+                        <div className="mt-6 flex items-center gap-3 border-t border-white/10 pt-5">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-blue-500/30 bg-blue-600/10 text-sm font-semibold text-blue-200">
+                            {initials}
+                          </div>
+                          <p className="min-w-0 text-xs uppercase tracking-[0.2em] text-white truncate">
+                            {item.author}
+                            {item.organization ? (
+                              <>
+                                <span className="mx-1.5 text-blue-200/50">·</span>
+                                <span className="text-gray-400">{item.organization}</span>
+                              </>
+                            ) : null}
+                          </p>
                         </div>
-                        <p className="min-w-0 text-xs uppercase tracking-[0.2em] text-white">
-                          {item.author}
-                          {item.organization ? <span className="mx-1.5 text-blue-200/50">·</span> : null}
-                          <span className="text-gray-400">{item.organization}</span>
-                        </p>
-                      </div>
-                    </article>
-                  );
-                }) : (
-                  <EmptyState
-                    body="Los testimonios aprobados desde admin apareceran aqui de forma automatica."
-                    title="Sin testimonios publicados"
-                  />
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className="xl:col-span-3">
+                    <EmptyState
+                      body="Los testimonios aprobados desde admin apareceran aqui de forma automatica."
+                      title="Sin testimonios publicados"
+                    />
+                  </div>
                 )}
               </div>
+            </div>
 
-            <div className="mt-14 sm:mt-16 lg:mt-20">
-              <div className="mb-8 max-w-4xl">
-                <SectionTag>{landing.institutionsCarouselTitle || "Instituciones con convenio"}</SectionTag>
+            {/* Instituciones */}
+            <div className="mt-20 lg:mt-28">
+              <div className="max-w-4xl mb-8">
+                <SectionTag>
+                  {landing.institutionsCarouselTitle || "Instituciones con convenio"}
+                </SectionTag>
                 {landing.institutionsCarouselBody ? (
                   <MarkdownContent className="text-base leading-relaxed text-gray-500 sm:text-lg">
                     {landing.institutionsCarouselBody}
@@ -897,7 +1066,8 @@ export function PublicExperience({
               )}
             </div>
 
-            <div className="mt-14 sm:mt-16 lg:mt-20">
+            {/* Noticias */}
+            <div className="mt-20 lg:mt-28">
               <NewsSection
                 featuredNews={featuredNews}
                 featuredNewsEmbed={featuredNewsEmbed}
@@ -912,59 +1082,63 @@ export function PublicExperience({
           </div>
         </section>
 
-        {/* CONTACTO */}
-        <section id="contacto" className="py-20 sm:py-24 lg:py-32 bg-[#1d4ed8]">
-          <div className="container mx-auto px-5 sm:px-6 md:px-8">
-            <div className="grid gap-12 items-start lg:grid-cols-[0.92fr_1.08fr]">
-              <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
+        {/* ── CONTACTO ── */}
+        <section id="contacto" className="py-24 sm:py-28 lg:py-36 bg-[#1d4ed8]">
+          <div className="container mx-auto px-5 sm:px-6 lg:px-8">
+            <div className="grid gap-12 items-start lg:grid-cols-2">
+              <div className="gobeyond-reveal">
                 <SectionTag>{landing.contactTitle || "Contacto"}</SectionTag>
-                <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-white">
+                <h2 className="text-[clamp(2rem,5vw,4.5rem)] font-black tracking-tighter leading-[0.95] text-white break-words">
                   {landing.contactBody || "Ponte en contacto con GoBeyond."}
                 </h2>
+              </div>
 
-                {(contactInfo.emailValue || contactInfo.phoneValue) ? (
-                  <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                    {contactInfo.emailValue ? (
-                      <a
-                        className="rounded-[1.6rem] border border-white/15 bg-white/10 px-5 py-5 text-white transition-all hover:-translate-y-0.5 hover:bg-white/15"
-                        href={getEmailHref(contactInfo.emailValue)}
-                      >
-                        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-100">
-                          {contactInfo.emailLabel || "Email"}
-                        </p>
-                        <p className="mt-4 text-lg font-semibold leading-snug">{contactInfo.emailValue}</p>
-                      </a>
+              <div className="gobeyond-reveal grid gap-4">
+                {contactInfo.emailValue ? (
+                  <a
+                    className="rounded-[1.5rem] border border-white/15 bg-white/10 px-6 py-5 text-white transition-all hover:-translate-y-0.5 hover:bg-white/15 block"
+                    href={getEmailHref(contactInfo.emailValue)}
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-100">
+                      {contactInfo.emailLabel || "Email"}
+                    </p>
+                    <p className="mt-3 text-lg font-semibold leading-snug break-all">
+                      {contactInfo.emailValue}
+                    </p>
+                  </a>
+                ) : null}
+
+                {contactInfo.phoneValue ? (
+                  <a
+                    className="rounded-[1.5rem] border border-white/15 bg-white/10 px-6 py-5 text-white transition-all hover:-translate-y-0.5 hover:bg-white/15 block"
+                    href={getPhoneHref(contactInfo.phoneValue)}
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-100">
+                      {contactInfo.phoneLabel || "Telefono"}
+                    </p>
+                    {contactInfo.phonePrompt ? (
+                      <p className="mt-2 text-sm font-medium text-blue-100/80">
+                        {contactInfo.phonePrompt}
+                      </p>
                     ) : null}
-                    {contactInfo.phoneValue ? (
-                      <a
-                        className="rounded-[1.6rem] border border-white/15 bg-white/10 px-5 py-5 text-white transition-all hover:-translate-y-0.5 hover:bg-white/15"
-                        href={getPhoneHref(contactInfo.phoneValue)}
-                      >
-                        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-100">
-                          {contactInfo.phoneLabel || "Telefono"}
-                        </p>
-                        <p className="mt-3 text-sm font-medium text-blue-100/85">
-                          {contactInfo.phonePrompt || "Llamanos"}
-                        </p>
-                        <p className="mt-2 text-lg font-semibold leading-snug">{contactInfo.phoneValue}</p>
-                      </a>
-                    ) : null}
-                  </div>
+                    <p className="mt-2 text-lg font-semibold leading-snug">
+                      {contactInfo.phoneValue}
+                    </p>
+                  </a>
                 ) : null}
 
                 {(landing.contactActions ?? []).length ? (
-                  <div className="mt-12 grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     {landing.contactActions.map((item) => {
                       const href = getActionHref(item, news, institutions, socialLinks);
                       const external = isExternalHref(href);
-
                       return (
                         <a
                           key={item}
                           href={href}
                           rel={external ? "noreferrer" : undefined}
                           target={external ? "_blank" : undefined}
-                          className="flex items-center justify-between rounded-[1.5rem] border border-white/15 bg-white/10 px-5 py-4 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/15"
+                          className="flex items-center justify-between rounded-[1.25rem] border border-white/15 bg-white/10 px-5 py-4 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/15"
                         >
                           <span>{item}</span>
                           <span>&rarr;</span>
@@ -973,6 +1147,14 @@ export function PublicExperience({
                     })}
                   </div>
                 ) : null}
+
+                {!contactInfo.emailValue &&
+                !contactInfo.phoneValue &&
+                !(landing.contactActions ?? []).length ? (
+                  <p className="text-blue-100/70 text-sm leading-relaxed">
+                    Configura los datos de contacto desde el panel de administracion.
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -980,38 +1162,36 @@ export function PublicExperience({
       </main>
 
       <footer className="border-t border-white/5 py-12 safe-bottom safe-x">
-        <div className="container mx-auto grid gap-8 px-5 sm:px-6 md:px-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="container mx-auto px-5 sm:px-6 lg:px-8 grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <div className="flex items-center gap-3">
-              <img alt="Logo de GoBeyond" className="h-7 w-7 object-contain" src="/logo-icon.png" />
-              <span className="text-[11px] font-black uppercase tracking-[0.3em]">{shortBrandName(brand.name)}</span>
+              <img
+                alt="Logo de GoBeyond"
+                className="h-7 w-7 object-contain shrink-0"
+                src="/logo-icon.png"
+              />
+              <span className="text-[11px] font-black uppercase tracking-[0.3em]">
+                {shortBrandName(brand.name)}
+              </span>
             </div>
-            <p className="mt-4 text-[11px] uppercase tracking-[0.3em] text-gray-600">
+            <p className="mt-4 text-[11px] uppercase tracking-[0.28em] text-gray-600">
               © {new Date().getFullYear()} · Formación de Alto Impacto · Puerto Limón, CR.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 lg:justify-items-end">
+          <nav className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:justify-items-end">
             {legalFooterLinks.map((item) => (
               <a
-                className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 transition hover:text-white"
+                className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 transition hover:text-white whitespace-nowrap"
                 href={item.href}
                 key={item.href}
               >
                 {item.label}
               </a>
             ))}
-          </div>
+          </nav>
         </div>
       </footer>
-
-      <style>{`
-        html { scroll-behavior: smooth; }
-        .gobeyond-reveal.is-visible {
-          opacity: 1 !important;
-          transform: translate(0, 0) !important;
-        }
-      `}</style>
     </div>
   );
 }

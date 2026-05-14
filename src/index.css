@@ -138,6 +138,10 @@
   --color-blue-border:     rgba(37,99,235,0.20);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -184,8 +188,8 @@ body {
 }
 
 .gobeyond-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
+  opacity: 1 !important;
+  transform: translateY(0) !important;
 }
 
 .markdown-content {
