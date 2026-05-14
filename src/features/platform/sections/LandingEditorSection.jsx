@@ -511,23 +511,6 @@ export function LandingEditorSection({
           </div>
         </section>
 
-        {/* ── MODALIDADES (read-only placeholder) ─────────────────────────── */}
-        <section className="py-20 sm:py-24 lg:py-32 container mx-auto px-5 sm:px-8">
-          <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/[0.01] p-10 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">Sección Modalidades de participación</p>
-            <p className="mt-3 text-sm text-gray-500 max-w-md mx-auto">
-              Los precios, opciones y textos de modalidades se editan en el Formulario avanzado.
-            </p>
-            <button
-              onClick={onOpenAdvancedForm}
-              className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 transition hover:border-blue-500/30 hover:text-blue-400"
-              type="button"
-            >
-              Abrir formulario avanzado →
-            </button>
-          </div>
-        </section>
-
         {/* ── TESTIMONIOS ─────────────────────────────────────────────────── */}
         <section className="py-20 sm:py-24 lg:py-32 bg-[#080808]">
           <div className="container mx-auto px-5 sm:px-8">

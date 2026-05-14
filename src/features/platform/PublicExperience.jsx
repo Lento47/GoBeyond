@@ -7,6 +7,7 @@ import { getPublishedNews, normalizeSocialNewsItem } from "./newsUtils";
 import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX } from "../../shared/embedPolicy";
 import { MarkdownContent } from "../../shared/MarkdownContent";
 import { PublicImageWithFallback } from "../../shared/PublicImageWithFallback";
+import { defaultContent } from "../../data/defaultContent";
 
 const legalFooterLinks = [
   { href: "/terminos", label: "Terminos y Condiciones" },
@@ -382,15 +383,10 @@ export function PublicExperience({
   );
   const courses = useMemo(() => (content?.courses ?? []).filter((item) => !isSixSigmaLandingItem(item)), [content?.courses]);
   const programCards = useMemo(
-    () => (Array.isArray(landing?.programCards) ? landing.programCards : []),
+    () => (Array.isArray(landing?.programCards) && landing.programCards.length ? landing.programCards : (defaultContent.landing?.programCards ?? [])),
     [landing?.programCards]
   );
   const liveSessions = useMemo(() => (content?.liveSessions ?? []).filter((item) => !isSixSigmaLandingItem(item)), [content?.liveSessions]);
-  const participationSection = useMemo(() => content?.participationSection ?? defaultParticipationSection, [content?.participationSection]);
-  const participationOptions = useMemo(
-    () => (content?.participationOptions?.length ? content.participationOptions : defaultParticipationOptions),
-    [content?.participationOptions]
-  );
   const institutions = useMemo(() => content?.institutions ?? [], [content?.institutions]);
   const featuredInstitutions = useMemo(() => institutions.filter((item) => item.featured), [institutions]);
   const visibleInstitutions = featuredInstitutions.length > 1 ? featuredInstitutions : institutions;
