@@ -379,18 +379,18 @@ function CoursesSection({ landing, programCards, courses, liveSessions }) {
 
         {hasCourseContent ? (
           <>
-            {programCards.length ? (
+            {courses.length ? (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {programCards.map((p, i) => (
-                  <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
+                {courses.map((c, i) => (
+                  <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
                 ))}
               </div>
             ) : null}
 
-            {courses.length ? (
-              <div className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${programCards.length ? "mt-8" : ""}`}>
-                {courses.map((c, i) => (
-                  <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
+            {programCards.length ? (
+              <div className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${courses.length ? "mt-8" : ""}`}>
+                {programCards.map((p, i) => (
+                  <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
                 ))}
               </div>
             ) : null}
