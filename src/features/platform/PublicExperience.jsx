@@ -469,7 +469,7 @@ function ProgramCard({ program, index, landing }) {
   return (
     <LandingCard
       highlight={index === 0}
-      className="gobeyond-reveal flex flex-col justify-between"
+      className="gobeyond-reveal flex flex-col"
     >
       <div>
         {/* Cover */}
@@ -495,7 +495,7 @@ function ProgramCard({ program, index, landing }) {
 
         {program.description ? (
           <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-400 break-words">
-            {truncate(program.description, 200)}
+            {program.description}
           </MarkdownContent>
         ) : null}
 
@@ -503,7 +503,7 @@ function ProgramCard({ program, index, landing }) {
           <div className="mt-5 rounded-xl border border-white/8 bg-white/[0.04] p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
             <MarkdownContent className="mt-2 text-sm leading-relaxed text-gray-200">
-              {truncate(program.relevance, 200)}
+              {program.relevance}
             </MarkdownContent>
           </div>
         ) : null}
@@ -537,7 +537,7 @@ function CourseCard({ course, index, landing }) {
   return (
     <LandingCard
       highlight={index === 0}
-      className="gobeyond-reveal flex flex-col justify-between"
+      className="gobeyond-reveal flex flex-col"
     >
       <div>
         <div className="mb-5 overflow-hidden rounded-xl border border-white/8 bg-[#0b0f17]">
@@ -566,11 +566,11 @@ function CourseCard({ course, index, landing }) {
 
         <h3 className="text-xl font-black tracking-tight break-words">{course.title}</h3>
         {course.audience ? (
-          <p className="mt-2 text-sm font-medium text-gray-400 break-words">{truncate(course.audience, 120)}</p>
+          <p className="mt-2 text-sm font-medium text-gray-400 break-words">{course.audience}</p>
         ) : null}
         {course.description ? (
           <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-500 break-words">
-            {truncate(course.description, 200)}
+            {course.description}
           </MarkdownContent>
         ) : null}
       </div>
