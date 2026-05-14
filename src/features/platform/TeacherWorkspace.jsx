@@ -1213,94 +1213,230 @@ export function TeacherExperience(props) {
       ) : null}
 
       {modal === "enrollment" ? (
-        <ModalShell
-          onClose={closeModal}
-          subtitle="Solo puedes crear o editar matriculas de estudiantes dentro de tus cursos asignados."
-          title={enrollmentForm.id ? "Gestionar matricula" : "Nueva matricula"}
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2 backdrop-blur-[8px] sm:px-4 sm:py-4"
+          onClick={closeModal}
+          role="presentation"
         >
-          <form className="grid gap-4" onSubmit={handleEnrollmentSubmit}>
-            {!enrollmentForm.id ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, userId: event.target.value }))} value={enrollmentForm.userId}>
-                  <option value="">Selecciona un estudiante</option>
-                  {(enrollmentsView?.studentOptions ?? []).map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.fullName} · {student.email}
-                    </option>
-                  ))}
-                </Select>
-                <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, courseId: event.target.value }))} value={enrollmentForm.courseId}>
-                  <option value="">Selecciona un curso</option>
-                  {teacherCourseOptions.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.title}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            ) : null}
-
-            {!enrollmentForm.id && !teacherCourseOptions.length ? (
-              <p className="text-sm leading-6 text-[#617085]">
-                Este docente aun no tiene cursos asignados. Asigna al menos un curso desde administracion para habilitar nuevas matriculas.
-              </p>
-            ) : null}
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, status: event.target.value }))} value={enrollmentForm.status}>
-                <option value="active">active</option>
-                <option value="paused">paused</option>
-                <option value="completed">completed</option>
-                <option value="cancelled">cancelled</option>
-              </Select>
-              {enrollmentForm.id ? (
-                <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, accessExpiresAt: event.target.value }))} placeholder="2026-12-31T23:59:59.000Z" value={enrollmentForm.accessExpiresAt} />
-              ) : (
-                <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, accessDays: event.target.value }))} placeholder="45" value={enrollmentForm.accessDays} />
-              )}
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, progressPercent: event.target.value }))} placeholder="Progreso %" value={enrollmentForm.progressPercent} />
-              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, points: event.target.value }))} placeholder="Puntos" value={enrollmentForm.points} />
-              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, streakDays: event.target.value }))} placeholder="Racha" value={enrollmentForm.streakDays} />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, passingThreshold: event.target.value }))} placeholder="Umbral de aprobacion % (ej. 80)" value={enrollmentForm.passingThreshold} />
-              {enrollmentForm.id ? (
-                <select
-                  className="rounded-[var(--radius-input)] border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#dbeafe]"
-                  value={enrollmentForm.completionStatus}
-                  onChange={(event) => setEnrollmentForm((current) => ({ ...current, completionStatus: event.target.value }))}
+          <div
+            className="flex w-full max-w-2xl flex-col overflow-hidden rounded-[22px] border border-[#d8e2f0] bg-[#f8fbff] shadow-[0_24px_70px_rgba(15,23,42,0.18)] max-h-[92vh]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Header */}
+            <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#059669] to-[#10b981] px-5 py-5 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">
+                    {enrollmentForm.id ? "Editando matrícula" : "Nueva matrícula"}
+                  </p>
+                  <h3 className="mt-1 text-xl font-black leading-tight text-white sm:text-2xl">
+                    {enrollmentForm.id
+                      ? ((enrollmentsView?.studentOptions ?? []).find((s) => s.id === enrollmentForm.userId)?.fullName ?? "Estudiante")
+                      : "Registrar acceso a curso"}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-white/60">
+                    {enrollmentForm.courseId
+                      ? (teacherCourseOptions.find((c) => c.id === enrollmentForm.courseId)?.title ?? "Curso seleccionado")
+                      : "Elige estudiante y curso abajo"}
+                  </p>
+                </div>
+                <button
+                  className="shrink-0 rounded-xl border border-white/25 bg-white/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/25"
+                  onClick={closeModal}
+                  type="button"
                 >
-                  <option value="in_progress">En progreso</option>
-                  <option value="passed">Aprobado</option>
-                  <option value="failed">No aprobado</option>
-                </select>
-              ) : null}
-            </div>
-
-            <label className="flex items-center gap-3 text-sm text-[#172033]">
-              <input checked={enrollmentForm.gamificationEnabled} onChange={(event) => setEnrollmentForm((current) => ({ ...current, gamificationEnabled: event.target.checked }))} type="checkbox" />
-              Activar gamificacion para esta matricula
-            </label>
-
-            <div className="flex flex-wrap gap-3">
-              <ActionButton disabled={submitting} type="submit">
-                {submitting ? "Guardando..." : enrollmentForm.id ? "Guardar cambios" : "Crear matricula"}
-              </ActionButton>
+                  Cerrar
+                </button>
+              </div>
               {enrollmentForm.id ? (
-                <SecondaryButton disabled={submitting} onClick={handleEnrollmentDelete} type="button">
-                  Eliminar
-                </SecondaryButton>
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white">
+                  <span className={`h-1.5 w-1.5 rounded-full ${enrollmentForm.status === "active" ? "bg-[#4ade80]" : "bg-white/40"}`} />
+                  {enrollmentForm.status === "active" ? "Activa" : enrollmentForm.status === "paused" ? "Pausada" : enrollmentForm.status === "completed" ? "Completada" : "Cancelada"}
+                </span>
               ) : null}
-              <SecondaryButton onClick={closeModal} type="button">
-                Cancelar
-              </SecondaryButton>
             </div>
-          </form>
-        </ModalShell>
+
+            {/* Timeline form */}
+            <form className="min-h-0 flex-1 overflow-y-auto" onSubmit={handleEnrollmentSubmit}>
+              <div className="px-5 py-5 sm:px-6 sm:py-6">
+
+                {/* Step 1 — Participante (only new) */}
+                {!enrollmentForm.id ? (
+                  <div className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#059669] text-[11px] font-black text-white">1</div>
+                      <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#a7f3d0] to-transparent" />
+                    </div>
+                    <div className="min-w-0 flex-1 pb-6">
+                      <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#059669]">Participante</p>
+                      <p className="mb-3 text-xs text-[#6b7a90]">¿Quién accede y a qué curso?</p>
+                      {!teacherCourseOptions.length ? (
+                        <div className="rounded-[14px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3 text-sm text-[#617085]">
+                          No tienes cursos asignados. Solicita al administrador que te asigne un curso para habilitar matrículas.
+                        </div>
+                      ) : (
+                        <div className="grid gap-3">
+                          <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, userId: event.target.value }))} value={enrollmentForm.userId}>
+                            <option value="">— Estudiante —</option>
+                            {(enrollmentsView?.studentOptions ?? []).map((student) => (
+                              <option key={student.id} value={student.id}>
+                                {student.fullName} · {student.email}
+                              </option>
+                            ))}
+                          </Select>
+                          <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, courseId: event.target.value }))} value={enrollmentForm.courseId}>
+                            <option value="">— Curso —</option>
+                            {teacherCourseOptions.map((course) => (
+                              <option key={course.id} value={course.id}>
+                                {course.title}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Step 2 — Acceso */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#059669] text-[11px] font-black text-white">
+                      {enrollmentForm.id ? "1" : "2"}
+                    </div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#a7f3d0] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#059669]">Acceso</p>
+                    <p className="mb-3 text-xs text-[#6b7a90]">Estado de la matrícula y duración del acceso al curso.</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Estado</label>
+                        <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, status: event.target.value }))} value={enrollmentForm.status}>
+                          <option value="active">Activa — estudiante tiene acceso</option>
+                          <option value="paused">Pausada — acceso suspendido</option>
+                          <option value="completed">Completada — ciclo finalizado</option>
+                          <option value="cancelled">Cancelada — sin acceso</option>
+                        </Select>
+                      </div>
+                      <div>
+                        {enrollmentForm.id ? (
+                          <>
+                            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Vence el</label>
+                            <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, accessExpiresAt: event.target.value }))} placeholder="ej. 2026-12-31T23:59:59Z" value={enrollmentForm.accessExpiresAt} />
+                          </>
+                        ) : (
+                          <>
+                            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Días de acceso</label>
+                            <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, accessDays: event.target.value }))} placeholder="ej. 45" value={enrollmentForm.accessDays} />
+                            <p className="mt-1 text-[10px] text-[#8899b0]">Desde hoy, ¿cuántos días dura el acceso?</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3 — Progreso */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#a7f3d0] bg-white text-[11px] font-black text-[#059669]">
+                      {enrollmentForm.id ? "2" : "3"}
+                    </div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#a7f3d0] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Progreso académico <span className="font-normal normal-case tracking-normal opacity-60">— opcional</span></p>
+                    <p className="mb-3 text-xs text-[#6b7a90]">Registro manual del avance. Puede actualizarse desde el sistema de seguimiento.</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Avance actual (%)</label>
+                        <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, progressPercent: event.target.value }))} placeholder="0 – 100" value={enrollmentForm.progressPercent} />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Nota mínima para aprobar (%)</label>
+                        <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, passingThreshold: event.target.value }))} placeholder="ej. 80" value={enrollmentForm.passingThreshold} />
+                      </div>
+                    </div>
+                    {enrollmentForm.id ? (
+                      <div className="mt-3">
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Resultado final</label>
+                        <select
+                          className="w-full rounded-[14px] border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#059669] focus:ring-2 focus:ring-[#a7f3d0]"
+                          onChange={(event) => setEnrollmentForm((current) => ({ ...current, completionStatus: event.target.value }))}
+                          value={enrollmentForm.completionStatus}
+                        >
+                          <option value="in_progress">En curso — aún no finaliza</option>
+                          <option value="passed">Aprobado — superó el umbral</option>
+                          <option value="failed">No aprobado — no alcanzó el umbral</option>
+                        </select>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Step 4 — Gamificación */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#a7f3d0] bg-white text-[11px] font-black text-[#059669]">
+                      {enrollmentForm.id ? "3" : "4"}
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Gamificación <span className="font-normal normal-case tracking-normal opacity-60">— opcional</span></p>
+                    <p className="mb-3 text-xs text-[#6b7a90]">Sistema de puntos y racha de días consecutivos de actividad.</p>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-[14px] border border-[#d7e0ea] bg-white px-4 py-3 transition hover:bg-[#f0fdf4]">
+                      <input
+                        checked={enrollmentForm.gamificationEnabled}
+                        className="h-4 w-4 accent-[#059669]"
+                        onChange={(event) => setEnrollmentForm((current) => ({ ...current, gamificationEnabled: event.target.checked }))}
+                        type="checkbox"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-[#172033]">Activar gamificación</p>
+                        <p className="text-[11px] text-[#6b7a90]">El estudiante acumula puntos y puede ver su racha de actividad</p>
+                      </div>
+                    </label>
+                    {enrollmentForm.gamificationEnabled ? (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Puntos acumulados</label>
+                          <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, points: event.target.value }))} placeholder="0" value={enrollmentForm.points} />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Racha (días seguidos)</label>
+                          <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, streakDays: event.target.value }))} placeholder="0" value={enrollmentForm.streakDays} />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky footer */}
+              <div className="sticky bottom-0 border-t border-[#d8e2f0] bg-[#f8fbff]/96 px-5 py-4 backdrop-blur sm:px-6">
+                {actionError ? <p className="mb-3 text-sm text-[#dc2626]">{actionError}</p> : null}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <ActionButton disabled={submitting} type="submit">
+                      {submitting ? "Guardando..." : enrollmentForm.id ? "Guardar cambios" : "Crear matrícula"}
+                    </ActionButton>
+                    <SecondaryButton onClick={closeModal} type="button">
+                      Cancelar
+                    </SecondaryButton>
+                  </div>
+                  {enrollmentForm.id ? (
+                    <SecondaryButton disabled={submitting} onClick={handleEnrollmentDelete} type="button">
+                      Eliminar matrícula
+                    </SecondaryButton>
+                  ) : null}
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
 
       {modal === "support" ? (
