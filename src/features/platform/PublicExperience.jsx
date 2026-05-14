@@ -309,7 +309,7 @@ function AboutSection({ landing, brand, benefits }) {
             <div className="gobeyond-reveal grid gap-3 sm:grid-cols-2">
               {benefits.map((item, i) => (
                 <div key={i} className="rounded-xl border border-white/8 bg-white/[0.02] p-5">
-                  <p className="text-sm leading-relaxed text-gray-300 break-words">{item}</p>
+                  <MarkdownContent className="text-sm leading-relaxed text-gray-300 break-words">{item}</MarkdownContent>
                 </div>
               ))}
             </div>
@@ -345,9 +345,9 @@ function ServicesSection({ landing, content, learningPath }) {
                 <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
                   {item.stageLabel}
                 </p>
-                <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-500">
+                <MarkdownContent className="mt-3 flex-1 text-sm leading-relaxed text-gray-500">
                   {item.description}
-                </p>
+                </MarkdownContent>
               </LandingCard>
             ))
           ) : (
@@ -441,15 +441,15 @@ function ProgramCard({ program, index, landing }) {
         </h3>
 
         {program.description ? (
-          <p className="mt-3 text-sm leading-relaxed text-gray-400 break-words">
+          <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-400 break-words">
             {truncate(program.description, 200)}
-          </p>
+          </MarkdownContent>
         ) : null}
 
         {program.relevance ? (
-          <p className="mt-3 text-sm leading-relaxed text-gray-300 break-words">
+          <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-300 break-words">
             {truncate(program.relevance, 160)}
-          </p>
+          </MarkdownContent>
         ) : null}
 
         <ProgramHighlights program={program} />
@@ -513,9 +513,9 @@ function CourseCard({ course, index, landing }) {
           <p className="mt-2 text-sm font-medium text-gray-400 break-words">{truncate(course.audience, 120)}</p>
         ) : null}
         {course.description ? (
-          <p className="mt-3 text-sm leading-relaxed text-gray-500 break-words">
+          <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-500 break-words">
             {truncate(course.description, 200)}
-          </p>
+          </MarkdownContent>
         ) : null}
       </div>
 
