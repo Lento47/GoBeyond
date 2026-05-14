@@ -384,7 +384,7 @@ function ProgramCardGrid({ programCards, landing }) {
       {nonEmpty.map((group, gi) => (
         <div key={gi}>
           {(group.label || group.heading || group.subheading) ? (
-            <div className="mb-10 gobeyond-reveal">
+            <div className="mb-10 text-center gobeyond-reveal">
               {group.label ? (
                 <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400 mb-3">
                   {group.label}
@@ -396,7 +396,7 @@ function ProgramCardGrid({ programCards, landing }) {
                 </h3>
               ) : null}
               {group.subheading ? (
-                <p className="mt-3 text-base text-gray-500 leading-relaxed max-w-2xl">
+                <p className="mt-3 text-base text-gray-500 leading-relaxed max-w-2xl mx-auto">
                   {group.subheading}
                 </p>
               ) : null}
