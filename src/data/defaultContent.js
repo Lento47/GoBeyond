@@ -262,7 +262,7 @@ export const defaultContent = {
     supportEmail: "it@gobeyondcr.org",
   },
   landing: {
-    nav: ["Inicio", "Sobre nosotros", "Servicios", "Impacto", "Testimonios", "Contacto"],
+    nav: ["Inicio", "Sobre nosotros", "Servicios", "Cursos", "Testimonios", "Contacto"],
     aboutTitle: "Sobre nosotros",
     aboutBody:
       "Bienvenidos a Go Beyond, una iniciativa limonense creada para impulsar el desarrollo integral de los jovenes, tanto desde instituciones educativas como de manera independiente, fortaleciendo su excelencia academica y su proyeccion profesional.",
