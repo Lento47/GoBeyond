@@ -505,11 +505,11 @@ function WorkspaceShell({
       ? "rounded-[22px] border border-[#d7e0ea] bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
     : `${workspaceChrome.shellPanel} p-4`;
   const accessPanelClass = isAdminVariant
-    ? "mt-4 rounded-[18px] border border-[#1e293b] bg-[#111827] px-4 py-4 shadow-[0_18px_44px_rgba(15,23,42,0.18)]"
+    ? "mt-4 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] px-4 py-4 shadow-[0_12px_24px_rgba(29,78,216,0.08)]"
     : isStudentVariant
       ? "mt-4 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] px-4 py-4 shadow-[0_12px_24px_rgba(29,78,216,0.08)]"
     : isTeacherVariant
-      ? "mt-4 rounded-[18px] border border-[#e8d4bf] bg-[#fff8f1] px-4 py-4 shadow-[0_12px_24px_rgba(182,110,42,0.08)]"
+      ? "mt-4 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] px-4 py-4 shadow-[0_12px_24px_rgba(29,78,216,0.08)]"
     : "mt-4 rounded-2xl border border-[#e7edf5] bg-[#f7f9fc] px-3 py-3";
   const navPanelClass = isAdminVariant
     ? "flex-1 min-h-0 overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
@@ -573,9 +573,9 @@ function WorkspaceShell({
               <WorkspaceHomeButton contextInitial={contextInitial} subtitle={subtitle} variant={variant} />
               <div className={accessPanelClass}>
                 <p className={`text-[10px] font-black uppercase tracking-[0.22em] ${
-                  isAdminVariant ? "text-[#9fb0c9]" : isTeacherVariant ? "text-[#b66e2a]" : isStudentVariant ? "text-[#1d4ed8]" : "text-[#6b7a90]"
+                  isAdminVariant || isTeacherVariant || isStudentVariant ? "text-[#1d4ed8]" : "text-[#6b7a90]"
                 }`}>Acceso</p>
-                <p className={`mt-2 text-sm font-semibold ${isAdminVariant ? "text-white" : "text-[#172033]"}`}>
+                <p className="mt-2 text-sm font-semibold text-[#172033]">
                   {currentUser?.role === "admin"
                     ? "Control administrativo"
                     : currentUser?.role === "teacher"
@@ -583,7 +583,7 @@ function WorkspaceShell({
                       : "Experiencia estudiantil"}
                 </p>
                 <p className={`mt-1 text-xs leading-relaxed ${
-                  isAdminVariant ? "text-[#c2cfdf]" : isTeacherVariant ? "text-[#8b5e34]" : isStudentVariant ? "text-[#45608d]" : "text-[#5d6b80]"
+                  isAdminVariant || isTeacherVariant || isStudentVariant ? "text-[#45608d]" : "text-[#5d6b80]"
                 }`}>
                   {accessDetail ?? (currentUser ? `${currentUser.email} · ${formatUserRoles(currentUser)}` : "Workspace operativo seguro")}
                 </p>
@@ -1466,9 +1466,9 @@ export default function GoBeyondApp() {
               onClick: () => navigateToWorkspaceSection("teacher", "teacher-courses"),
             },
             {
-              label: "Tareas y evaluaciones",
+              label: "Aula",
               icon: "clipboard",
-              caption: "Asignaciones y entregables docentes",
+              caption: "Ruta de clase y materiales",
               active: activeWorkspaceSection === "teacher-assignments",
               onClick: () => navigateToWorkspaceSection("teacher", "teacher-assignments"),
             },

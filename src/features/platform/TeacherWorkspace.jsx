@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ActionButton,
+  CompactBand,
   EmptyState,
   Input,
   ModalShell,
@@ -10,6 +11,7 @@ import {
   SectionCard,
   Select,
   SmallStat,
+  StatusPill,
   Textarea,
 } from "./components/admin/AdminUI";
 import { uploadAdminAsset } from "../../services/contentApi";
@@ -259,6 +261,7 @@ export function TeacherExperience(props) {
   const [submitting, setSubmitting] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   const [actionError, setActionError] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
 
   const teacherName = currentUser?.fullName || "Docente";
   const teacherCourseOptions =
@@ -290,6 +293,7 @@ export function TeacherExperience(props) {
     openCases: supportLoading ? dashboard?.metrics?.openCases ?? 0 : liveOpenCases,
   };
   const teacherSection = activeSection || "teacher-overview";
+  const selectedCourse = (courses ?? []).find((c) => c.id === selectedCourseId) ?? (courses ?? [])[0] ?? null;
 
   function closeModal() {
     setModal("");
@@ -414,10 +418,10 @@ export function TeacherExperience(props) {
           assignmentId: assignmentForm.assignmentId,
           ...payload,
         });
-        setActionMessage("Asignacion actualizada en el curso docente.");
+        setActionMessage("Material actualizado en el curso docente.");
       } else {
         await onCreateAssignment(payload);
-        setActionMessage("Asignacion publicada para el curso seleccionado.");
+        setActionMessage("Material publicado para el curso seleccionado.");
       }
       closeModal();
     } catch (requestError) {
@@ -436,7 +440,7 @@ export function TeacherExperience(props) {
         courseId: assignmentForm.courseId,
         assignmentId: assignmentForm.assignmentId,
       });
-      setActionMessage("Asignacion eliminada del curso docente.");
+      setActionMessage("Material eliminado del curso docente.");
       closeModal();
     } catch (requestError) {
       setActionError(requestError.message);
@@ -520,146 +524,280 @@ export function TeacherExperience(props) {
 
   function renderOverviewSection() {
     return (
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]" id="teacher-overview">
-        <SectionCard
-          description={dashboard?.summary || "Gestiona cursos, tareas, matriculas e incidencias desde un mismo frente docente."}
-          title={dashboard?.welcomeTitle || `Panel docente de ${teacherName}`}
-        >
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <SmallStat help="Programas bajo tu alcance docente." label="Cursos asignados" value={dashboardLoading ? "..." : metrics.assignedCourses} />
-            <SmallStat help="Grupos activos configurados para tus cursos." label="Cohortes activas" value={dashboardLoading ? "..." : metrics.activeCohorts} />
-            <SmallStat help="Estudiantes activos en tus cohortes." label="Estudiantes activos" value={dashboardLoading ? "..." : metrics.activeStudents} />
-            <SmallStat help="Asignaciones publicadas para seguimiento." label="Tareas publicadas" value={dashboardLoading ? "..." : metrics.pendingAssignments} />
-            <SmallStat help="Tickets, solicitudes e hilos que requieren atencion." label="Casos abiertos" value={dashboardLoading ? "..." : metrics.openCases} />
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.55fr)]" id="teacher-overview">
+        <div className="grid gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033] sm:text-3xl">
+              {dashboard?.welcomeTitle || `Workspace docente`}
+            </h1>
+            <p className="mt-1 text-sm leading-relaxed text-[#6b7a90]">
+              {dashboard?.summary || "Tu espacio operativo para gestionar clases, contenidos, estudiantes y actividades académicas."}
+            </p>
           </div>
-        </SectionCard>
 
-        <SectionCard description="Ultimos movimientos operativos ligados a tus cursos y grupos." title="Casos recientes" density="compact">
+          <CompactBand>
+            <SmallStat variant="band" label="Clases activas" value={dashboardLoading ? "…" : metrics.assignedCourses} help="Programas bajo tu alcance" />
+            <SmallStat variant="band" label="Cohortes activas" value={dashboardLoading ? "…" : metrics.activeCohorts} help="Grupos configurados" />
+            <SmallStat variant="band" label="Estudiantes" value={dashboardLoading ? "…" : metrics.activeStudents} help="Activos en tus cohortes" />
+            <SmallStat variant="band" label="Materiales" value={dashboardLoading ? "…" : metrics.pendingAssignments} help="Publicados" />
+            <SmallStat variant="band" label="Casos abiertos" value={dashboardLoading ? "…" : metrics.openCases} help="Requieren atención" />
+          </CompactBand>
+        </div>
+
+        <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+          <div className="border-b border-[#e8eef6] px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Actividad reciente</p>
+          </div>
           {dashboardLoading ? (
-            <p className="text-sm text-[#617085]">Cargando actividad docente...</p>
+            <p className="px-4 py-3 text-sm text-[#617085]">Cargando actividad…</p>
           ) : dashboard?.recentCases?.length ? (
             <ScrollArea className="max-h-[22rem]">
-              <div className="grid gap-3">
-                {dashboard.recentCases.map((item) => (
-                  <RowCard
-                    density="compact"
-                    eyebrow={titleCase(item.kind)}
-                    key={`${item.kind}-${item.id}`}
-                    meta={`${item.subtitle || "Sin referencia"} · ${titleCase(item.status)}`}
-                    title={item.title}
-                    body={`Ultima actualizacion: ${formatDateTime(item.updatedAt)}`}
-                  />
-                ))}
-              </div>
+              {dashboard.recentCases.map((item) => (
+                <RowCard
+                  density="compact"
+                  eyebrow={titleCase(item.kind)}
+                  key={`${item.kind}-${item.id}`}
+                  meta={`${item.subtitle || "Sin referencia"} · ${formatDateTime(item.updatedAt)}`}
+                  title={item.title}
+                >
+                  <StatusPill status={item.status === "open" ? "pending" : item.status === "closed" ? "draft" : "progress"} label={titleCase(item.status)} />
+                </RowCard>
+              ))}
             </ScrollArea>
           ) : (
-            <EmptyState body="Todavia no hay actividad reciente dentro de tu alcance docente." title="Sin casos recientes" />
+            <div className="px-4 py-6">
+              <EmptyState body="Todavia no hay actividad reciente dentro de tu alcance docente." title="Sin actividad" />
+            </div>
           )}
-        </SectionCard>
+        </div>
       </section>
     );
   }
 
   function renderCoursesSection() {
+    const COURSE_COLORS = ["#2563eb", "#059669", "#7c3aed", "#d97706", "#e11d48", "#0891b2"];
+    const selectedIndex = (courses ?? []).findIndex((c) => c.id === selectedCourse?.id);
+    const selectedColor = COURSE_COLORS[Math.max(selectedIndex, 0) % COURSE_COLORS.length];
+
     return (
-      <SectionCard
-        description="Cursos asignados, cohortes activas y acceso rapido para abrir nuevas tareas o matriculas."
-        title="Cursos y grupos"
-      >
-        <div className="grid gap-4" id="teacher-courses">
-          {coursesLoading ? (
-            <p className="text-sm text-[#617085]">Cargando cursos asignados...</p>
-          ) : courses.length ? (
-            courses.map((course) => (
-              <RowCard
-                body={course.description || course.detailSummary || "Curso listo para operacion docente."}
-                key={course.id}
-                meta={`${course.format || "Formato libre"} · ${course.duration || "Duracion abierta"} · ${course.audience || "Audiencia general"}`}
-                title={course.title}
-              >
-                <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                  <div className="grid gap-3">
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                      <SmallStat help="Matriculas registradas." label="Matriculas" value={course.enrollmentCount ?? 0} />
-                      <SmallStat help="Grupos configurados para este curso." label="Cohortes" value={course.cohortCount ?? 0} />
-                      <SmallStat help="Estudiantes con acceso activo." label="Activos" value={course.activeStudentCount ?? 0} />
-                      <SmallStat help="Entregables creados." label="Tareas" value={course.assignmentCount ?? 0} />
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]" id="teacher-courses">
+        {/* Left — course list */}
+        <div className="grid gap-4 content-start">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033]">Clases y grupos</h1>
+            <p className="mt-0.5 text-sm text-[#6b7a90]">Selecciona un curso para ver sus materiales y grupos.</p>
+          </div>
+
+          <div className="overflow-hidden rounded-[18px] border border-[#d8e2f0] bg-white">
+            {coursesLoading ? (
+              <p className="px-4 py-3 text-sm text-[#617085]">Cargando cursos asignados…</p>
+            ) : (courses ?? []).length ? (
+              (courses ?? []).map((course, index) => {
+                const isSelected = course.id === selectedCourse?.id;
+                const accent = COURSE_COLORS[index % COURSE_COLORS.length];
+                const initials = String(course.title ?? "")
+                  .trim()
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((p) => p[0]?.toUpperCase() ?? "")
+                  .join("");
+                return (
+                  <div
+                    key={course.id}
+                    className={`flex items-center gap-3 border-b border-[#edf1f7] last:border-b-0 cursor-pointer transition-colors px-3 py-3 ${
+                      isSelected ? "bg-[#eef4ff] border-l-2 border-l-[#1d4ed8]" : "hover:bg-[#f7f9fc]"
+                    }`}
+                    onClick={() => setSelectedCourseId(course.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCourseId(course.id); }}
+                  >
+                    {/* Color avatar */}
+                    <div
+                      className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center text-[11px] font-black text-white"
+                      style={{ backgroundColor: accent }}
+                    >
+                      {initials || "GB"}
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                      <ActionButton onClick={() => startCreateAssignment(course.id)} type="button">
-                        Nueva tarea
-                      </ActionButton>
-                      <SecondaryButton onClick={() => startCreateEnrollment(course.id)} type="button">
-                        Matricular estudiante
+
+                    {/* Course info */}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[#172033]">{course.title}</p>
+                      <p className="text-[10px] text-[#8899b0]">
+                        {course.format || "Formato libre"}{course.audience ? ` · ${course.audience}` : ""}
+                      </p>
+                      <div className="mt-0.5 flex items-center gap-3 text-[10px] text-[#66758c]">
+                        <span className="flex items-center gap-1">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          {course.activeStudentCount ?? 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                          </svg>
+                          {(course.assignments ?? []).length} mat.
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Single action */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <SecondaryButton
+                        className="!py-1.5 !text-xs shrink-0"
+                        onClick={() => setSelectedCourseId(course.id)}
+                        type="button"
+                      >
+                        Entrar →
                       </SecondaryButton>
                     </div>
                   </div>
-                  <div className="grid gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cohortes visibles</p>
-                    {(course.cohorts ?? []).length ? (
-                      <div className="grid gap-2">
-                        {(course.cohorts ?? []).slice(0, 4).map((cohort) => (
-                          <div className="rounded-[16px] border border-[#dbe3ec] bg-white px-3 py-3" key={cohort.id}>
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-[#172033]">{cohort.title}</p>
-                                <p className="truncate text-xs text-[#617085]">
-                                  {cohort.status || "planned"}
-                                  {cohort.startDate ? ` · inicia ${formatDate(cohort.startDate)}` : ""}
-                                  {cohort.endDate ? ` · cierra ${formatDate(cohort.endDate)}` : ""}
-                                </p>
-                              </div>
-                              {cohort.capacity ? (
-                                <span className="shrink-0 text-xs text-[#617085]">{cohort.capacity} cupos</span>
-                              ) : null}
-                            </div>
-                          </div>
-                        ))}
-                        {(course.cohorts ?? []).length > 4 ? (
-                          <p className="text-xs uppercase tracking-[0.18em] text-[#6b7a90]">+ {(course.cohorts ?? []).length - 4} cohortes adicionales</p>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[#617085]">Todavia no hay cohortes configuradas para este curso.</p>
-                    )}
-                  </div>
-                  <div className="grid gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] p-4 lg:col-span-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estudiantes visibles</p>
-                    <CourseStudentsPreview students={course.students ?? []} />
-                  </div>
-                </div>
-              </RowCard>
-            ))
-          ) : (
-            <EmptyState
-              body="Asigna cursos a esta cuenta desde el panel administrativo para habilitar la operacion docente real."
-              title="Sin cursos asignados"
-            />
-          )}
+                );
+              })
+            ) : (
+              <div className="px-4 py-6">
+                <EmptyState
+                  body="Asigna cursos a esta cuenta desde el panel administrativo para habilitar la operacion docente real."
+                  title="Sin cursos asignados"
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </SectionCard>
+
+        {/* Right — aula panel */}
+        <div className="grid gap-4 content-start">
+          <div className="overflow-hidden rounded-[18px] border border-[#d7e0ea] bg-white">
+
+            {/* A) Header con color del curso */}
+            <div
+              className="relative px-4 py-4"
+              style={{ background: `linear-gradient(135deg, ${selectedColor}, ${selectedColor}99)` }}
+            >
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/70">Ahora en clase</p>
+              <p className="mt-0.5 text-base font-black leading-tight text-white">
+                {selectedCourse?.title || "Ninguna clase seleccionada"}
+              </p>
+              {selectedCourse ? (
+                <p className="mt-0.5 text-[10px] text-white/70">
+                  {selectedCourse.activeStudentCount ?? 0} activos · {(selectedCourse.assignments ?? []).length} materiales
+                </p>
+              ) : null}
+              {selectedCourse ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    className="rounded-xl border border-white/30 bg-white/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/30"
+                    onClick={() => startCreateAssignment(selectedCourse.id)}
+                    type="button"
+                  >
+                    + Material
+                  </button>
+                  <button
+                    className="rounded-xl border border-white/30 bg-white/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/30"
+                    onClick={() => startCreateEnrollment(selectedCourse.id)}
+                    type="button"
+                  >
+                    Matricular
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* B) Grupos activos */}
+            {selectedCourse ? (
+              <div className="border-t border-[#e7edf5] px-4 py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Grupos activos</p>
+                {(selectedCourse.cohorts ?? []).length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(selectedCourse.cohorts ?? []).map((cohort) => {
+                      const isActive = cohort.status === "active";
+                      return (
+                        <span
+                          key={cohort.id}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            isActive
+                              ? "border-[#bfdbfe] bg-[#dbeafe] text-[#1d4ed8]"
+                              : "border-[#d8e2f0] bg-[#f7f9fc] text-[#536277]"
+                          }`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-[#1d4ed8]" : "bg-[#d0d8e4]"}`} />
+                          {cohort.title}
+                          {cohort.startDate ? (
+                            <span className="opacity-60">· {formatDate(cohort.startDate)}</span>
+                          ) : null}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-1.5 text-xs text-[#8899b0]">Sin grupos configurados para este curso.</p>
+                )}
+              </div>
+            ) : null}
+
+            {/* C) Materiales */}
+            <div className="border-t border-[#e7edf5] divide-y divide-[#e7edf5]">
+              {(selectedCourse?.assignments ?? []).slice(0, 6).map((assignment) => (
+                <div key={assignment.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#f8fbff] transition-colors">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eef4ff]">
+                    <svg className="h-3.5 w-3.5 text-[#1d4ed8]" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-[#172033]">{assignment.title}</p>
+                    {assignment.dueLabel ? (
+                      <p className="text-[10px] text-[#6b7a90]">{assignment.dueLabel}</p>
+                    ) : null}
+                  </div>
+                  <SecondaryButton
+                    className="!py-1 !px-2.5 !text-[10px] shrink-0"
+                    onClick={() => startEditAssignment(selectedCourse?.id, assignment)}
+                    type="button"
+                  >
+                    Editar
+                  </SecondaryButton>
+                </div>
+              ))}
+              <p className="px-4 py-3 text-xs text-[#8899b0]">
+                {selectedCourse
+                  ? (selectedCourse.assignments ?? []).length === 0
+                    ? "Sin materiales publicados aún en este curso."
+                    : null
+                  : "Selecciona un curso de la lista para ver sus materiales."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     );
   }
 
   function renderAssignmentsSection() {
     return (
       <SectionCard
-        description="Gestiona las asignaciones publicadas en tus cursos sin salir del workspace."
-        title="Tareas y evaluaciones"
+        description="Organiza los materiales publicados en tus cursos desde una ruta clara y escaneable."
+        title="Aula"
       >
         <div className="grid gap-4" id="teacher-assignments">
           {coursesLoading ? (
-            <p className="text-sm text-[#617085]">Cargando asignaciones docentes...</p>
+            <p className="text-sm text-[#617085]">Cargando materiales docentes...</p>
           ) : courses.some((course) => (course.assignments ?? []).length) ? (
             courses.map((course) => (
               <div className="grid gap-3" key={`assignments-${course.id}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] px-4 py-3">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Curso docente</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Ruta de clase</p>
                     <h3 className="mt-1 text-lg font-semibold text-[#172033]">{course.title}</h3>
                   </div>
                   <ActionButton onClick={() => startCreateAssignment(course.id)} type="button">
-                    Agregar tarea
+                    Agregar material
                   </ActionButton>
                 </div>
                 {(course.assignments ?? []).length ? (
@@ -668,7 +806,7 @@ export function TeacherExperience(props) {
                       <RowCard
                         body={assignment.instruction}
                         density="compact"
-                        eyebrow={assignment.dueLabel ? `Entrega ${assignment.dueLabel}` : "Sin fecha de entrega"}
+                        eyebrow={assignment.dueLabel ? `Programado ${assignment.dueLabel}` : "Sin fecha definida"}
                         key={assignment.id}
                         meta={[
                           course.title,
@@ -685,12 +823,12 @@ export function TeacherExperience(props) {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState body="Todavia no has publicado tareas en este curso." title="Sin asignaciones" />
+                  <EmptyState body="Todavia no has publicado materiales en este curso." title="Sin materiales" />
                 )}
               </div>
             ))
           ) : (
-            <EmptyState body="Crea la primera asignacion en cualquiera de tus cursos." title="Sin tareas publicadas" />
+            <EmptyState body="Crea el primer material en cualquiera de tus cursos." title="Sin materiales publicados" />
           )}
         </div>
       </SectionCard>
@@ -699,94 +837,124 @@ export function TeacherExperience(props) {
 
   function renderOperationsSection() {
     return (
-      <section className="grid gap-6 xl:items-start xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]" id="teacher-operations">
-        <SectionCard
-          description="Matricula estudiantes en tus cursos asignados y ajusta progreso o vigencia de acceso."
-          title="Matriculas"
-        >
-          <div className="mb-4 flex justify-end">
-            <ActionButton onClick={() => startCreateEnrollment()} type="button">
-              Nueva matricula
-            </ActionButton>
-          </div>
-          {enrollmentsLoading ? (
-            <p className="text-sm text-[#617085]">Cargando matriculas...</p>
-          ) : enrollmentsView?.enrollments?.length ? (
-            <ScrollArea className="max-h-[34rem]">
-              <div className="grid gap-3">
-                {enrollmentsView.enrollments.map((enrollment) => (
-                  <RowCard
-                    body={`Acceso hasta ${formatDate(enrollment.accessExpiresAt)} · ${enrollment.enhancement?.progressPercent ?? 0}% progreso · ${enrollment.enhancement?.points ?? 0} puntos`}
-                    density="compact"
-                    eyebrow={titleCase(enrollment.status)}
-                    key={enrollment.id}
-                    meta={`${enrollment.course?.title || enrollment.courseId} · ${enrollment.student?.email || "Sin correo"}`}
-                    title={enrollment.student?.fullName || "Estudiante"}
-                  >
-                    <SecondaryButton onClick={() => startEditEnrollment(enrollment)} type="button">
-                      Gestionar
-                    </SecondaryButton>
-                  </RowCard>
-                ))}
-              </div>
-            </ScrollArea>
-          ) : (
-            <EmptyState body="Aun no hay estudiantes matriculados dentro de tu alcance." title="Sin matriculas" />
-          )}
-        </SectionCard>
+      <section className="grid gap-4" id="teacher-operations">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033]">Operaciones</h1>
+          <p className="mt-0.5 text-sm text-[#6b7a90]">Matriculas, soporte y comunidad ligados a tus cursos.</p>
+        </div>
 
-        <SectionCard
-          description="Supervisa tickets, solicitudes de apertura y hilos de comunidad relacionados con tus grupos."
-          title="Soporte y comunidad"
-        >
-          {supportLoading ? (
-            <p className="text-sm text-[#617085]">Cargando incidencias docentes...</p>
-          ) : (
-            <div className="grid gap-5">
-              <div className="grid gap-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Tickets de soporte</p>
-                <SupportList
-                  actionLabel="Gestionar ticket"
-                  emptyBody="No hay tickets ligados a tus cursos asignados."
-                  emptyTitle="Sin tickets"
-                  items={support?.tickets ?? []}
-                  onAction={(item) => startManageSupport("ticket", item)}
-                  renderMeta={(item) =>
-                    `${item.student?.fullName || item.student?.email || "Estudiante"} · ${item.courseTitle || "Curso"} · Prioridad ${titleCase(item.priority)}`
-                  }
-                />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="grid gap-4 content-start">
+            <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+              <div className="flex items-center justify-between border-b border-[#e8eef6] px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Matriculas</p>
+                <ActionButton className="!py-1.5 !text-xs" onClick={() => startCreateEnrollment()} type="button">
+                  + Nueva matricula
+                </ActionButton>
               </div>
-
-              <div className="grid gap-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Solicitudes de apertura</p>
-                <SupportList
-                  actionLabel="Gestionar solicitud"
-                  emptyBody="No hay solicitudes de ingreso o apertura en tus programas."
-                  emptyTitle="Sin solicitudes"
-                  items={support?.courseRequests ?? []}
-                  onAction={(item) => startManageSupport("course-request", item)}
-                  renderMeta={(item) =>
-                    `${item.student?.fullName || item.student?.email || "Estudiante"} · ${item.contactChannel || "Canal libre"}`
-                  }
-                />
-              </div>
-
-              <div className="grid gap-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Hilos de comunidad</p>
-                <SupportList
-                  actionLabel="Gestionar hilo"
-                  emptyBody="No hay hilos de comunidad dentro de tu alcance docente."
-                  emptyTitle="Sin hilos"
-                  items={support?.threads ?? []}
-                  onAction={(item) => startManageSupport("thread", item)}
-                  renderMeta={(item) =>
-                    `${item.authorName || item.authorEmail || "Autor"} · ${item.courseTitle || "Curso"} · ${item.replies?.length ?? 0} respuestas`
-                  }
-                />
-              </div>
+              {enrollmentsLoading ? (
+                <p className="px-4 py-3 text-sm text-[#617085]">Cargando matriculas…</p>
+              ) : enrollmentsView?.enrollments?.length ? (
+                <ScrollArea className="max-h-[28rem]">
+                  {enrollmentsView.enrollments.map((enrollment) => (
+                    <RowCard
+                      density="compact"
+                      eyebrow={enrollment.course?.title || enrollment.courseId}
+                      key={enrollment.id}
+                      meta={`${enrollment.student?.email || "Sin correo"} · Acceso hasta ${formatDate(enrollment.accessExpiresAt)}`}
+                      title={enrollment.student?.fullName || "Estudiante"}
+                    >
+                      <StatusPill
+                        status={enrollment.status === "active" ? "active" : enrollment.status === "completed" ? "ready" : "draft"}
+                        label={titleCase(enrollment.status)}
+                      />
+                      <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startEditEnrollment(enrollment)} type="button">
+                        Gestionar
+                      </SecondaryButton>
+                    </RowCard>
+                  ))}
+                </ScrollArea>
+              ) : (
+                <div className="px-4 py-6">
+                  <EmptyState body="Aun no hay estudiantes matriculados dentro de tu alcance." title="Sin matriculas" />
+                </div>
+              )}
             </div>
-          )}
-        </SectionCard>
+          </div>
+
+          <div className="grid gap-4 content-start">
+            <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+              <div className="border-b border-[#e8eef6] px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Soporte y comunidad</p>
+              </div>
+              {supportLoading ? (
+                <p className="px-4 py-3 text-sm text-[#617085]">Cargando incidencias…</p>
+              ) : (
+                <div>
+                  {(support?.tickets ?? []).length ? (
+                    <div>
+                      <p className="border-b border-[#edf1f7] bg-[#f8fafc] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Tickets</p>
+                      {(support.tickets).map((item) => (
+                        <RowCard
+                          density="compact"
+                          eyebrow={`${item.courseTitle || "Curso"} · Prioridad ${titleCase(item.priority)}`}
+                          key={item.id}
+                          meta={item.student?.fullName || item.student?.email || "Estudiante"}
+                          title={item.subject || "Ticket"}
+                        >
+                          <StatusPill status={item.status === "open" ? "pending" : item.status === "resolved" ? "ready" : "draft"} label={titleCase(item.status)} />
+                          <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startManageSupport("ticket", item)} type="button">Gestionar</SecondaryButton>
+                        </RowCard>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {(support?.courseRequests ?? []).length ? (
+                    <div>
+                      <p className="border-b border-[#edf1f7] bg-[#f8fafc] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Solicitudes</p>
+                      {(support.courseRequests).map((item) => (
+                        <RowCard
+                          density="compact"
+                          eyebrow={item.contactChannel || "Canal libre"}
+                          key={item.id}
+                          meta={item.student?.fullName || item.student?.email || "Estudiante"}
+                          title={item.courseTitle || "Solicitud de apertura"}
+                        >
+                          <StatusPill status="pending" label={titleCase(item.status)} />
+                          <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startManageSupport("course-request", item)} type="button">Gestionar</SecondaryButton>
+                        </RowCard>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {(support?.threads ?? []).length ? (
+                    <div>
+                      <p className="border-b border-[#edf1f7] bg-[#f8fafc] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Comunidad</p>
+                      {(support.threads).map((item) => (
+                        <RowCard
+                          density="compact"
+                          eyebrow={`${item.courseTitle || "Curso"} · ${item.replies?.length ?? 0} respuestas`}
+                          key={item.id}
+                          meta={item.authorName || item.authorEmail || "Autor"}
+                          title={item.subject || item.title || "Hilo"}
+                        >
+                          <SecondaryButton className="!py-1.5 !text-xs" onClick={() => startManageSupport("thread", item)} type="button">Gestionar</SecondaryButton>
+                        </RowCard>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {!(support?.tickets ?? []).length && !(support?.courseRequests ?? []).length && !(support?.threads ?? []).length ? (
+                    <div className="px-4 py-6">
+                      <EmptyState body="No hay incidencias activas dentro de tu alcance docente." title="Sin incidencias" />
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </section>
     );
   }
@@ -816,230 +984,459 @@ export function TeacherExperience(props) {
       {teacherSection === "teacher-sops" ? renderSopsSection() : null}
 
       {modal === "assignment" ? (
-        <ModalShell
-          onClose={closeModal}
-          subtitle="Las tareas creadas aqui solo impactan cursos asignados a este docente."
-          title={assignmentForm.assignmentId ? "Editar asignacion docente" : "Nueva asignacion docente"}
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2 backdrop-blur-[8px] sm:px-4 sm:py-4"
+          onClick={closeModal}
+          role="presentation"
         >
-          <form className="grid gap-4" onSubmit={handleAssignmentSubmit}>
-            <Select onChange={(event) => setAssignmentForm((current) => ({ ...current, courseId: event.target.value }))} value={assignmentForm.courseId}>
-              <option value="">Selecciona un curso</option>
-              {(courses ?? []).map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
-              ))}
-            </Select>
-            <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, title: event.target.value }))} placeholder="Titulo de la tarea" value={assignmentForm.title} />
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueDate: event.target.value }))} type="date" value={assignmentForm.dueDate} />
-              <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueTime: event.target.value }))} type="time" value={assignmentForm.dueTime} />
-            </div>
-            <Textarea onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Instruccion o criterio de evaluacion" value={assignmentForm.instruction} />
-            <div className="grid gap-3 rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            className="flex w-full max-w-3xl flex-col overflow-hidden rounded-[22px] border border-[#d8e2f0] bg-[#f8fbff] shadow-[0_24px_70px_rgba(15,23,42,0.18)] max-h-[92vh]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Header banner */}
+            <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#1d4ed8] to-[#3b82f6] px-5 py-5 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Archivo adjunto</p>
-                  <p className="mt-1 text-sm text-[#536277]">
-                    Sube una o varias guias, plantillas o recursos para esta tarea.
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">
+                    {assignmentForm.assignmentId ? "Editando material" : "Nuevo material"}
                   </p>
+                  <h3 className="mt-1 text-xl font-black leading-tight text-white sm:text-2xl">
+                    {assignmentForm.title || (assignmentForm.assignmentId ? "Sin título" : "Material sin título")}
+                  </h3>
+                  {assignmentForm.courseId ? (
+                    <p className="mt-1 text-[11px] text-white/70">
+                      {(courses ?? []).find((c) => c.id === assignmentForm.courseId)?.title ?? "Curso seleccionado"}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-white/50">Selecciona un curso abajo</p>
+                  )}
                 </div>
-                {assignmentForm.attachments.length ? (
-                  <span className="rounded-full border border-[#d7e0ea] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#435066]">
-                    {assignmentForm.attachments.length} adjunto{assignmentForm.attachments.length === 1 ? "" : "s"}
-                  </span>
-                ) : null}
+                <button
+                  className="shrink-0 rounded-xl border border-white/25 bg-white/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/25"
+                  onClick={closeModal}
+                  type="button"
+                >
+                  Cerrar
+                </button>
               </div>
-              <input
-                accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv"
-                className="block w-full text-sm text-[#435066] file:mr-4 file:rounded-xl file:border-0 file:bg-[#eef4ff] file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-[#1d4ed8] hover:file:bg-[#dbeafe]"
-                disabled={submitting}
-                onChange={async (event) => {
-                  const files = Array.from(event.target.files ?? []);
-                  if (!files.length) {
-                    return;
-                  }
-
-                  try {
-                    setSubmitting(true);
-                    setActionError("");
-                    const uploads = await Promise.all(files.map((file) => uploadAdminAsset(undefined, file, "assignment-file")));
-                    setAssignmentForm((current) => {
-                      const nextAttachments = [...(current.attachments ?? [])];
-
-                      uploads.forEach((asset, index) => {
-                        nextAttachments.push({
-                          id: createAttachmentId(),
-                          fileKey: asset.key ?? "",
-                          fileName: asset.fileName ?? files[index].name,
-                          fileType: asset.contentType ?? files[index].type,
-                          fileUploadedAt: new Date().toISOString(),
-                          fileExpiresAt: "",
-                          fileUrl: asset.url ?? "",
-                        });
-                      });
-
-                      return {
-                        ...current,
-                        attachments: nextAttachments,
-                        fileKey: nextAttachments[0]?.fileKey ?? "",
-                        fileName: nextAttachments[0]?.fileName ?? "",
-                        fileType: nextAttachments[0]?.fileType ?? "",
-                        fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
-                        fileUrl: nextAttachments[0]?.fileUrl ?? "",
-                      };
-                    });
-                  } catch (uploadError) {
-                    setActionError(uploadError.message);
-                  } finally {
-                    setSubmitting(false);
-                    event.target.value = "";
-                  }
-                }}
-                multiple
-                type="file"
-              />
-              {assignmentForm.attachments.length ? (
-                <div className="grid gap-2">
-                  {assignmentForm.attachments.map((attachment) => (
-                    <div key={attachment.id} className="flex flex-col gap-2 rounded-[14px] border border-[#d7e0ea] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[#172033]">{attachment.fileName}</p>
-                        <p className="mt-1 text-[11px] text-[#6b7a90]">
-                          {attachment.fileUploadedAt ? `cargado ${formatDateTime(attachment.fileUploadedAt)}` : "Adjunto listo"}
-                        </p>
-                      </div>
-                      <SecondaryButton
-                        className="w-full sm:w-auto"
-                        onClick={() =>
-                          setAssignmentForm((current) => {
-                            const nextAttachments = (current.attachments ?? []).filter((item) => item.id !== attachment.id);
-                            return {
-                              ...current,
-                              attachments: nextAttachments,
-                              fileKey: nextAttachments[0]?.fileKey ?? "",
-                              fileName: nextAttachments[0]?.fileName ?? "",
-                              fileType: nextAttachments[0]?.fileType ?? "",
-                              fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
-                              fileUrl: nextAttachments[0]?.fileUrl ?? "",
-                            };
-                          })
-                        }
-                        type="button"
-                      >
-                        Quitar
-                      </SecondaryButton>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <ActionButton disabled={submitting} type="submit">
-                {submitting ? "Guardando..." : assignmentForm.assignmentId ? "Guardar cambios" : "Crear asignacion"}
-              </ActionButton>
               {assignmentForm.assignmentId ? (
-                <SecondaryButton disabled={submitting} onClick={handleAssignmentDelete} type="button">
-                  Eliminar
-                </SecondaryButton>
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
+                  Publicado · editable
+                </span>
               ) : null}
-              <SecondaryButton onClick={closeModal} type="button">
-                Cancelar
-              </SecondaryButton>
             </div>
-          </form>
-        </ModalShell>
+
+            {/* Timeline form body */}
+            <form className="min-h-0 flex-1 overflow-y-auto" onSubmit={handleAssignmentSubmit}>
+              <div className="px-5 py-5 sm:px-6 sm:py-6">
+
+                {/* Step 1 — Curso */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1d4ed8] text-[11px] font-black text-white">1</div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#c6d4ec] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#1d4ed8]">Curso</p>
+                    <Select onChange={(event) => setAssignmentForm((current) => ({ ...current, courseId: event.target.value }))} value={assignmentForm.courseId}>
+                      <option value="">Selecciona un curso</option>
+                      {(courses ?? []).map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.title}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Step 2 — Contenido */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1d4ed8] text-[11px] font-black text-white">2</div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#c6d4ec] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#1d4ed8]">Contenido</p>
+                    <input
+                      className="block w-full rounded-[14px] border border-[#d8e2f0] bg-white px-4 py-3 text-lg font-semibold text-[#172033] placeholder-[#b0bfcf] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#1d4ed8]/15 mb-3"
+                      onChange={(event) => setAssignmentForm((current) => ({ ...current, title: event.target.value }))}
+                      placeholder="Título del material"
+                      value={assignmentForm.title}
+                    />
+                    <Textarea onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Guía, instrucción o contexto para el estudiante" value={assignmentForm.instruction} />
+                  </div>
+                </div>
+
+                {/* Step 3 — Fecha límite */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#c6d4ec] bg-white text-[11px] font-black text-[#6b7a90]">3</div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#c6d4ec] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Fecha límite <span className="font-normal normal-case tracking-normal opacity-60">— opcional</span></p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueDate: event.target.value }))} type="date" value={assignmentForm.dueDate} />
+                      <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueTime: event.target.value }))} type="time" value={assignmentForm.dueTime} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 4 — Archivos */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#c6d4ec] bg-white text-[11px] font-black text-[#6b7a90]">4</div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Archivos <span className="font-normal normal-case tracking-normal opacity-60">— opcional</span></p>
+                    <label className="flex cursor-pointer flex-col items-center gap-2 rounded-[16px] border-2 border-dashed border-[#c6d4ec] bg-[#f7f9fc] px-4 py-5 text-center transition hover:border-[#93b4e8] hover:bg-[#eef4ff]">
+                      <svg className="h-7 w-7 text-[#8899b0]" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      </svg>
+                      <span className="text-sm font-semibold text-[#536277]">Subir archivos</span>
+                      <span className="text-[11px] text-[#8899b0]">PDF, DOCX, XLSX, PPTX, TXT, CSV</span>
+                      <input
+                        accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv"
+                        className="sr-only"
+                        disabled={submitting}
+                        onChange={async (event) => {
+                          const files = Array.from(event.target.files ?? []);
+                          if (!files.length) return;
+                          try {
+                            setSubmitting(true);
+                            setActionError("");
+                            const uploads = await Promise.all(files.map((file) => uploadAdminAsset(undefined, file, "assignment-file")));
+                            setAssignmentForm((current) => {
+                              const nextAttachments = [...(current.attachments ?? [])];
+                              uploads.forEach((asset, index) => {
+                                nextAttachments.push({
+                                  id: createAttachmentId(),
+                                  fileKey: asset.key ?? "",
+                                  fileName: asset.fileName ?? files[index].name,
+                                  fileType: asset.contentType ?? files[index].type,
+                                  fileUploadedAt: new Date().toISOString(),
+                                  fileExpiresAt: "",
+                                  fileUrl: asset.url ?? "",
+                                });
+                              });
+                              return {
+                                ...current,
+                                attachments: nextAttachments,
+                                fileKey: nextAttachments[0]?.fileKey ?? "",
+                                fileName: nextAttachments[0]?.fileName ?? "",
+                                fileType: nextAttachments[0]?.fileType ?? "",
+                                fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
+                                fileUrl: nextAttachments[0]?.fileUrl ?? "",
+                              };
+                            });
+                          } catch (uploadError) {
+                            setActionError(uploadError.message);
+                          } finally {
+                            setSubmitting(false);
+                            event.target.value = "";
+                          }
+                        }}
+                        multiple
+                        type="file"
+                      />
+                    </label>
+
+                    {assignmentForm.attachments.length ? (
+                      <div className="mt-3 grid gap-2">
+                        {assignmentForm.attachments.map((attachment) => (
+                          <div key={attachment.id} className="flex items-center gap-3 rounded-[14px] border border-[#d7e0ea] bg-white px-3 py-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eef4ff]">
+                              <svg className="h-4 w-4 text-[#1d4ed8]" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-semibold text-[#172033]">{attachment.fileName}</p>
+                              <p className="text-[10px] text-[#6b7a90]">
+                                {attachment.fileUploadedAt ? `Cargado ${formatDateTime(attachment.fileUploadedAt)}` : "Listo para publicar"}
+                              </p>
+                            </div>
+                            <button
+                              className="shrink-0 rounded-lg border border-[#d7e0ea] bg-[#f7f9fc] px-2.5 py-1 text-[10px] font-semibold text-[#536277] transition hover:bg-[#fee2e2] hover:text-[#dc2626] hover:border-[#fecaca]"
+                              onClick={() =>
+                                setAssignmentForm((current) => {
+                                  const nextAttachments = (current.attachments ?? []).filter((item) => item.id !== attachment.id);
+                                  return {
+                                    ...current,
+                                    attachments: nextAttachments,
+                                    fileKey: nextAttachments[0]?.fileKey ?? "",
+                                    fileName: nextAttachments[0]?.fileName ?? "",
+                                    fileType: nextAttachments[0]?.fileType ?? "",
+                                    fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
+                                    fileUrl: nextAttachments[0]?.fileUrl ?? "",
+                                  };
+                                })
+                              }
+                              type="button"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky footer */}
+              <div className="sticky bottom-0 border-t border-[#d8e2f0] bg-[#f8fbff]/96 px-5 py-4 backdrop-blur sm:px-6">
+                {actionError ? <p className="mb-3 text-sm text-[#dc2626]">{actionError}</p> : null}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <ActionButton disabled={submitting} type="submit">
+                      {submitting ? "Guardando..." : assignmentForm.assignmentId ? "Guardar cambios" : "Publicar material"}
+                    </ActionButton>
+                    <SecondaryButton onClick={closeModal} type="button">
+                      Cancelar
+                    </SecondaryButton>
+                  </div>
+                  {assignmentForm.assignmentId ? (
+                    <SecondaryButton disabled={submitting} onClick={handleAssignmentDelete} type="button">
+                      Eliminar material
+                    </SecondaryButton>
+                  ) : null}
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
 
       {modal === "enrollment" ? (
-        <ModalShell
-          onClose={closeModal}
-          subtitle="Solo puedes crear o editar matriculas de estudiantes dentro de tus cursos asignados."
-          title={enrollmentForm.id ? "Gestionar matricula" : "Nueva matricula"}
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2 backdrop-blur-[8px] sm:px-4 sm:py-4"
+          onClick={closeModal}
+          role="presentation"
         >
-          <form className="grid gap-4" onSubmit={handleEnrollmentSubmit}>
-            {!enrollmentForm.id ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, userId: event.target.value }))} value={enrollmentForm.userId}>
-                  <option value="">Selecciona un estudiante</option>
-                  {(enrollmentsView?.studentOptions ?? []).map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.fullName} · {student.email}
-                    </option>
-                  ))}
-                </Select>
-                <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, courseId: event.target.value }))} value={enrollmentForm.courseId}>
-                  <option value="">Selecciona un curso</option>
-                  {teacherCourseOptions.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.title}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            ) : null}
-
-            {!enrollmentForm.id && !teacherCourseOptions.length ? (
-              <p className="text-sm leading-6 text-[#617085]">
-                Este docente aun no tiene cursos asignados. Asigna al menos un curso desde administracion para habilitar nuevas matriculas.
-              </p>
-            ) : null}
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, status: event.target.value }))} value={enrollmentForm.status}>
-                <option value="active">active</option>
-                <option value="paused">paused</option>
-                <option value="completed">completed</option>
-                <option value="cancelled">cancelled</option>
-              </Select>
-              {enrollmentForm.id ? (
-                <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, accessExpiresAt: event.target.value }))} placeholder="2026-12-31T23:59:59.000Z" value={enrollmentForm.accessExpiresAt} />
-              ) : (
-                <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, accessDays: event.target.value }))} placeholder="45" value={enrollmentForm.accessDays} />
-              )}
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, progressPercent: event.target.value }))} placeholder="Progreso %" value={enrollmentForm.progressPercent} />
-              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, points: event.target.value }))} placeholder="Puntos" value={enrollmentForm.points} />
-              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, streakDays: event.target.value }))} placeholder="Racha" value={enrollmentForm.streakDays} />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, passingThreshold: event.target.value }))} placeholder="Umbral de aprobacion % (ej. 80)" value={enrollmentForm.passingThreshold} />
-              {enrollmentForm.id ? (
-                <select
-                  className="rounded-[var(--radius-input)] border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#dbeafe]"
-                  value={enrollmentForm.completionStatus}
-                  onChange={(event) => setEnrollmentForm((current) => ({ ...current, completionStatus: event.target.value }))}
+          <div
+            className="flex w-full max-w-2xl flex-col overflow-hidden rounded-[22px] border border-[#d8e2f0] bg-[#f8fbff] shadow-[0_24px_70px_rgba(15,23,42,0.18)] max-h-[92vh]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Header */}
+            <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#059669] to-[#10b981] px-5 py-5 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">
+                    {enrollmentForm.id ? "Editando matrícula" : "Nueva matrícula"}
+                  </p>
+                  <h3 className="mt-1 text-xl font-black leading-tight text-white sm:text-2xl">
+                    {enrollmentForm.id
+                      ? ((enrollmentsView?.studentOptions ?? []).find((s) => s.id === enrollmentForm.userId)?.fullName ?? "Estudiante")
+                      : "Registrar acceso a curso"}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-white/60">
+                    {enrollmentForm.courseId
+                      ? (teacherCourseOptions.find((c) => c.id === enrollmentForm.courseId)?.title ?? "Curso seleccionado")
+                      : "Elige estudiante y curso abajo"}
+                  </p>
+                </div>
+                <button
+                  className="shrink-0 rounded-xl border border-white/25 bg-white/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/25"
+                  onClick={closeModal}
+                  type="button"
                 >
-                  <option value="in_progress">En progreso</option>
-                  <option value="passed">Aprobado</option>
-                  <option value="failed">No aprobado</option>
-                </select>
-              ) : null}
-            </div>
-
-            <label className="flex items-center gap-3 text-sm text-[#172033]">
-              <input checked={enrollmentForm.gamificationEnabled} onChange={(event) => setEnrollmentForm((current) => ({ ...current, gamificationEnabled: event.target.checked }))} type="checkbox" />
-              Activar gamificacion para esta matricula
-            </label>
-
-            <div className="flex flex-wrap gap-3">
-              <ActionButton disabled={submitting} type="submit">
-                {submitting ? "Guardando..." : enrollmentForm.id ? "Guardar cambios" : "Crear matricula"}
-              </ActionButton>
+                  Cerrar
+                </button>
+              </div>
               {enrollmentForm.id ? (
-                <SecondaryButton disabled={submitting} onClick={handleEnrollmentDelete} type="button">
-                  Eliminar
-                </SecondaryButton>
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white">
+                  <span className={`h-1.5 w-1.5 rounded-full ${enrollmentForm.status === "active" ? "bg-[#4ade80]" : "bg-white/40"}`} />
+                  {enrollmentForm.status === "active" ? "Activa" : enrollmentForm.status === "paused" ? "Pausada" : enrollmentForm.status === "completed" ? "Completada" : "Cancelada"}
+                </span>
               ) : null}
-              <SecondaryButton onClick={closeModal} type="button">
-                Cancelar
-              </SecondaryButton>
             </div>
-          </form>
-        </ModalShell>
+
+            {/* Timeline form */}
+            <form className="min-h-0 flex-1 overflow-y-auto" onSubmit={handleEnrollmentSubmit}>
+              <div className="px-5 py-5 sm:px-6 sm:py-6">
+
+                {/* Step 1 — Participante (only new) */}
+                {!enrollmentForm.id ? (
+                  <div className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#059669] text-[11px] font-black text-white">1</div>
+                      <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#a7f3d0] to-transparent" />
+                    </div>
+                    <div className="min-w-0 flex-1 pb-6">
+                      <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#059669]">Participante</p>
+                      <p className="mb-3 text-xs text-[#6b7a90]">¿Quién accede y a qué curso?</p>
+                      {!teacherCourseOptions.length ? (
+                        <div className="rounded-[14px] border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3 text-sm text-[#617085]">
+                          No tienes cursos asignados. Solicita al administrador que te asigne un curso para habilitar matrículas.
+                        </div>
+                      ) : (
+                        <div className="grid gap-3">
+                          <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, userId: event.target.value }))} value={enrollmentForm.userId}>
+                            <option value="">— Estudiante —</option>
+                            {(enrollmentsView?.studentOptions ?? []).map((student) => (
+                              <option key={student.id} value={student.id}>
+                                {student.fullName} · {student.email}
+                              </option>
+                            ))}
+                          </Select>
+                          <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, courseId: event.target.value }))} value={enrollmentForm.courseId}>
+                            <option value="">— Curso —</option>
+                            {teacherCourseOptions.map((course) => (
+                              <option key={course.id} value={course.id}>
+                                {course.title}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Step 2 — Acceso */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#059669] text-[11px] font-black text-white">
+                      {enrollmentForm.id ? "1" : "2"}
+                    </div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#a7f3d0] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#059669]">Acceso</p>
+                    <p className="mb-3 text-xs text-[#6b7a90]">Estado de la matrícula y duración del acceso al curso.</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Estado</label>
+                        <Select onChange={(event) => setEnrollmentForm((current) => ({ ...current, status: event.target.value }))} value={enrollmentForm.status}>
+                          <option value="active">Activa — estudiante tiene acceso</option>
+                          <option value="paused">Pausada — acceso suspendido</option>
+                          <option value="completed">Completada — ciclo finalizado</option>
+                          <option value="cancelled">Cancelada — sin acceso</option>
+                        </Select>
+                      </div>
+                      <div>
+                        {enrollmentForm.id ? (
+                          <>
+                            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Vence el</label>
+                            <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, accessExpiresAt: event.target.value }))} placeholder="ej. 2026-12-31T23:59:59Z" value={enrollmentForm.accessExpiresAt} />
+                          </>
+                        ) : (
+                          <>
+                            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Días de acceso</label>
+                            <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, accessDays: event.target.value }))} placeholder="ej. 45" value={enrollmentForm.accessDays} />
+                            <p className="mt-1 text-[10px] text-[#8899b0]">Desde hoy, ¿cuántos días dura el acceso?</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3 — Progreso */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#a7f3d0] bg-white text-[11px] font-black text-[#059669]">
+                      {enrollmentForm.id ? "2" : "3"}
+                    </div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#a7f3d0] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Progreso académico <span className="font-normal normal-case tracking-normal opacity-60">— opcional</span></p>
+                    <p className="mb-3 text-xs text-[#6b7a90]">Registro manual del avance. Puede actualizarse desde el sistema de seguimiento.</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Avance actual (%)</label>
+                        <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, progressPercent: event.target.value }))} placeholder="0 – 100" value={enrollmentForm.progressPercent} />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Nota mínima para aprobar (%)</label>
+                        <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, passingThreshold: event.target.value }))} placeholder="ej. 80" value={enrollmentForm.passingThreshold} />
+                      </div>
+                    </div>
+                    {enrollmentForm.id ? (
+                      <div className="mt-3">
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Resultado final</label>
+                        <select
+                          className="w-full rounded-[14px] border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#059669] focus:ring-2 focus:ring-[#a7f3d0]"
+                          onChange={(event) => setEnrollmentForm((current) => ({ ...current, completionStatus: event.target.value }))}
+                          value={enrollmentForm.completionStatus}
+                        >
+                          <option value="in_progress">En curso — aún no finaliza</option>
+                          <option value="passed">Aprobado — superó el umbral</option>
+                          <option value="failed">No aprobado — no alcanzó el umbral</option>
+                        </select>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Step 4 — Gamificación */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#a7f3d0] bg-white text-[11px] font-black text-[#059669]">
+                      {enrollmentForm.id ? "3" : "4"}
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Gamificación <span className="font-normal normal-case tracking-normal opacity-60">— opcional</span></p>
+                    <p className="mb-3 text-xs text-[#6b7a90]">Sistema de puntos y racha de días consecutivos de actividad.</p>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-[14px] border border-[#d7e0ea] bg-white px-4 py-3 transition hover:bg-[#f0fdf4]">
+                      <input
+                        checked={enrollmentForm.gamificationEnabled}
+                        className="h-4 w-4 accent-[#059669]"
+                        onChange={(event) => setEnrollmentForm((current) => ({ ...current, gamificationEnabled: event.target.checked }))}
+                        type="checkbox"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-[#172033]">Activar gamificación</p>
+                        <p className="text-[11px] text-[#6b7a90]">El estudiante acumula puntos y puede ver su racha de actividad</p>
+                      </div>
+                    </label>
+                    {enrollmentForm.gamificationEnabled ? (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Puntos acumulados</label>
+                          <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, points: event.target.value }))} placeholder="0" value={enrollmentForm.points} />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Racha (días seguidos)</label>
+                          <Input onChange={(event) => setEnrollmentForm((current) => ({ ...current, streakDays: event.target.value }))} placeholder="0" value={enrollmentForm.streakDays} />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky footer */}
+              <div className="sticky bottom-0 border-t border-[#d8e2f0] bg-[#f8fbff]/96 px-5 py-4 backdrop-blur sm:px-6">
+                {actionError ? <p className="mb-3 text-sm text-[#dc2626]">{actionError}</p> : null}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <ActionButton disabled={submitting} type="submit">
+                      {submitting ? "Guardando..." : enrollmentForm.id ? "Guardar cambios" : "Crear matrícula"}
+                    </ActionButton>
+                    <SecondaryButton onClick={closeModal} type="button">
+                      Cancelar
+                    </SecondaryButton>
+                  </div>
+                  {enrollmentForm.id ? (
+                    <SecondaryButton disabled={submitting} onClick={handleEnrollmentDelete} type="button">
+                      Eliminar matrícula
+                    </SecondaryButton>
+                  ) : null}
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
 
       {modal === "support" ? (

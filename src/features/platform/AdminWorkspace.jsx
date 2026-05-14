@@ -3,6 +3,7 @@ import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX, extractEmbedUrl } from "../..
 import { MarkdownContent } from "../../shared/MarkdownContent";
 import {
   ActionButton,
+  CompactBand,
   EmptyState,
   FilterInput,
   Input,
@@ -15,12 +16,14 @@ import {
   SectionToolbar,
   Select,
   SmallStat,
+  StatusPill,
   Textarea,
 } from "./components/admin/AdminUI";
 import { getEmbedDescriptor } from "./embedUtils";
 import { CatalogSection } from "./sections/CatalogSection";
 import { getLearningPathThemeClasses, normalizeLearningPathItem } from "./learningPath";
 import { IdentitySection } from "./sections/IdentitySection";
+import { LandingEditorSection } from "./sections/LandingEditorSection";
 import { PeopleSection } from "./sections/PeopleSection";
 import { AdminSopsSection } from "./SopsWorkspaceV2";
 import { adminNavigationGroups, adminViewIcons, adminViewLabels } from "./adminNavigation";
@@ -92,6 +95,36 @@ const initialUserForm = {
 };
 
 const roleOptions = ["student", "teacher", "admin"];
+
+function listToLines(value = []) {
+  return Array.isArray(value) ? value.filter(Boolean).join("\n") : String(value ?? "");
+}
+
+function linesToList(value = "") {
+  return String(value ?? "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function metricsToLines(value = []) {
+  return Array.isArray(value)
+    ? value
+        .map((item) => [item?.label, item?.value, item?.description].map((part) => String(part ?? "").trim()).join(" | "))
+        .join("\n")
+    : "";
+}
+
+function linesToMetrics(value = "") {
+  return String(value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label = "", metricValue = "", description = ""] = line.split("|").map((part) => part.trim());
+      return { label, value: metricValue, description };
+    });
+}
 
 function formatRolesLabel(roles = [], fallbackRole = "") {
   const values = Array.isArray(roles) && roles.length ? roles : fallbackRole ? [fallbackRole] : [];
@@ -196,6 +229,46 @@ const initialRuleDraft = {
 function normalizeLandingState(landing = {}) {
   return {
     ...landing,
+    // Navegación
+    nav: Array.isArray(landing?.nav)
+      ? landing.nav.join(", ")
+      : "Inicio, Sobre nosotros, Servicios, Impacto, Testimonios, Contacto",
+    // Sobre nosotros
+    benefits: Array.isArray(landing?.benefits) && landing.benefits.length
+      ? landing.benefits.join("\n")
+      : "Alianza con centros educativos y apertura para jovenes independientes.\nPreparacion orientada a certificaciones internacionales con valor real de empleabilidad.\nImpacto social concreto para reducir brechas de acceso a formacion especializada.\nHerramientas practicas que amplian oportunidades dentro y fuera de Limon.",
+    // Servicios
+    servicesTitle: landing?.servicesTitle ?? "Nuestros servicios",
+    subscriptionLabel: landing?.subscriptionLabel ?? "",
+    // Testimonios / Confianza
+    trustTitle: landing?.trustTitle ?? "Red de confianza",
+    trustBody: landing?.trustBody ?? "",
+    // Contacto
+    contactTitle: landing?.contactTitle ?? "Contacto",
+    // Convenios
+    institutionsCarouselTitle: landing?.institutionsCarouselTitle ?? "Instituciones con convenio",
+    institutionsCarouselLabel: landing?.institutionsCarouselLabel ?? "Convenios activos",
+    institutionsCarouselBody:
+      landing?.institutionsCarouselBody ??
+      "Centros educativos y organizaciones aliadas que trabajan con Go Beyond para ampliar oportunidades de formacion y certificacion.",
+    // Hero CTAs
+    heroPrimaryCtaLabel: landing?.heroPrimaryCtaLabel ?? "Empezar ahora",
+    heroSecondaryCtaLabel: landing?.heroSecondaryCtaLabel ?? "Explorar catalogo",
+    // Cursos
+    coursesHeading: landing?.coursesHeading ?? "Creados para el Impacto Real.",
+    courseResultsLabel: landing?.courseResultsLabel ?? "Resultados:",
+    // Modalidades
+    participationCostLabel: landing?.participationCostLabel ?? "Costo",
+    participationCloseLabel: landing?.participationCloseLabel ?? "Cierre",
+    participationDetailsEyebrow: landing?.participationDetailsEyebrow ?? "Mas detalles",
+    // Noticias
+    newsTitle: landing?.newsTitle ?? "Noticias",
+    newsArchiveLabel: landing?.newsArchiveLabel ?? "Ver mas noticias",
+    // Testimonios
+    testimonialsCarouselLabel: landing?.testimonialsCarouselLabel ?? "Rotando testimonios",
+    // Tarjetas de programas
+    programCards: Array.isArray(landing?.programCards) ? landing.programCards : [],
+    // Contacto
     contactInfo: {
       emailLabel: landing?.contactInfo?.emailLabel ?? "Email",
       emailValue: landing?.contactInfo?.emailValue ?? "info@gobeyondcr.org",
@@ -209,6 +282,21 @@ function normalizeLandingState(landing = {}) {
       instagram: landing?.socialLinks?.instagram ?? "",
     },
   };
+}
+
+function normalizeParticipationSectionState(section = {}) {
+  return {
+    eyebrow: section?.eyebrow ?? "Modalidades",
+    title: section?.title ?? "Formacion de alto valor, con acceso real.",
+    description: section?.description ?? "",
+    footnote: section?.footnote ?? "",
+    detailsHref: section?.detailsHref ?? "",
+    detailsLabel: section?.detailsLabel ?? "Ver mas detalles y condiciones",
+  };
+}
+
+function normalizeParticipationOptionsState(options = []) {
+  return Array.isArray(options) ? options : [];
 }
 
 function normalizeSecuritySettingsState(settings = {}) {
@@ -441,6 +529,8 @@ export function AdminWorkspace({
   const [brandForm, setBrandForm] = useState(content.brand);
   const [heroForm, setHeroForm] = useState(content.hero);
   const [landingForm, setLandingForm] = useState(() => normalizeLandingState(content.landing));
+  const [participationSectionForm, setParticipationSectionForm] = useState(() => normalizeParticipationSectionState(content.participationSection));
+  const [participationOptionsForm, setParticipationOptionsForm] = useState(() => normalizeParticipationOptionsState(content.participationOptions));
   const [securitySettingsForm, setSecuritySettingsForm] = useState(() => normalizeSecuritySettingsState(content.securitySettings));
   const [sessionForm, setSessionForm] = useState(initialSessionForm);
   const [learningForm, setLearningForm] = useState(initialLearningForm);
@@ -495,6 +585,8 @@ export function AdminWorkspace({
     setBrandForm(content.brand);
     setHeroForm(content.hero);
     setLandingForm(normalizeLandingState(content.landing));
+    setParticipationSectionForm(normalizeParticipationSectionState(content.participationSection));
+    setParticipationOptionsForm(normalizeParticipationOptionsState(content.participationOptions));
     setSecuritySettingsForm(normalizeSecuritySettingsState(content.securitySettings));
   }, [content]);
 
@@ -1121,6 +1213,19 @@ export function AdminWorkspace({
   function normalizeLandingForm() {
     return {
       ...landingForm,
+      nav: String(landingForm.nav ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      benefits: String(landingForm.benefits ?? "")
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      servicesTitle: String(landingForm.servicesTitle ?? "").trim(),
+      subscriptionLabel: String(landingForm.subscriptionLabel ?? "").trim(),
+      trustTitle: String(landingForm.trustTitle ?? "").trim(),
+      trustBody: String(landingForm.trustBody ?? "").trim(),
+      contactTitle: String(landingForm.contactTitle ?? "").trim(),
       trustItems: String(landingForm.trustItems ?? "")
         .split(",")
         .map((item) => item.trim())
@@ -1137,7 +1242,36 @@ export function AdminWorkspace({
         linkedin: String(landingForm.socialLinks?.linkedin ?? "").trim(),
         instagram: String(landingForm.socialLinks?.instagram ?? "").trim(),
       },
+      programCards: (landingForm.programCards ?? []).map((card) => ({
+        ...card,
+        eyebrow: String(card.eyebrow ?? "").trim(),
+        title: String(card.title ?? "").trim(),
+        subtitle: String(card.subtitle ?? "").trim(),
+        description: String(card.description ?? "").trim(),
+        idealFor: String(card.idealFor ?? "").trim(),
+        ctaLabel: String(card.ctaLabel ?? "").trim(),
+        href: String(card.href ?? "").trim(),
+        availablePrograms: Array.isArray(card.availablePrograms) ? card.availablePrograms.filter(Boolean) : [],
+        includes: Array.isArray(card.includes) ? card.includes.filter(Boolean) : [],
+        benefits: Array.isArray(card.benefits) ? card.benefits.filter(Boolean) : [],
+        requirements: Array.isArray(card.requirements) ? card.requirements.filter(Boolean) : [],
+        tags: Array.isArray(card.tags) ? card.tags.filter(Boolean) : [],
+      })),
     };
+  }
+
+  function normalizeParticipationOptionsPayload() {
+    return (participationOptionsForm ?? []).map((option) => ({
+      ...option,
+      eyebrow: String(option.eyebrow ?? "").trim(),
+      title: String(option.title ?? "").trim(),
+      price: String(option.price ?? "").trim(),
+      priceNote: String(option.priceNote ?? "").trim(),
+      description: String(option.description ?? "").trim(),
+      ctaLabel: String(option.ctaLabel ?? "").trim(),
+      href: String(option.href ?? "").trim(),
+      highlights: Array.isArray(option.highlights) ? option.highlights.filter(Boolean) : [],
+    }));
   }
 
   function normalizeSecuritySettingsPayload() {
@@ -1573,6 +1707,42 @@ export function AdminWorkspace({
     );
   }
 
+  async function saveParticipation(event) {
+    event.preventDefault();
+    await runAction(
+      async () => {
+        await updateSection("participationSection", {
+          eyebrow: String(participationSectionForm.eyebrow ?? "").trim(),
+          title: String(participationSectionForm.title ?? "").trim(),
+          description: String(participationSectionForm.description ?? "").trim(),
+          footnote: String(participationSectionForm.footnote ?? "").trim(),
+          detailsHref: String(participationSectionForm.detailsHref ?? "").trim(),
+          detailsLabel: String(participationSectionForm.detailsLabel ?? "").trim(),
+        });
+        await updateSection("participationOptions", normalizeParticipationOptionsPayload());
+      },
+      "Modalidades actualizadas.",
+      { closeAfter: true }
+    );
+  }
+
+  function updateProgramCard(index, key, value) {
+    setLandingForm((current) => ({
+      ...current,
+      programCards: (current.programCards ?? []).map((card, cardIndex) =>
+        cardIndex === index ? { ...card, [key]: value } : card
+      ),
+    }));
+  }
+
+  function updateParticipationOption(index, key, value) {
+    setParticipationOptionsForm((current) =>
+      (current ?? []).map((option, optionIndex) =>
+        optionIndex === index ? { ...option, [key]: value } : option
+      )
+    );
+  }
+
   async function saveSecuritySettings() {
     await runAction(
       () => updateSection("securitySettings", normalizeSecuritySettingsPayload()),
@@ -1963,6 +2133,33 @@ export function AdminWorkspace({
     );
   }
 
+  async function handleSaveLandingAll() {
+    await runAction(
+      async () => {
+        await updateSection("brand", brandForm);
+        await updateSection("hero", heroForm);
+        await updateSection("landing", normalizeLandingForm());
+      },
+      "Landing page actualizado."
+    );
+  }
+
+  function renderLandingView() {
+    return (
+      <LandingEditorSection
+        landingForm={landingForm}
+        heroForm={heroForm}
+        brandForm={brandForm}
+        content={content}
+        setLandingForm={setLandingForm}
+        setHeroForm={setHeroForm}
+        setBrandForm={setBrandForm}
+        onSaveAll={handleSaveLandingAll}
+        onOpenAdvancedForm={() => openModal("landing")}
+      />
+    );
+  }
+
   function renderCatalogView() {
     return (
       <CatalogSection
@@ -2111,113 +2308,146 @@ export function AdminWorkspace({
     const followUpCount = filteredQueueItems.filter((item) => item.attention === "seguimiento").length;
 
     return (
-      <div className="grid gap-6">
-        <SectionCard
-          title="Queue operativa"
-          description="Una bandeja unica para revisar trabajo pendiente de cuentas, solicitudes, soporte, comunidad y moderacion sin saltar entre modulos en cada paso."
-        >
-          <div className="grid gap-4 md:grid-cols-4">
-            <SmallStat label="En bandeja" value={filteredQueueItems.length} help="Elementos visibles con los filtros actuales." tone="accent" />
-            <SmallStat label="Criticos" value={criticalCount} help="Casos que bloquean acceso o requieren accion prioritaria." />
-            <SmallStat label="Nuevos" value={newCount} help="Entradas nuevas que aun no reciben gestion." />
-            <SmallStat label="Seguimiento" value={followUpCount} help="Elementos en observacion o con proxima accion." />
+      <div className="grid gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación administrativa</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033] sm:text-3xl">Centro de administración</h1>
+          <p className="mt-1 text-sm leading-relaxed text-[#6b7a90]">
+            Monitorea solicitudes, comunidad, soporte y estado del sistema desde una sola vista.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <FilterInput
+              onChange={(event) => updateQueueFilter("query", event.target.value)}
+              placeholder="Buscar estudiantes, cursos o tickets…"
+              value={queueFilters.query}
+            />
           </div>
-        </SectionCard>
-
-        <SectionCard
-          title="Filtro de cola"
-          description="Combina filtros como haria una consola de operaciones: tipo de caso, estado, nivel de atencion y texto libre."
-        >
-          <SectionToolbar
-            helper={`${queueItems.length} items totales · ${filteredQueueItems.length} visibles · ${criticalCount} criticos con la vista actual.`}
-            action={
-              <SecondaryButton
-                onClick={() =>
-                  setQueueFilters({
-                    query: "",
-                    kind: "all",
-                    state: "all",
-                    attention: "all",
-                  })
-                }
-                type="button"
-              >
-                Limpiar filtros
-              </SecondaryButton>
-            }
+          <Select className="w-auto" value={queueFilters.kind} onChange={(event) => updateQueueFilter("kind", event.target.value)}>
+            <option value="all">Todo</option>
+            <option value="Cuenta">Cuentas</option>
+            <option value="Ticket">Tickets</option>
+            <option value="Solicitud">Solicitudes</option>
+            <option value="Hilo">Hilos</option>
+            <option value="Cambio SOP">SOPs</option>
+            <option value="Moderacion">Moderacion</option>
+          </Select>
+          <SecondaryButton
+            onClick={() => setQueueFilters({ query: "", kind: "all", state: "all", attention: "all" })}
+            type="button"
           >
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,0.7fr))]">
-              <FilterInput
-                onChange={(event) => updateQueueFilter("query", event.target.value)}
-                placeholder="Busca por usuario, correo, curso, ticket, solicitud, SOP o nota"
-                value={queueFilters.query}
-              />
-              <Select value={queueFilters.kind} onChange={(event) => updateQueueFilter("kind", event.target.value)}>
-                <option value="all">Todos los tipos</option>
-                <option value="Cuenta">Cuentas</option>
-                <option value="Ticket">Tickets</option>
-                <option value="Solicitud">Solicitudes</option>
-                <option value="Hilo">Hilos</option>
-                <option value="Cambio SOP">Cambios SOP</option>
-                <option value="Moderacion">Moderacion</option>
-              </Select>
-              <Select value={queueFilters.state} onChange={(event) => updateQueueFilter("state", event.target.value)}>
-                <option value="all">Todos los estados</option>
-                <option value="open">open</option>
-                <option value="in_progress">in_progress</option>
-                <option value="resolved">resolved</option>
-                <option value="closed">closed</option>
-                <option value="reviewing">reviewing</option>
-                <option value="waitlist">waitlist</option>
-                <option value="pending_verification">pending_verification</option>
-                <option value="password_expired">password_expired</option>
-                <option value="hidden">hidden</option>
-                <option value="pending_review">pending_review</option>
-                <option value="inactive">inactive</option>
-              </Select>
-              <Select value={queueFilters.attention} onChange={(event) => updateQueueFilter("attention", event.target.value)}>
-                <option value="all">Toda atencion</option>
-                <option value="critica">Critica</option>
-                <option value="nueva">Nueva</option>
-                <option value="seguimiento">Seguimiento</option>
-                <option value="operativa">Operativa</option>
-              </Select>
-            </div>
-          </SectionToolbar>
+            Limpiar
+          </SecondaryButton>
+        </div>
 
-          <ScrollArea>
-            <div className="grid gap-4">
-              {filteredQueueItems.length ? (
-                filteredQueueItems.map((item) => (
-                  <RowCard
-                    key={item.id}
-                    eyebrow={`${item.kind} · ${item.state} · ${item.attention}`}
-                    title={item.title}
-                    meta={item.subtitle}
-                    body={item.body}
-                  >
-                    <ActionButton onClick={() => handleQueueItemManage(item)} type="button">
-                      {item.manageLabel}
-                    </ActionButton>
-                    <SecondaryButton onClick={() => handleQueueItemOpenSection(item)} type="button">
-                      Abrir seccion
-                    </SecondaryButton>
-                    {item.kind === "Moderacion" ? (
-                      <SecondaryButton onClick={() => approveTestimonialSubmission(item.source)} type="button">
-                        Aprobar
-                      </SecondaryButton>
-                    ) : null}
-                  </RowCard>
-                ))
-              ) : (
-                <EmptyState
-                  title="No hay coincidencias en la queue"
-                  body="Ajusta los filtros o limpia la consulta para volver a ver toda la bandeja operativa."
-                />
-              )}
+        <CompactBand>
+          <SmallStat variant="band" label="Solicitudes" value={filteredQueueItems.length} help="En bandeja" />
+          <SmallStat variant="band" label="Críticos" value={criticalCount} help="Requieren acción" />
+          <SmallStat variant="band" label="Nuevos" value={newCount} help="Sin gestión aún" />
+          <SmallStat variant="band" label="Seguimiento" value={followUpCount} help="En observación" />
+        </CompactBand>
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.4fr)]">
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-t-[18px] border border-b-0 border-[#d8e2f0] bg-[#f8fafc] px-4 py-2.5">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Queue operativa</p>
+              <div className="flex gap-2">
+                <Select value={queueFilters.state} onChange={(event) => updateQueueFilter("state", event.target.value)}>
+                  <option value="all">Todos los estados</option>
+                  <option value="open">open</option>
+                  <option value="in_progress">in_progress</option>
+                  <option value="resolved">resolved</option>
+                  <option value="closed">closed</option>
+                  <option value="reviewing">reviewing</option>
+                  <option value="waitlist">waitlist</option>
+                  <option value="pending_verification">pending_verification</option>
+                  <option value="password_expired">password_expired</option>
+                  <option value="hidden">hidden</option>
+                  <option value="pending_review">pending_review</option>
+                  <option value="inactive">inactive</option>
+                </Select>
+                <Select value={queueFilters.attention} onChange={(event) => updateQueueFilter("attention", event.target.value)}>
+                  <option value="all">Toda atención</option>
+                  <option value="critica">Crítica</option>
+                  <option value="nueva">Nueva</option>
+                  <option value="seguimiento">Seguimiento</option>
+                  <option value="operativa">Operativa</option>
+                </Select>
+              </div>
             </div>
-          </ScrollArea>
-        </SectionCard>
+            <div className="overflow-hidden rounded-b-[18px] border border-[#d8e2f0] bg-white">
+              <ScrollArea>
+                {filteredQueueItems.length ? (
+                  filteredQueueItems.map((item) => (
+                    <RowCard
+                      density="compact"
+                      key={item.id}
+                      eyebrow={`${item.kind} · ${item.subtitle || ""}`}
+                      title={item.title}
+                      meta={item.body}
+                    >
+                      <StatusPill
+                        status={
+                          item.attention === "critica" ? "urgent"
+                          : item.attention === "nueva" ? "pending"
+                          : item.state === "resolved" ? "ready"
+                          : "progress"
+                        }
+                        label={item.attention === "critica" ? "Urgente" : item.attention === "nueva" ? "Pendiente" : String(item.state ?? "").replace(/_/g, " ")}
+                      />
+                      <ActionButton className="!py-1.5 !text-xs" onClick={() => handleQueueItemManage(item)} type="button">
+                        {item.manageLabel}
+                      </ActionButton>
+                      <SecondaryButton className="!py-1.5 !text-xs" onClick={() => handleQueueItemOpenSection(item)} type="button">
+                        Ver
+                      </SecondaryButton>
+                      {item.kind === "Moderacion" ? (
+                        <SecondaryButton className="!py-1.5 !text-xs" onClick={() => approveTestimonialSubmission(item.source)} type="button">
+                          Aprobar
+                        </SecondaryButton>
+                      ) : null}
+                    </RowCard>
+                  ))
+                ) : (
+                  <div className="px-4 py-6">
+                    <EmptyState
+                      title="No hay coincidencias en la queue"
+                      body="Ajusta los filtros o limpia la consulta para ver toda la bandeja."
+                    />
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          </div>
+
+          <div className="grid gap-4 content-start">
+            <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
+              <div className="border-b border-[#e8eef6] px-4 py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Resumen rápido</p>
+              </div>
+              <div className="divide-y divide-[#edf1f7] px-4">
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs text-[#536277]">Pendientes hoy</span>
+                  <span className="text-sm font-black text-[#172033]">{filteredQueueItems.filter(i => i.attention === "nueva").length}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs text-[#536277]">Casos críticos</span>
+                  <span className="text-sm font-black text-red-600">{criticalCount}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs text-[#536277]">En seguimiento</span>
+                  <span className="text-sm font-black text-[#172033]">{followUpCount}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs text-[#536277]">Total bandeja</span>
+                  <span className="text-sm font-black text-[#172033]">{queueItems.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -2551,9 +2781,10 @@ export function AdminWorkspace({
           onClose={closeModal}
         >
           <form className="grid gap-4" onSubmit={saveBrand}>
+            <p className="text-xs text-[#6b7a90] leading-relaxed">La descripción de Marca aparece en "Sobre nosotros" y como respaldo en la sección de Testimonios. El Hero del landing tiene su propia descripción independiente.</p>
             <Input value={brandForm.name} onChange={(event) => setBrandForm({ ...brandForm, name: event.target.value })} placeholder="Nombre del proyecto" />
-            <Input value={brandForm.tagline} onChange={(event) => setBrandForm({ ...brandForm, tagline: event.target.value })} placeholder="Tagline" />
-            <Textarea value={brandForm.description} onChange={(event) => setBrandForm({ ...brandForm, description: event.target.value })} placeholder="Descripcion" />
+            <Input value={brandForm.tagline} onChange={(event) => setBrandForm({ ...brandForm, tagline: event.target.value })} placeholder="Tagline (aparece en footer y como respaldo del título del Hero)" />
+            <Textarea value={brandForm.description} onChange={(event) => setBrandForm({ ...brandForm, description: event.target.value })} placeholder="Descripcion institucional (Sobre nosotros)" />
             <div className="flex gap-3">
               <ActionButton type="submit">Guardar marca</ActionButton>
               <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
@@ -2571,9 +2802,15 @@ export function AdminWorkspace({
           onClose={closeModal}
         >
           <form className="grid gap-4" onSubmit={saveHero}>
-            <Input value={heroForm.eyebrow} onChange={(event) => setHeroForm({ ...heroForm, eyebrow: event.target.value })} placeholder="Eyebrow" />
-            <Input value={heroForm.title} onChange={(event) => setHeroForm({ ...heroForm, title: event.target.value })} placeholder="Titulo" />
-            <Textarea value={heroForm.description} onChange={(event) => setHeroForm({ ...heroForm, description: event.target.value })} placeholder="Descripcion" />
+            <p className="text-xs text-[#6b7a90] leading-relaxed">Estos campos son exclusivos del landing page y no afectan la Marca. Si el título está vacío se usa el tagline de Marca como respaldo.</p>
+            <Input value={heroForm.eyebrow} onChange={(event) => setHeroForm({ ...heroForm, eyebrow: event.target.value })} placeholder="Eyebrow (encima del título)" />
+            <Input value={heroForm.title} onChange={(event) => setHeroForm({ ...heroForm, title: event.target.value })} placeholder="Título principal del Hero" />
+            <Textarea value={heroForm.description} onChange={(event) => setHeroForm({ ...heroForm, description: event.target.value })} placeholder="Descripción del Hero (independiente de la descripción de Marca)" />
+            <Textarea
+              value={metricsToLines(heroForm.metrics)}
+              onChange={(event) => setHeroForm({ ...heroForm, metrics: linesToMetrics(event.target.value) })}
+              placeholder="Metricas del hero: Etiqueta | Valor | Descripcion"
+            />
             <div className="flex gap-3">
               <ActionButton type="submit">Guardar hero</ActionButton>
               <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
@@ -2584,130 +2821,204 @@ export function AdminWorkspace({
     }
 
       if (modal === "landing") {
+        const setLanding = (key, value) => setLandingForm((f) => ({ ...f, [key]: value }));
+        const setContactInfo = (key, value) => setLandingForm((f) => ({ ...f, contactInfo: { ...f.contactInfo, [key]: value } }));
+        const setSocialLinks = (key, value) => setLandingForm((f) => ({ ...f, socialLinks: { ...f.socialLinks, [key]: value } }));
+
         return (
           <ModalShell
-            title="Editar narrativa institucional"
-            subtitle="Usa este editor para la historia principal, relevancia laboral y bloque de contacto. Las instituciones aliadas ahora se gestionan en su propia cabina."
+            title="Editar landing page"
+            subtitle="Todos los textos y etiquetas del sitio publico, organizados por seccion."
             onClose={closeModal}
+            size="wide"
           >
-            <form className="grid gap-4" onSubmit={saveLanding}>
-            <Input value={landingForm.aboutTitle} onChange={(event) => setLandingForm({ ...landingForm, aboutTitle: event.target.value })} placeholder="Titulo sobre nosotros" />
-            <Textarea value={landingForm.aboutBody} onChange={(event) => setLandingForm({ ...landingForm, aboutBody: event.target.value })} placeholder="Texto principal" />
-              <Textarea value={landingForm.aboutBodyTwo} onChange={(event) => setLandingForm({ ...landingForm, aboutBodyTwo: event.target.value })} placeholder="Texto secundario" />
-              <Textarea value={landingForm.relevanceBody} onChange={(event) => setLandingForm({ ...landingForm, relevanceBody: event.target.value })} placeholder="Texto de relevancia laboral" />
-              <Textarea value={landingForm.contactBody} onChange={(event) => setLandingForm({ ...landingForm, contactBody: event.target.value })} placeholder="Texto de contacto" />
-              <div className="grid gap-4 md:grid-cols-2">
-                <Input
-                  value={landingForm.contactInfo?.emailLabel ?? ""}
-                  onChange={(event) =>
-                    setLandingForm((current) => ({
-                      ...current,
-                      contactInfo: {
-                        ...current.contactInfo,
-                        emailLabel: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Etiqueta de email"
-                />
-                <Input
-                  value={landingForm.contactInfo?.emailValue ?? ""}
-                  onChange={(event) =>
-                    setLandingForm((current) => ({
-                      ...current,
-                      contactInfo: {
-                        ...current.contactInfo,
-                        emailValue: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="info@gobeyondcr.org"
-                />
-                <Input
-                  value={landingForm.contactInfo?.phoneLabel ?? ""}
-                  onChange={(event) =>
-                    setLandingForm((current) => ({
-                      ...current,
-                      contactInfo: {
-                        ...current.contactInfo,
-                        phoneLabel: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Etiqueta de telefono"
-                />
-                <Input
-                  value={landingForm.contactInfo?.phonePrompt ?? ""}
-                  onChange={(event) =>
-                    setLandingForm((current) => ({
-                      ...current,
-                      contactInfo: {
-                        ...current.contactInfo,
-                        phonePrompt: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Texto auxiliar del telefono"
-                />
+            <form className="grid gap-6" onSubmit={saveLanding}>
+
+              {/* ── NAVEGACIÓN ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Navegación</p>
+                <Input value={landingForm.nav ?? ""} onChange={(e) => setLanding("nav", e.target.value)} placeholder="Etiquetas de navegación, separadas por comas: Inicio, Sobre nosotros, ..." />
+                <p className="text-[11px] text-[#8899b0]">Escribe las etiquetas del menú separadas por coma. El orden importa.</p>
               </div>
-              <Input
-                value={landingForm.contactInfo?.phoneValue ?? ""}
-                onChange={(event) =>
-                  setLandingForm((current) => ({
-                    ...current,
-                    contactInfo: {
-                      ...current.contactInfo,
-                      phoneValue: event.target.value,
-                    },
-                  }))
-                }
-                placeholder="(+506) 8530 5317"
-              />
-              <div className="grid gap-4 md:grid-cols-2">
-                <Input
-                  value={landingForm.socialLinks?.facebook ?? ""}
-                  onChange={(event) =>
-                    setLandingForm((current) => ({
-                      ...current,
-                      socialLinks: {
-                        ...current.socialLinks,
-                        facebook: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Link de Facebook"
-                />
-                <Input
-                  value={landingForm.socialLinks?.linkedin ?? ""}
-                  onChange={(event) =>
-                    setLandingForm((current) => ({
-                      ...current,
-                      socialLinks: {
-                        ...current.socialLinks,
-                        linkedin: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Link de LinkedIn"
-                />
+
+              {/* ── HERO ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Hero — Botones</p>
+                <p className="text-[11px] text-[#8899b0]">El texto del hero (título, descripción) se edita en el modal "Hero". Aquí van los botones CTA.</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Input value={landingForm.heroPrimaryCtaLabel ?? ""} onChange={(e) => setLanding("heroPrimaryCtaLabel", e.target.value)} placeholder="Botón principal (Empezar ahora)" />
+                  <Input value={landingForm.heroSecondaryCtaLabel ?? ""} onChange={(e) => setLanding("heroSecondaryCtaLabel", e.target.value)} placeholder="Botón secundario (Explorar catálogo)" />
+                </div>
               </div>
-              <Input
-                value={landingForm.socialLinks?.instagram ?? ""}
-                onChange={(event) =>
-                  setLandingForm((current) => ({
-                    ...current,
-                    socialLinks: {
-                      ...current.socialLinks,
-                      instagram: event.target.value,
-                    },
-                  }))
-                }
-                placeholder="Link de Instagram"
-              />
+
+              {/* ── SOBRE NOSOTROS ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Sobre nosotros</p>
+                <Input value={landingForm.aboutTitle ?? ""} onChange={(e) => setLanding("aboutTitle", e.target.value)} placeholder="Etiqueta de sección (Sobre nosotros)" />
+                <Textarea value={landingForm.aboutBody ?? ""} onChange={(e) => setLanding("aboutBody", e.target.value)} placeholder="Párrafo principal" />
+                <Textarea value={landingForm.aboutBodyTwo ?? ""} onChange={(e) => setLanding("aboutBodyTwo", e.target.value)} placeholder="Párrafo secundario (panel derecho / Sobre nosotros)" />
+                <Textarea value={landingForm.benefits ?? ""} onChange={(e) => setLanding("benefits", e.target.value)} placeholder="Beneficios / bullets, uno por línea" />
+                <p className="text-[11px] text-[#8899b0]">Los beneficios aparecen como lista en la sección Sobre nosotros. Un punto por línea.</p>
+              </div>
+
+              {/* ── SERVICIOS ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Servicios</p>
+                <Input value={landingForm.servicesTitle ?? ""} onChange={(e) => setLanding("servicesTitle", e.target.value)} placeholder="Etiqueta de sección (Nuestros servicios)" />
+                <Input value={landingForm.subscriptionLabel ?? ""} onChange={(e) => setLanding("subscriptionLabel", e.target.value)} placeholder="Encabezado grande de servicios (Ruta de desarrollo continuo.)" />
+                <Textarea value={landingForm.relevanceBody ?? ""} onChange={(e) => setLanding("relevanceBody", e.target.value)} placeholder="Descripción de relevancia laboral" />
+              </div>
+
+              {/* ── PROGRAMAS Y CURSOS ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Programas y cursos</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Input value={landingForm.coursesTitle ?? ""} onChange={(e) => setLanding("coursesTitle", e.target.value)} placeholder="Etiqueta de sección (Programas y cursos)" />
+                  <Input value={landingForm.coursesHeading ?? ""} onChange={(e) => setLanding("coursesHeading", e.target.value)} placeholder="Encabezado (Creados para el Impacto Real.)" />
+                  <Input value={landingForm.courseResultsLabel ?? ""} onChange={(e) => setLanding("courseResultsLabel", e.target.value)} placeholder="Etiqueta de resultados (Resultados:)" />
+                </div>
+                {/* Program cards */}
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#748197]">Tarjetas de programas</p>
+                {(landingForm.programCards ?? []).map((card, index) => (
+                  <div key={card.id || index} className="grid gap-3 rounded-xl border border-[#dfe6ee] bg-white p-4">
+                    <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#8899b0]">Tarjeta {index + 1}</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Input value={card.eyebrow ?? ""} onChange={(e) => updateProgramCard(index, "eyebrow", e.target.value)} placeholder="Etiqueta (ej. Certificación Internacional)" />
+                      <Input value={card.title ?? ""} onChange={(e) => updateProgramCard(index, "title", e.target.value)} placeholder="Título del curso" />
+                    </div>
+                    <Input value={card.image ?? ""} onChange={(e) => updateProgramCard(index, "image", e.target.value)} placeholder="URL de imagen de portada (dejar vacío para gradiente)" />
+                    <Textarea value={card.description ?? ""} onChange={(e) => updateProgramCard(index, "description", e.target.value)} placeholder="Descripción (texto gris bajo el título)" />
+                    <Textarea value={card.relevance ?? ""} onChange={(e) => updateProgramCard(index, "relevance", e.target.value)} placeholder="¿Por qué es relevante? (texto blanco en recuadro)" />
+                    <Textarea value={listToLines(card.outcomes)} onChange={(e) => updateProgramCard(index, "outcomes", linesToList(e.target.value))} placeholder="Resultados, uno por línea (ej. Fundamentos reales de gestión)" />
+                    <Input value={card.certificationNote ?? ""} onChange={(e) => updateProgramCard(index, "certificationNote", e.target.value)} placeholder="Nota de certificación (ej. Certificación Propia de Go Beyond)" />
+                    <Input value={card.subtitle ?? ""} onChange={(e) => updateProgramCard(index, "subtitle", e.target.value)} placeholder="Subtítulo (opcional)" />
+                    <Textarea value={listToLines(card.availablePrograms)} onChange={(e) => updateProgramCard(index, "availablePrograms", linesToList(e.target.value))} placeholder="Programas disponibles, uno por línea" />
+                    <Textarea value={listToLines(card.includes)} onChange={(e) => updateProgramCard(index, "includes", linesToList(e.target.value))} placeholder="Incluye, uno por línea" />
+                    <Textarea value={listToLines(card.benefits)} onChange={(e) => updateProgramCard(index, "benefits", linesToList(e.target.value))} placeholder="Beneficios adicionales, uno por línea" />
+                    <Textarea value={listToLines(card.requirements)} onChange={(e) => updateProgramCard(index, "requirements", linesToList(e.target.value))} placeholder="Requisitos, uno por línea" />
+                    <Textarea value={card.idealFor ?? ""} onChange={(e) => updateProgramCard(index, "idealFor", e.target.value)} placeholder="Ideal para" />
+                    <Textarea value={listToLines(card.tags)} onChange={(e) => updateProgramCard(index, "tags", linesToList(e.target.value))} placeholder="Etiquetas, una por línea" />
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Input value={card.ctaLabel ?? ""} onChange={(e) => updateProgramCard(index, "ctaLabel", e.target.value)} placeholder="Texto del botón (ej. Aplicar →)" />
+                      <Input value={card.href ?? ""} onChange={(e) => updateProgramCard(index, "href", e.target.value)} placeholder="Enlace del botón" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── MODALIDADES (IMPACTO) ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Modalidades — Etiquetas</p>
+                <p className="text-[11px] text-[#8899b0]">El contenido de las modalidades (títulos, precios, descripción) se edita en el modal "Modalidades".</p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <Input value={landingForm.participationCostLabel ?? ""} onChange={(e) => setLanding("participationCostLabel", e.target.value)} placeholder="Etiqueta costo (Costo)" />
+                  <Input value={landingForm.participationCloseLabel ?? ""} onChange={(e) => setLanding("participationCloseLabel", e.target.value)} placeholder="Etiqueta cierre (Cierre)" />
+                  <Input value={landingForm.participationDetailsEyebrow ?? ""} onChange={(e) => setLanding("participationDetailsEyebrow", e.target.value)} placeholder="Etiqueta detalles (Más detalles)" />
+                </div>
+              </div>
+
+              {/* ── TESTIMONIOS Y CONFIANZA ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Testimonios y confianza</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Input value={landingForm.trustTitle ?? ""} onChange={(e) => setLanding("trustTitle", e.target.value)} placeholder="Etiqueta de sección (Red de confianza)" />
+                  <Input value={landingForm.testimonialTitle ?? ""} onChange={(e) => setLanding("testimonialTitle", e.target.value)} placeholder="Título principal (Testimonios)" />
+                  <Input value={landingForm.testimonialsCarouselLabel ?? ""} onChange={(e) => setLanding("testimonialsCarouselLabel", e.target.value)} placeholder="Etiqueta del carrusel" />
+                </div>
+                <Textarea value={landingForm.trustBody ?? ""} onChange={(e) => setLanding("trustBody", e.target.value)} placeholder="Párrafo introductorio de la sección Testimonios (si está vacío se usa la descripción de Marca)" />
+              </div>
+
+              {/* ── CONVENIOS / INSTITUCIONES ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Carrusel de instituciones</p>
+                <Input value={landingForm.institutionsCarouselTitle ?? ""} onChange={(e) => setLanding("institutionsCarouselTitle", e.target.value)} placeholder="Título del carrusel" />
+                <Input value={landingForm.institutionsCarouselLabel ?? ""} onChange={(e) => setLanding("institutionsCarouselLabel", e.target.value)} placeholder="Etiqueta de estado (Convenios activos)" />
+                <Textarea value={landingForm.institutionsCarouselBody ?? ""} onChange={(e) => setLanding("institutionsCarouselBody", e.target.value)} placeholder="Descripción del carrusel" />
+              </div>
+
+              {/* ── NOTICIAS ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Noticias</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Input value={landingForm.newsTitle ?? ""} onChange={(e) => setLanding("newsTitle", e.target.value)} placeholder="Título de sección (Noticias)" />
+                  <Input value={landingForm.newsArchiveLabel ?? ""} onChange={(e) => setLanding("newsArchiveLabel", e.target.value)} placeholder="Botón ver más (Ver más noticias)" />
+                </div>
+              </div>
+
+              {/* ── CONTACTO ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Contacto</p>
+                <Input value={landingForm.contactTitle ?? ""} onChange={(e) => setLanding("contactTitle", e.target.value)} placeholder="Etiqueta de sección (Contacto)" />
+                <Input value={landingForm.contactBody ?? ""} onChange={(e) => setLanding("contactBody", e.target.value)} placeholder="Texto introductorio de contacto" />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Input value={landingForm.contactInfo?.emailLabel ?? ""} onChange={(e) => setContactInfo("emailLabel", e.target.value)} placeholder="Etiqueta email (Email)" />
+                  <Input value={landingForm.contactInfo?.emailValue ?? ""} onChange={(e) => setContactInfo("emailValue", e.target.value)} placeholder="Dirección email" />
+                  <Input value={landingForm.contactInfo?.phoneLabel ?? ""} onChange={(e) => setContactInfo("phoneLabel", e.target.value)} placeholder="Etiqueta teléfono (Teléfono)" />
+                  <Input value={landingForm.contactInfo?.phonePrompt ?? ""} onChange={(e) => setContactInfo("phonePrompt", e.target.value)} placeholder="Texto auxiliar teléfono (Llámanos)" />
+                  <Input value={landingForm.contactInfo?.phoneValue ?? ""} onChange={(e) => setContactInfo("phoneValue", e.target.value)} placeholder="Número de teléfono" className="md:col-span-2" />
+                </div>
+              </div>
+
+              {/* ── REDES SOCIALES ── */}
+              <div className="grid gap-3 rounded-2xl border border-[#d7e0ea] bg-[#f8fbff] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#1d4ed8]">Redes sociales</p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <Input value={landingForm.socialLinks?.facebook ?? ""} onChange={(e) => setSocialLinks("facebook", e.target.value)} placeholder="URL Facebook" />
+                  <Input value={landingForm.socialLinks?.linkedin ?? ""} onChange={(e) => setSocialLinks("linkedin", e.target.value)} placeholder="URL LinkedIn" />
+                  <Input value={landingForm.socialLinks?.instagram ?? ""} onChange={(e) => setSocialLinks("instagram", e.target.value)} placeholder="URL Instagram" />
+                </div>
+              </div>
+
               <div className="flex gap-3">
-                <ActionButton type="submit">Guardar narrativa</ActionButton>
+                <ActionButton type="submit">Guardar landing page</ActionButton>
                 <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
               </div>
+            </form>
+          </ModalShell>
+        );
+      }
+
+    if (modal === "participation") {
+      return (
+        <ModalShell
+          title="Editar modalidades"
+          subtitle="Todo este contenido aparece en la seccion Modalidades del landing."
+          onClose={closeModal}
+        >
+          <form className="grid gap-4" onSubmit={saveParticipation}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input value={participationSectionForm.eyebrow} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, eyebrow: event.target.value })} placeholder="Etiqueta superior" />
+              <Input value={participationSectionForm.title} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, title: event.target.value })} placeholder="Titulo" />
+            </div>
+            <Textarea value={participationSectionForm.description} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, description: event.target.value })} placeholder="Descripcion" />
+            <Textarea value={participationSectionForm.footnote} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, footnote: event.target.value })} placeholder="Cierre" />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input value={participationSectionForm.detailsLabel} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, detailsLabel: event.target.value })} placeholder="Texto del enlace de detalles" />
+              <Input value={participationSectionForm.detailsHref} onChange={(event) => setParticipationSectionForm({ ...participationSectionForm, detailsHref: event.target.value })} placeholder="URL de detalles" />
+            </div>
+            <div className="grid gap-4 rounded-2xl border border-[#d7e0ea] bg-[#f8fafc] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#748197]">Opciones visibles</p>
+              {(participationOptionsForm ?? []).map((option, index) => (
+                <div key={option.id || index} className="grid gap-3 rounded-xl border border-[#dfe6ee] bg-white p-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Input value={option.eyebrow ?? ""} onChange={(event) => updateParticipationOption(index, "eyebrow", event.target.value)} placeholder="Etiqueta" />
+                    <Input value={option.title ?? ""} onChange={(event) => updateParticipationOption(index, "title", event.target.value)} placeholder="Titulo" />
+                    <Input value={option.price ?? ""} onChange={(event) => updateParticipationOption(index, "price", event.target.value)} placeholder="Costo" />
+                    <Input value={option.priceNote ?? ""} onChange={(event) => updateParticipationOption(index, "priceNote", event.target.value)} placeholder="Nota del costo" />
+                  </div>
+                  <Textarea value={option.description ?? ""} onChange={(event) => updateParticipationOption(index, "description", event.target.value)} placeholder="Descripcion" />
+                  <Textarea value={listToLines(option.highlights)} onChange={(event) => updateParticipationOption(index, "highlights", linesToList(event.target.value))} placeholder="Puntos destacados, uno por linea" />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Input value={option.ctaLabel ?? ""} onChange={(event) => updateParticipationOption(index, "ctaLabel", event.target.value)} placeholder="Texto del boton" />
+                    <Input value={option.href ?? ""} onChange={(event) => updateParticipationOption(index, "href", event.target.value)} placeholder="URL del boton" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <ActionButton type="submit">Guardar modalidades</ActionButton>
+              <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
+            </div>
           </form>
         </ModalShell>
       );
@@ -4056,35 +4367,19 @@ export function AdminWorkspace({
 
   return (
     <div className="grid gap-6">
-      <section className="overflow-hidden rounded-[20px] border border-[#1e293b] bg-[#111827] shadow-[0_18px_44px_rgba(15,23,42,0.18)]">
-        <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,24rem)] lg:items-end">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#9fb0c9]">
-              <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
-              Cabina administrativa
-            </div>
-            <h2 className="mt-5 text-[1.85rem] font-semibold leading-tight text-white sm:text-[2.15rem]">
-              Administracion GoBeyond
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9fb0c9]">
-              Todo cambio queda registrado en backend. Esta capa ordena la operacion con navegacion clara, busqueda superior y bloques mas faciles de escanear.
-            </p>
-          </div>
-
-          <div className="grid gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#9fb0c9]">Vista activa</p>
-            <p className="text-lg font-semibold text-white">{adminViewLabels[activeView]}</p>
-            <p className="text-sm leading-6 text-[#c2cfdf]">
-              {globalSearchQuery.trim()
-                ? "Busqueda focalizada sobre cursos, usuarios, matriculas, noticias y recursos internos."
-                : "Usa la navegacion lateral para cambiar de bloque y la queue para aterrizar casos puntuales."}
-            </p>
-          </div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación administrativa</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033] sm:text-3xl">Portal administrador</h1>
+          <p className="mt-0.5 text-sm text-[#6b7a90]">Monitorea solicitudes, comunidad, soporte y estado del sistema.</p>
         </div>
-      </section>
+        <span className="inline-flex items-center rounded-full border border-[#d8e2f0] bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#536277]">
+          {adminViewLabels[activeView]}
+        </span>
+      </div>
 
-      <section className="rounded-[18px] border border-[#d7e0ea] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
           <FilterInput
             onChange={(event) => {
               const nextQuery = event.target.value;
@@ -4093,56 +4388,42 @@ export function AdminWorkspace({
                 setActiveView("search");
               }
             }}
-            placeholder="Busqueda general: cursos, usuarios, matriculas, sesiones, noticias, instituciones..."
+            placeholder="Buscar estudiantes, cursos o tickets…"
             value={globalSearchQuery}
           />
-          <SecondaryButton
-            className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em]"
-            onClick={() => {
-              setGlobalSearchQuery("");
-              if (activeView === "search") {
-                setActiveView("queue");
-              }
-            }}
-            type="button"
-          >
-            Limpiar
-          </SecondaryButton>
         </div>
-      </section>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SmallStat label="Cursos" value={content.courses?.length ?? 0} help="Programas visibles para captacion y aprendizaje." tone="accent" />
-        <SmallStat label="Usuarios" value={users.length} help="Cuentas administrables desde la UI." />
-        <SmallStat label="Matriculas" value={enrollments.length} help="Accesos activos o historicos por estudiante." />
-        <SmallStat label="Queue" value={queueItems.length} help="Bandeja unificada de trabajo operativo." />
+        <SecondaryButton
+          className="shrink-0"
+          onClick={() => {
+            setGlobalSearchQuery("");
+            if (activeView === "search") {
+              setActiveView("queue");
+            }
+          }}
+          type="button"
+        >
+          Limpiar
+        </SecondaryButton>
       </div>
 
-      <section className="rounded-[18px] border border-[#d7e0ea] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7edf5] pb-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Estado del sistema</p>
-            <p className="mt-2 text-lg font-semibold text-[#172033]">
-              {systemMessage ? "Seguimiento operativo activo" : "Sin alertas activas"}
-            </p>
-          </div>
-          <div
-            className={`rounded-full border px-4 py-2 text-[11px] font-semibold ${
-              systemMessageTone === "warning"
-                ? "border-[#fed7aa] bg-[#fff7ed] text-[#9a3412]"
-                : systemMessageTone === "accent"
-                  ? "border-[#c6d4ec] bg-[#eef4ff] text-[#1d4ed8]"
-                  : "border-[#d7e0ea] bg-[#f7f9fc] text-[#536277]"
-            }`}
-          >
-            {globalSearchQuery.trim() ? "Busqueda focalizada" : "Modo de trabajo normal"}
-          </div>
-        </div>
-        <p className="mt-4 text-sm leading-6 text-[#617085]">
-          {systemMessage || "Los mensajes de guardado, validacion y seguimiento apareceran aqui para darte contexto rapido mientras operas el panel."}
-        </p>
-      </section>
+      <CompactBand>
+        <SmallStat variant="band" label="Cursos" value={content.courses?.length ?? 0} help="Catálogo" />
+        <SmallStat variant="band" label="Usuarios" value={users.length} help="Cuentas" />
+        <SmallStat variant="band" label="Matrículas" value={enrollments.length} help="Accesos" />
+        <SmallStat variant="band" label="Queue" value={queueItems.length} help="Pendientes" />
+      </CompactBand>
 
+      {systemMessage ? (
+        <div className={`rounded-[14px] border px-4 py-3 text-sm leading-relaxed ${
+          systemMessageTone === "warning"
+            ? "border-[#fed7aa] bg-[#fff7ed] text-[#9a3412]"
+            : "border-[#c6d4ec] bg-[#eef4ff] text-[#1d4ed8]"
+        }`}>
+          {systemMessage}
+        </div>
+      ) : null}
+
+      {activeView === "landing" ? renderLandingView() : null}
       {activeView === "queue" ? renderQueueView() : null}
       {activeView === "identity" ? renderIdentityView() : null}
       {activeView === "catalog" ? renderCatalogView() : null}

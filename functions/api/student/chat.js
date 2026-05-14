@@ -123,7 +123,7 @@ function buildContext(user, content, enrollments) {
   return [
     `Programa: ${trimText(content.brand?.name, 80)}`,
     `Descripcion institucional: ${trimText(content.brand?.description, 220)}`,
-    `Oferta principal de GoBeyond: Project Management, Six Sigma, Scrum y programas relacionados de empleabilidad, mejora continua y agilidad.`,
+    `Oferta principal de GoBeyond: Project Management, AI, Scrum y programas relacionados de empleabilidad, mejora continua y agilidad.`,
     `Estudiante: ${trimText(user.fullName, 80)}`,
     `Resumen operativo del estudiante: ${buildProgressSummary(activeEnrollments)}`,
     `Cursos activos (${activeCourseLines.length}):`,

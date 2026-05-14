@@ -1,4 +1,5 @@
 export const adminViewLabels = {
+  landing: "Landing page",
   identity: "Marca e identidad",
   catalog: "Oferta academica",
   people: "Administrativos",
@@ -10,6 +11,7 @@ export const adminViewLabels = {
 };
 
 export const adminViewIcons = {
+  landing: "layout",
   identity: "tag",
   catalog: "grid",
   queue: "inbox",
@@ -23,7 +25,7 @@ export const adminViewIcons = {
 export const adminNavigationGroups = [
   {
     label: "Core",
-    items: ["identity", "catalog"],
+    items: ["landing", "identity", "catalog"],
   },
   {
     label: "Operacion",

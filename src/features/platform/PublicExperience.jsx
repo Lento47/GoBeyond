@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { EmbedFeedbackCarousel } from "./components/EmbedFeedbackCarousel";
 import HeroArcadePanel from "./components/HeroArcadePanel";
-import { SecurityTurnstile } from "./components/SecurityTurnstile";
 import { getDomainLabel, getEmbedDescriptor, normalizePublicMediaUrl } from "./embedUtils";
 import { normalizeLearningPath } from "./learningPath";
 import { getPublishedNews, normalizeSocialNewsItem } from "./newsUtils";
 import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX } from "../../shared/embedPolicy";
 import { MarkdownContent } from "../../shared/MarkdownContent";
 import { PublicImageWithFallback } from "../../shared/PublicImageWithFallback";
+import { defaultContent } from "../../data/defaultContent";
 
 const legalFooterLinks = [
   { href: "/terminos", label: "Terminos y Condiciones" },
@@ -30,6 +30,23 @@ function normalizeText(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function isSixSigmaLandingItem(item) {
+  return normalizeText(item?.title).includes("six sigma");
+}
+
+function removeLegacySixSigmaCopy(value) {
+  return typeof value === "string" ? value.replace(/Six Sigma/gi, "IA") : value;
+}
+
+function normalizeHeroMetric(item) {
+  return {
+    ...item,
+    label: removeLegacySixSigmaCopy(item?.label),
+    value: removeLegacySixSigmaCopy(item?.value),
+    description: removeLegacySixSigmaCopy(item?.description),
+  };
 }
 
 function getActionHref(label, news, institutions, socialLinks) {
@@ -149,6 +166,175 @@ function EmptyState({ title, body }) {
   );
 }
 
+function ProgramList({ title, items }) {
+  const visibleItems = Array.isArray(items) ? items.filter((item) => String(item ?? "").trim()) : [];
+
+  if (!visibleItems.length) return null;
+
+  return (
+    <div className="mt-7">
+      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">{title}</p>
+      <ul className="mt-4 grid gap-3 text-sm leading-relaxed text-gray-300">
+        {visibleItems.map((item) => (
+          <li key={item} className="flex gap-3">
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function NewsSection({
+  featuredNews,
+  featuredNewsEmbed,
+  landing,
+  noticiasError,
+  noticiasLoading,
+  onNavigateToNewsArchive,
+  publishedNews,
+  secondaryNewsCards,
+}) {
+  if (noticiasLoading) {
+    return (
+      <EmptyState
+        body="Estamos consultando las publicaciones mas recientes de Facebook y LinkedIn."
+        title="Cargando noticias"
+      />
+    );
+  }
+
+  if (noticiasError) {
+    return (
+      <EmptyState
+        body={noticiasError}
+        title="No pudimos cargar las noticias automaticas"
+      />
+    );
+  }
+
+  if (!publishedNews.length) return null;
+
+  return (
+    <div className="grid gap-6">
+      <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-blue-400">{landing.newsTitle || "Noticias"}</p>
+      {featuredNews ? (
+        <article className="overflow-hidden rounded-[1.9rem] border border-white/10 bg-white/[0.03] shadow-[0_24px_60px_rgba(0,0,0,0.16)] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30">
+          <div className="aspect-[16/8] overflow-hidden bg-[#0b0f17]">
+            <PublicImageWithFallback
+              alt={featuredNews.title}
+              className="h-full w-full object-cover"
+              fallback={
+                featuredNewsEmbed.embedUrl ? (
+                  <EmbedFrame src={featuredNewsEmbed.embedUrl} title={featuredNews.title} />
+                ) : (
+                  <div className="flex h-full flex-col justify-end bg-[linear-gradient(135deg,rgba(37,99,235,0.16),rgba(8,8,8,0.95))] p-6">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-blue-300">
+                      {getDomainLabel(featuredNews.link || featuredNewsEmbed.externalUrl) || "Referencia externa"}
+                    </p>
+                    <p className="mt-3 max-w-md text-sm leading-relaxed text-gray-300">
+                      Este contenido se abre mejor como referencia externa. GoBeyond muestra aqui una vista editorial para evitar iframes bloqueados.
+                    </p>
+                  </div>
+                )
+              }
+              src={featuredNews.image}
+            />
+          </div>
+          <div className="p-6 sm:p-7">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-blue-400">
+              {featuredNews.source || featuredNews.category || "Noticia"}
+              {featuredNews.featured ? " · Destacada" : " · Reciente"}
+              {featuredNews.publishedAt ? ` · ${new Date(featuredNews.publishedAt).toLocaleDateString("es-CR")}` : ""}
+            </p>
+            <h3 className="mt-4 text-3xl font-black tracking-tight text-white">{featuredNews.title}</h3>
+            {featuredNews.summary ? (
+              <MarkdownContent className="mt-4 text-sm leading-relaxed text-gray-400 sm:text-base">{featuredNews.summary}</MarkdownContent>
+            ) : null}
+            {featuredNews.link ? (
+              <a
+                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-400 transition hover:gap-3 hover:text-blue-300"
+                href={featuredNews.link}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Ver referencia
+                <span>&rarr;</span>
+              </a>
+            ) : null}
+          </div>
+        </article>
+      ) : null}
+
+      {secondaryNewsCards.length ? (
+        <div className="grid gap-3">
+          {secondaryNewsCards.map(({ item, embed, externalDomain }) => (
+            <article
+              key={item.id}
+              className="overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.03] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30"
+            >
+              <div className="grid gap-0 sm:grid-cols-[6.5rem_minmax(0,1fr)]">
+                <div className="h-full min-h-[6.5rem] overflow-hidden bg-[#0b0f17]">
+                  <PublicImageWithFallback
+                    alt={item.title}
+                    className="h-full w-full object-cover"
+                    fallback={
+                      embed.embedUrl ? (
+                        <EmbedFrame src={embed.embedUrl} title={item.title} />
+                      ) : (
+                        <div className="flex h-full min-h-[6.5rem] flex-col items-center justify-center bg-white/[0.03] px-4 text-center">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-300">
+                            {externalDomain || "Referencia"}
+                          </p>
+                          <p className="mt-2 text-[11px] text-gray-500">Vista externa</p>
+                        </div>
+                      )
+                    }
+                    src={item.image}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4 p-4">
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-blue-400">
+                      {item.source || item.category || "Noticia"}
+                      {item.publishedAt ? ` · ${new Date(item.publishedAt).toLocaleDateString("es-CR")}` : ""}
+                    </p>
+                    <h4 className="mt-2 text-base font-black tracking-tight text-white sm:text-[1.05rem]">{item.title}</h4>
+                    {item.summary ? (
+                      <MarkdownContent className="mt-2 text-[13px] leading-relaxed text-gray-400">
+                        {truncateText(item.summary, 150)}
+                      </MarkdownContent>
+                    ) : null}
+                  </div>
+                  {item.link ? (
+                    <a
+                      className="shrink-0 rounded-full border border-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:border-blue-500/30 hover:text-blue-300"
+                      href={item.link}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Ver
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      <button
+        className="w-fit rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-xs font-bold uppercase tracking-[0.24em] text-white transition hover:border-blue-500/30 hover:bg-white/[0.06]"
+        onClick={onNavigateToNewsArchive}
+        type="button"
+      >
+        {landing.newsArchiveLabel || "Ver mas noticias"}
+      </button>
+    </div>
+  );
+}
+
 function EmbedFrame({ src, title, className = "" }) {
   return (
     <iframe
@@ -166,94 +352,9 @@ function EmbedFrame({ src, title, className = "" }) {
   );
 }
 
-function TestimonialSubmissionForm({ createTestimonialSubmission, turnstileSiteKey }) {
-  const [form, setForm] = useState({ quote: "", author: "", organization: "" });
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
-  const requiresTurnstile = Boolean(turnstileSiteKey);
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    if (requiresTurnstile && !turnstileToken) {
-      setError("Completa la verificacion de seguridad.");
-      return;
-    }
-
-    setSubmitting(true);
-    setMessage("");
-    setError("");
-
-    try {
-      const response = await createTestimonialSubmission({
-        ...form,
-        turnstileToken,
-      });
-      setMessage(response.message);
-      setForm({ quote: "", author: "", organization: "" });
-      setTurnstileResetKey((current) => current + 1);
-      setTurnstileToken("");
-    } catch (requestError) {
-      setError(requestError.message);
-      setTurnstileResetKey((current) => current + 1);
-      setTurnstileToken("");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <form
-      className="grid gap-5 rounded-[2rem] border border-white/12 bg-[#0b0b0b]/35 p-6 shadow-[0_30px_80px_rgba(0,0,0,0.18)] backdrop-blur-2xl sm:p-8"
-      onSubmit={handleSubmit}
-    >
-      <p className="text-[11px] uppercase tracking-[0.3em] text-blue-100">Comparte tu experiencia</p>
-      <textarea
-        className="min-h-[160px] rounded-[1.5rem] border border-white/12 bg-white/10 px-5 py-4 text-sm text-white outline-none transition placeholder:text-blue-100/50 focus:border-white/40 focus:bg-white/15"
-        onChange={(event) => setForm((current) => ({ ...current, quote: event.target.value }))}
-        placeholder="Escribe tu testimonio"
-        value={form.quote}
-      />
-      <div className="grid gap-4 md:grid-cols-2">
-        <input
-          className="rounded-[999px] border border-white/12 bg-white/10 px-5 py-4 text-sm text-white outline-none transition placeholder:text-blue-100/50 focus:border-white/40 focus:bg-white/15"
-          onChange={(event) => setForm((current) => ({ ...current, author: event.target.value }))}
-          placeholder="Tu nombre"
-          value={form.author}
-        />
-        <input
-          className="rounded-[999px] border border-white/12 bg-white/10 px-5 py-4 text-sm text-white outline-none transition placeholder:text-blue-100/50 focus:border-white/40 focus:bg-white/15"
-          onChange={(event) => setForm((current) => ({ ...current, organization: event.target.value }))}
-          placeholder="Institucion u organizacion"
-          value={form.organization}
-        />
-      </div>
-      <SecurityTurnstile
-        action="public-testimonial"
-        className="overflow-hidden rounded-[1.4rem] border border-white/12 bg-white/10 p-3"
-        onTokenChange={setTurnstileToken}
-        resetKey={turnstileResetKey}
-        siteKey={turnstileSiteKey}
-      />
-      <button
-        className="w-full rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-blue-600 transition duration-300 hover:-translate-y-0.5 hover:bg-blue-50 disabled:opacity-60 sm:w-fit"
-        disabled={submitting || (requiresTurnstile && !turnstileToken)}
-        type="submit"
-      >
-        {submitting ? "Enviando..." : "Enviar testimonio"}
-      </button>
-      {message ? <p className="text-sm text-blue-100">{message}</p> : null}
-      {error ? <p className="text-sm text-red-200">{error}</p> : null}
-    </form>
-  );
-}
-
 // --- MAIN PAGE ---
 export function PublicExperience({
   content,
-  createTestimonialSubmission,
   noticiasPosts = [],
   noticiasLoading = false,
   noticiasError = "",
@@ -272,18 +373,23 @@ export function PublicExperience({
   );
   const hero = content?.hero ?? {};
   const brand = content?.brand ?? {};
-  const benefits = useMemo(() => content?.benefits ?? [], [content?.benefits]);
-  const learningPath = useMemo(() => normalizeLearningPath(content?.learningPath ?? []), [content?.learningPath]);
-  const courses = useMemo(() => content?.courses ?? [], [content?.courses]);
-  const liveSessions = useMemo(() => content?.liveSessions ?? [], [content?.liveSessions]);
-  const participationSection = useMemo(() => content?.participationSection ?? defaultParticipationSection, [content?.participationSection]);
-  const participationOptions = useMemo(
-    () => (content?.participationOptions?.length ? content.participationOptions : defaultParticipationOptions),
-    [content?.participationOptions]
+  const benefits = useMemo(
+    () => (landing?.benefits?.length ? landing.benefits : content?.benefits ?? []),
+    [landing?.benefits, content?.benefits]
   );
+  const learningPath = useMemo(
+    () => normalizeLearningPath(content?.learningPath ?? []).filter((item) => !isSixSigmaLandingItem(item)),
+    [content?.learningPath]
+  );
+  const courses = useMemo(() => (content?.courses ?? []).filter((item) => !isSixSigmaLandingItem(item)), [content?.courses]);
+  const programCards = useMemo(
+    () => (Array.isArray(landing?.programCards) && landing.programCards.length ? landing.programCards : (defaultContent.landing?.programCards ?? [])),
+    [landing?.programCards]
+  );
+  const liveSessions = useMemo(() => (content?.liveSessions ?? []).filter((item) => !isSixSigmaLandingItem(item)), [content?.liveSessions]);
   const institutions = useMemo(() => content?.institutions ?? [], [content?.institutions]);
   const featuredInstitutions = useMemo(() => institutions.filter((item) => item.featured), [institutions]);
-  const visibleInstitutions = featuredInstitutions.length ? featuredInstitutions : institutions;
+  const visibleInstitutions = featuredInstitutions.length > 1 ? featuredInstitutions : institutions;
   const news = useMemo(() => content?.news ?? [], [content?.news]);
   const publishedNews = useMemo(
     () => (noticiasPosts.length ? noticiasPosts.map((item) => normalizeSocialNewsItem(item)) : getPublishedNews(news)),
@@ -312,7 +418,7 @@ export function PublicExperience({
     () => (content?.testimonials ?? []).filter((item) => !item.status || item.status === "approved"),
     [content?.testimonials]
   );
-  const metrics = useMemo(() => hero.metrics ?? [], [hero.metrics]);
+  const metrics = useMemo(() => (hero.metrics ?? []).map((item) => normalizeHeroMetric(item)), [hero.metrics]);
   const navLabels = landing.nav?.length
     ? landing.nav
     : ["Inicio", "Sobre nosotros", "Servicios", "Impacto", "Testimonios", "Contacto"];
@@ -473,14 +579,18 @@ export function PublicExperience({
             <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-1000 z-10">
               <SectionTag>{hero.eyebrow || "Aprende con nosotros"}</SectionTag>
               <h1 className="max-w-4xl text-[3rem] sm:text-[3.6rem] md:text-[5rem] lg:text-[6.2rem] font-[900] leading-[0.9] tracking-[-0.06em]">
-                {hero.title || brand.tagline || brand.name}
+                {hero.title || brand.name}
               </h1>
               <MarkdownContent className="mt-8 max-w-xl text-sm sm:text-base md:text-lg text-gray-400 font-light leading-relaxed">
-                {hero.description || brand.description}
+                {hero.description}
               </MarkdownContent>
               <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-                <a href="#contacto" className="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all hover:bg-blue-500 hover:shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:-translate-y-1 active:scale-95 active:opacity-90 text-center">Empezar ahora</a>
-                <a href="#servicios" className="px-8 py-4 bg-transparent text-white border border-white/10 font-bold rounded-xl text-sm transition-all hover:bg-white/5 active:scale-95 active:opacity-80 text-center">Explorar catálogo</a>
+                <a href="#contacto" className="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all hover:bg-blue-500 hover:shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:-translate-y-1 active:scale-95 active:opacity-90 text-center">
+                  {landing.heroPrimaryCtaLabel || "Empezar ahora"}
+                </a>
+                <a href="#servicios" className="px-8 py-4 bg-transparent text-white border border-white/10 font-bold rounded-xl text-sm transition-all hover:bg-white/5 active:scale-95 active:opacity-80 text-center">
+                  {landing.heroSecondaryCtaLabel || "Explorar catalogo"}
+                </a>
               </div>
 
               {metrics.length ? (
@@ -509,17 +619,14 @@ export function PublicExperience({
             <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
               <SectionTag>{landing.aboutTitle || "Sobre nosotros"}</SectionTag>
               <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-                {brand.tagline || brand.name}
+                {landing.aboutHeading || brand.tagline || brand.name}
               </h2>
               <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
-                {landing.aboutBody || brand.description}
+                {landing.aboutBodyTwo || brand.description}
               </MarkdownContent>
             </div>
 
             <GlassCard className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-              {landing.aboutBodyTwo ? (
-                <MarkdownContent className="text-lg text-gray-300 font-light leading-relaxed">{landing.aboutBodyTwo}</MarkdownContent>
-              ) : null}
               {benefits.length ? (
                 <div className="mt-8 grid gap-4 md:grid-cols-2">
                   {benefits.map((item) => (
@@ -538,7 +645,7 @@ export function PublicExperience({
           <div className="max-w-4xl gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
             <SectionTag>{landing.servicesTitle || "Nuestros servicios"}</SectionTag>
             <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-              {content?.subscription?.label || "Ruta de desarrollo continuo."}
+              {landing.subscriptionLabel || content?.subscription?.label || "Ruta de desarrollo continuo."}
             </h2>
             <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
               {landing.relevanceBody || content?.subscription?.description}
@@ -568,10 +675,75 @@ export function PublicExperience({
           <div className="container mx-auto px-5 sm:px-6 md:px-8">
             <div className="text-center mb-20 gobeyond-reveal opacity-0 translate-y-10 transition-all">
               <SectionTag>{landing.coursesTitle || "Programas y cursos"}</SectionTag>
-              <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter">Creados para el Impacto Real.</h2>
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter">
+                {landing.coursesHeading || "Creados para el Impacto Real."}
+              </h2>
             </div>
-            <div className="grid lg:grid-cols-2 gap-8">
-              {courses.length ? courses.map((course, index) => {
+            <div className={programCards.length ? "grid gap-6 xl:grid-cols-3" : "grid gap-8 lg:grid-cols-2"}>
+              {programCards.length ? programCards.map((program, index) => {
+                const external = isExternalHref(program.href);
+                const programImage = normalizePublicMediaUrl(program.image || "");
+                const initials = String(program.title ?? "")
+                  .trim().split(/\s+/).filter(Boolean).slice(0, 2)
+                  .map((p) => p[0]?.toUpperCase() ?? "").join("");
+
+                return (
+                  <GlassCard
+                    key={program.id || `${program.title}-${index}`}
+                    className={`flex h-full flex-col justify-between overflow-hidden ${index === 0 ? "border-blue-500/20 bg-blue-600/[0.02]" : ""}`}
+                  >
+                    <div>
+                      {/* Cover image */}
+                      <div className="mb-7 overflow-hidden rounded-[1.8rem] border border-white/8 bg-[#0b0f17]">
+                        {programImage ? (
+                          <img alt={program.title} className="h-52 w-full object-cover" src={programImage} />
+                        ) : (
+                          <div className="relative flex h-52 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.32),rgba(12,18,32,0.95)_58%)] p-6">
+                            <div className="absolute right-5 top-5 text-5xl font-black tracking-tighter text-white/10">{initials || "GB"}</div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Go Beyond</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <Badge>{program.eyebrow}</Badge>
+                      <h3 className="mt-5 text-3xl font-black leading-tight tracking-tight text-white">{program.title}</h3>
+
+                      {program.description ? (
+                        <MarkdownContent className="mt-5 text-sm leading-relaxed text-gray-400">
+                          {program.description}
+                        </MarkdownContent>
+                      ) : null}
+
+                      {program.relevance ? (
+                        <div className="mt-6 rounded-[1.4rem] border border-white/8 bg-white/[0.04] p-5">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
+                          <p className="mt-3 text-sm leading-relaxed text-gray-200">{program.relevance}</p>
+                        </div>
+                      ) : null}
+
+                      <ProgramList items={program.outcomes} title="Resultados" />
+                      <ProgramList items={program.availablePrograms} title="Programas disponibles" />
+                      <ProgramList items={program.includes} title="Incluye" />
+                      <ProgramList items={program.benefits} title="Beneficios adicionales" />
+                      <ProgramList items={program.requirements} title="Requisitos del programa" />
+
+                      {program.certificationNote ? (
+                        <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{program.certificationNote}</p>
+                      ) : null}
+                    </div>
+
+                    <a
+                      className="mt-8 inline-flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition-all hover:border-blue-500/30 hover:bg-white/[0.08] hover:text-blue-200"
+                      href={program.href || "#contacto"}
+                      rel={external ? "noreferrer" : undefined}
+                      target={external ? "_blank" : undefined}
+                    >
+                      <span>{program.ctaLabel || "Aplicar"}</span>
+                      <span>&rarr;</span>
+                    </a>
+                  </GlassCard>
+                );
+              }) : courses.length ? courses.map((course, index) => {
                 const courseImage = normalizePublicMediaUrl(course.coverImage || course.image || "");
                 const initials = String(course.title ?? "")
                   .trim()
@@ -619,14 +791,14 @@ export function PublicExperience({
                     </div>
                     {course.outcomes ? (
                       <div className="pt-6 border-t border-white/5">
-                        <p className={`text-[10px] uppercase tracking-widest font-bold ${index === 0 ? "text-blue-400" : "text-gray-400"}`}>Resultados:</p>
+                        <p className={`text-[10px] uppercase tracking-widest font-bold ${index === 0 ? "text-blue-400" : "text-gray-400"}`}>{landing.courseResultsLabel || "Resultados:"}</p>
                         <MarkdownContent className="mt-2 text-sm text-gray-300">{course.outcomes}</MarkdownContent>
                       </div>
                     ) : null}
                   </GlassCard>
                 );
               }) : (
-                <div className="lg:col-span-2">
+                <div className={programCards.length ? "xl:col-span-3" : "lg:col-span-2"}>
                   <EmptyState
                     body="Los programas y cursos publicados desde admin apareceran aqui."
                     title="Sin cursos publicados"
@@ -652,98 +824,6 @@ export function PublicExperience({
           </div>
         </section>
 
-        {/* MODALIDADES DE PARTICIPACION */}
-        <section id="impacto" className="py-20 sm:py-24 lg:py-32 container mx-auto px-5 sm:px-6 md:px-8">
-          <div className="max-w-4xl gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-            <SectionTag>{participationSection.eyebrow || "Modalidades"}</SectionTag>
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-              {participationSection.title || "Formacion de alto valor, con acceso real."}
-            </h2>
-            <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
-              {participationSection.description}
-            </MarkdownContent>
-          </div>
-
-          <div className="mt-14 sm:mt-16 lg:mt-20 grid gap-6 xl:grid-cols-3">
-            {participationOptions.map((item, index) => {
-              const external = isExternalHref(item.href);
-
-              return (
-                <GlassCard
-                  key={item.id || `${item.title}-${index}`}
-                  className={`gobeyond-reveal flex h-full flex-col justify-between opacity-0 translate-y-10 transition-all duration-700 ${
-                    index === 0 ? "border-blue-500/25 bg-blue-600/[0.04]" : ""
-                  }`}
-                >
-                    <div>
-                      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <Badge>{item.eyebrow}</Badge>
-                          <h3 className="mt-6 text-2xl font-black tracking-tight text-white sm:text-[2rem]">{item.title}</h3>
-                        </div>
-                        <div className="border-t border-white/10 pt-5 text-left sm:shrink-0 sm:border-t-0 sm:pt-0 sm:text-right">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Costo</p>
-                          <p className="mt-3 text-4xl font-black tracking-tight text-white">{item.price}</p>
-                          {item.priceNote ? (
-                            <p className="mt-2 max-w-[13rem] text-[11px] uppercase leading-relaxed tracking-[0.18em] text-gray-500 sm:ml-auto">
-                              {item.priceNote}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-
-                    <MarkdownContent className="mt-8 text-sm leading-relaxed text-gray-400">{item.description}</MarkdownContent>
-
-                    {item.highlights?.length ? (
-                      <div className="mt-8 flex flex-wrap gap-2">
-                        {item.highlights.map((highlight) => (
-                          <span
-                            key={highlight}
-                            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-200"
-                          >
-                            {highlight}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <a
-                    className="mt-10 inline-flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition-all hover:border-blue-500/30 hover:bg-white/[0.08] hover:text-blue-200"
-                    href={item.href}
-                    rel={external ? "noreferrer" : undefined}
-                    target={external ? "_blank" : undefined}
-                  >
-                    <span>{item.ctaLabel}</span>
-                    <span>&rarr;</span>
-                  </a>
-                </GlassCard>
-              );
-            })}
-          </div>
-
-          <div className="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="gobeyond-reveal rounded-[2rem] border border-white/10 bg-white/[0.02] p-6 opacity-0 translate-y-10 transition-all duration-700">
-              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Cierre</p>
-              <MarkdownContent className="mt-4 max-w-2xl text-base leading-relaxed text-gray-300">
-                {participationSection.footnote}
-              </MarkdownContent>
-            </div>
-            <a
-              className="gobeyond-reveal flex items-center justify-between rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 opacity-0 translate-y-10 transition-all duration-700 hover:border-blue-500/30 hover:bg-white/[0.06]"
-              href={participationSection.detailsHref}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">Mas detalles</p>
-                <p className="mt-3 text-lg font-semibold text-white">{participationSection.detailsLabel}</p>
-              </div>
-              <span className="text-xl text-white">&rarr;</span>
-            </a>
-          </div>
-        </section>
-
         {/* TESTIMONIOS */}
         <section id="testimonios" className="py-20 sm:py-24 lg:py-32 bg-[#080808]">
           <div className="container mx-auto px-5 sm:px-6 md:px-8">
@@ -753,157 +833,15 @@ export function PublicExperience({
                 {landing.testimonialTitle || "Testimonios"}
               </h2>
               <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
-                {brand.description}
+                {landing.trustBody || brand.description}
               </MarkdownContent>
             </div>
 
-            <div className="mt-14 sm:mt-16 lg:mt-20 grid gap-10 items-start xl:grid-cols-[1.02fr_0.98fr]">
-              <div className="grid gap-8">
-                {institutionFeedbackCards.length ? (
-                  <EmbedFeedbackCarousel items={institutionFeedbackCards} />
-                ) : (
-                  <EmptyState
-                    body="Las instituciones aliadas publicadas desde admin apareceran aqui con su imagen, enlace o embed."
-                    title="Sin instituciones publicadas"
-                  />
-                )}
-
-                {noticiasLoading ? (
-                  <EmptyState
-                    body="Estamos consultando las publicaciones mas recientes de Facebook y LinkedIn."
-                    title="Cargando noticias"
-                  />
-                ) : noticiasError ? (
-                  <EmptyState
-                    body={noticiasError}
-                    title="No pudimos cargar las noticias automaticas"
-                  />
-                ) : publishedNews.length ? (
-                  <div className="grid gap-6">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-blue-400">Noticias</p>
-                    {featuredNews ? (
-                      <article className="overflow-hidden rounded-[1.9rem] border border-white/10 bg-white/[0.03] shadow-[0_24px_60px_rgba(0,0,0,0.16)] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30">
-                        <div className="aspect-[16/8] overflow-hidden bg-[#0b0f17]">
-                          <PublicImageWithFallback
-                            alt={featuredNews.title}
-                            className="h-full w-full object-cover"
-                            fallback={
-                              featuredNewsEmbed.embedUrl ? (
-                                <EmbedFrame src={featuredNewsEmbed.embedUrl} title={featuredNews.title} />
-                              ) : (
-                                <div className="flex h-full flex-col justify-end bg-[linear-gradient(135deg,rgba(37,99,235,0.16),rgba(8,8,8,0.95))] p-6">
-                                  <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-blue-300">
-                                    {getDomainLabel(featuredNews.link || featuredNewsEmbed.externalUrl) || "Referencia externa"}
-                                  </p>
-                                  <p className="mt-3 max-w-md text-sm leading-relaxed text-gray-300">
-                                    Este contenido se abre mejor como referencia externa. GoBeyond muestra aqui una vista editorial para evitar iframes bloqueados.
-                                  </p>
-                                </div>
-                              )
-                            }
-                            src={featuredNews.image}
-                          />
-                        </div>
-                        <div className="p-6 sm:p-7">
-                          <p className="text-[11px] uppercase tracking-[0.28em] text-blue-400">
-                            {featuredNews.source || featuredNews.category || "Noticia"}
-                            {featuredNews.featured ? " · Destacada" : " · Reciente"}
-                            {featuredNews.publishedAt ? ` · ${new Date(featuredNews.publishedAt).toLocaleDateString("es-CR")}` : ""}
-                          </p>
-                          <h3 className="mt-4 text-3xl font-black tracking-tight text-white">{featuredNews.title}</h3>
-                          {featuredNews.summary ? (
-                            <MarkdownContent className="mt-4 text-sm leading-relaxed text-gray-400 sm:text-base">{featuredNews.summary}</MarkdownContent>
-                          ) : null}
-                          {featuredNews.link ? (
-                            <a
-                              className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-400 transition hover:gap-3 hover:text-blue-300"
-                              href={featuredNews.link}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              Ver referencia
-                              <span>&rarr;</span>
-                            </a>
-                          ) : null}
-                        </div>
-                      </article>
-                    ) : null}
-
-                    {secondaryNewsCards.length ? (
-                      <div className="grid gap-3">
-                        {secondaryNewsCards.map(({ item, embed, externalDomain }) => (
-                          <article
-                            key={item.id}
-                            className="overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.03] transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/30"
-                          >
-                            <div className="grid gap-0 sm:grid-cols-[6.5rem_minmax(0,1fr)]">
-                              <div className="h-full min-h-[6.5rem] overflow-hidden bg-[#0b0f17]">
-                                <PublicImageWithFallback
-                                  alt={item.title}
-                                  className="h-full w-full object-cover"
-                                  fallback={
-                                    embed.embedUrl ? (
-                                      <EmbedFrame src={embed.embedUrl} title={item.title} />
-                                    ) : (
-                                      <div className="flex h-full min-h-[6.5rem] flex-col items-center justify-center bg-white/[0.03] px-4 text-center">
-                                        <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-300">
-                                          {externalDomain || "Referencia"}
-                                        </p>
-                                        <p className="mt-2 text-[11px] text-gray-500">
-                                          Vista externa
-                                        </p>
-                                      </div>
-                                    )
-                                  }
-                                  src={item.image}
-                                />
-                              </div>
-                              <div className="flex items-center justify-between gap-4 p-4">
-                                <div className="min-w-0">
-                                  <p className="text-[11px] uppercase tracking-[0.22em] text-blue-400">
-                                    {item.source || item.category || "Noticia"}
-                                    {item.publishedAt ? ` · ${new Date(item.publishedAt).toLocaleDateString("es-CR")}` : ""}
-                                  </p>
-                                  <h4 className="mt-2 text-base font-black tracking-tight text-white sm:text-[1.05rem]">{item.title}</h4>
-                                  {item.summary ? (
-                                    <MarkdownContent className="mt-2 text-[13px] leading-relaxed text-gray-400">
-                                      {truncateText(item.summary, 150)}
-                                    </MarkdownContent>
-                                  ) : null}
-                                </div>
-                                {item.link ? (
-                                  <a
-                                    className="shrink-0 rounded-full border border-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:border-blue-500/30 hover:text-blue-300"
-                                    href={item.link}
-                                    rel="noreferrer"
-                                    target="_blank"
-                                  >
-                                    Ver
-                                  </a>
-                                ) : null}
-                              </div>
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <button
-                      className="w-fit rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-xs font-bold uppercase tracking-[0.24em] text-white transition hover:border-blue-500/30 hover:bg-white/[0.06]"
-                      onClick={onNavigateToNewsArchive}
-                      type="button"
-                    >
-                      Ver mas noticias
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="grid gap-4">
+            <div className="mt-14 sm:mt-16 lg:mt-20 grid gap-4 xl:grid-cols-3">
                 {testimonials.length > 3 ? (
-                  <div className="mb-2 flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <div className="mb-2 flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-4 py-3 xl:col-span-3">
                     <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-blue-400">
-                      Rotando testimonios
+                      {landing.testimonialsCarouselLabel || "Rotando testimonios"}
                     </p>
                     <div className="flex items-center gap-2">
                       <button
@@ -969,6 +907,44 @@ export function PublicExperience({
                   />
                 )}
               </div>
+
+            <div className="mt-14 sm:mt-16 lg:mt-20">
+              <div className="mb-8 max-w-4xl">
+                <SectionTag>{landing.institutionsCarouselTitle || "Instituciones con convenio"}</SectionTag>
+                {landing.institutionsCarouselBody ? (
+                  <MarkdownContent className="text-base leading-relaxed text-gray-500 sm:text-lg">
+                    {landing.institutionsCarouselBody}
+                  </MarkdownContent>
+                ) : null}
+              </div>
+              {institutionFeedbackCards.length ? (
+                <EmbedFeedbackCarousel
+                  controlsLabel={
+                    landing.institutionsCarouselLabel ||
+                    landing.institutionsCarouselTitle ||
+                    "Convenios activos"
+                  }
+                  items={institutionFeedbackCards}
+                />
+              ) : (
+                <EmptyState
+                  body="Las instituciones aliadas publicadas desde admin apareceran aqui con su imagen, enlace o embed."
+                  title="Sin instituciones publicadas"
+                />
+              )}
+            </div>
+
+            <div className="mt-14 sm:mt-16 lg:mt-20">
+              <NewsSection
+                featuredNews={featuredNews}
+                featuredNewsEmbed={featuredNewsEmbed}
+                landing={landing}
+                noticiasError={noticiasError}
+                noticiasLoading={noticiasLoading}
+                onNavigateToNewsArchive={onNavigateToNewsArchive}
+                publishedNews={publishedNews}
+                secondaryNewsCards={secondaryNewsCards}
+              />
             </div>
           </div>
         </section>
@@ -982,9 +958,6 @@ export function PublicExperience({
                 <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-white">
                   {landing.contactBody || "Ponte en contacto con GoBeyond."}
                 </h2>
-                {brand.description ? (
-                  <MarkdownContent className="mt-8 max-w-2xl text-base sm:text-lg md:text-xl text-blue-100 font-light leading-relaxed">{brand.description}</MarkdownContent>
-                ) : null}
 
                 {(contactInfo.emailValue || contactInfo.phoneValue) ? (
                   <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -1038,15 +1011,6 @@ export function PublicExperience({
                   </div>
                 ) : null}
               </div>
-
-              {createTestimonialSubmission ? (
-                <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
-                  <TestimonialSubmissionForm
-                    createTestimonialSubmission={createTestimonialSubmission}
-                    turnstileSiteKey={content?.securityPublic?.siteKey ?? ""}
-                  />
-                </div>
-              ) : null}
             </div>
           </div>
         </section>

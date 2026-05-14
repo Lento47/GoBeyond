@@ -4,7 +4,18 @@ import { normalizePublicMediaUrl } from "../../src/shared/publicMedia";
 import { purgeExpiredCommunityThreads } from "./community";
 import { parseJsonOrNull } from "./util";
 
-const blockSections = ["brand", "hero", "benefits", "accessTimeline", "subscription", "communityStats", "landing", "securitySettings"];
+const blockSections = [
+  "brand",
+  "hero",
+  "benefits",
+  "accessTimeline",
+  "subscription",
+  "communityStats",
+  "participationSection",
+  "participationOptions",
+  "landing",
+  "securitySettings",
+];
 const collectionSections = [
   "liveSessions",
   "learningPath",
@@ -69,7 +80,30 @@ export async function getContent(env) {
   for (const row of blockResult.results ?? []) {
     const parsed = parseJsonOrNull(row.value_json);
     if (parsed !== null) {
-      content[row.block_key] = parsed;
+      const current = content[row.block_key];
+      if (
+        current &&
+        parsed &&
+        typeof current === "object" &&
+        typeof parsed === "object" &&
+        !Array.isArray(current) &&
+        !Array.isArray(parsed)
+      ) {
+        content[row.block_key] = {
+          ...current,
+          ...parsed,
+          contactInfo:
+            current.contactInfo || parsed.contactInfo
+              ? { ...(current.contactInfo ?? {}), ...(parsed.contactInfo ?? {}) }
+              : undefined,
+          socialLinks:
+            current.socialLinks || parsed.socialLinks
+              ? { ...(current.socialLinks ?? {}), ...(parsed.socialLinks ?? {}) }
+              : undefined,
+        };
+      } else {
+        content[row.block_key] = parsed;
+      }
     }
   }
 

@@ -7,7 +7,7 @@ const WORD_LAYOUT = [
   { label: "Juventud", x: 0.24, y: 0.46, hue: "#86d957", floatX: 12, floatY: 14, phase: 2.8 },
   { label: "Limon", x: 0.47, y: 0.66, hue: "#ffc62a", floatX: 11, floatY: 10, phase: 3.5 },
   { label: "Scrum", x: 0.18, y: 0.76, hue: "#23b3ff", floatX: 10, floatY: 8, phase: 4.2 },
-  { label: "Six Sigma", x: 0.68, y: 0.78, hue: "#86d957", floatX: 12, floatY: 10, phase: 4.9 },
+  { label: "IA", x: 0.68, y: 0.78, hue: "#86d957", floatX: 12, floatY: 10, phase: 4.9 },
   { label: "Project Management", x: 0.47, y: 0.88, hue: "#ff6b1a", floatX: 14, floatY: 8, phase: 5.6 },
 ];
 
