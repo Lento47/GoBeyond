@@ -99,14 +99,19 @@ const initialUserForm = {
 const roleOptions = ["student", "teacher", "admin"];
 
 function listToLines(value = []) {
-  return Array.isArray(value) ? value.filter(Boolean).join("\n") : String(value ?? "");
+  return Array.isArray(value) ? value.join("\n") : String(value ?? "");
 }
 
 function linesToList(value = "") {
-  return String(value ?? "")
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const lines = String(value ?? "").split(/\r?\n/);
+  // Trim each line but preserve blank lines (used as visual spacers in lists)
+  const trimmed = lines.map((item) => item.trim());
+  // Remove only leading/trailing blank lines, keep internal ones
+  let start = 0;
+  let end = trimmed.length - 1;
+  while (start <= end && !trimmed[start]) start++;
+  while (end >= start && !trimmed[end]) end--;
+  return trimmed.slice(start, end + 1);
 }
 
 function metricsToLines(value = []) {
