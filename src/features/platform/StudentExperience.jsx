@@ -457,6 +457,10 @@ function StudentAssistant({ courseCount, availableCount, activeCourses }) {
 
 // --- COMPONENTE: MODAL DE DETALLE DE CURSO ---
 
+function courseColorIndex(id) {
+  return String(id ?? "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 5;
+}
+
 function CourseDetailModal({ course, onClose }) {
   const gcBannerColors = [
     "from-blue-600 to-blue-800",
@@ -481,7 +485,7 @@ function CourseDetailModal({ course, onClose }) {
   const isPassed = course.completionStatus === "passed";
   const isFailed = course.completionStatus === "failed";
   const assignments = course.assignments ?? [];
-  const bannerColor = gcBannerColors[0];
+  const bannerColor = gcBannerColors[courseColorIndex(course.id)];
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-[#0f172a]/32 backdrop-blur-[8px]">
@@ -901,19 +905,19 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
           <div className="mt-5 flex flex-wrap divide-x divide-[#c6d4ec] overflow-hidden rounded-[16px] border border-[#c6d4ec] bg-white/70">
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Matrículas</p>
-              <p className="text-[1.3rem] font-black leading-none text-[#172033]">{dashboard.dashboard.enrollments.length}</p>
+              <p className="text-[1.6rem] font-black leading-none text-[#1d4ed8]">{dashboard.dashboard.enrollments.length}</p>
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Cursos activos</p>
-              <p className="text-[1.3rem] font-black leading-none text-[#172033]">{activeCourses.length}</p>
+              <p className="text-[1.6rem] font-black leading-none text-[#15803d]">{activeCourses.length}</p>
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Disponibles</p>
-              <p className="text-[1.3rem] font-black leading-none text-[#172033]">{dashboard.dashboard.availableCourses.length}</p>
+              <p className="text-[1.6rem] font-black leading-none text-[#7c3aed]">{dashboard.dashboard.availableCourses.length}</p>
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Ruta</p>
-              <p className="text-[1.3rem] font-black leading-none text-[#172033]">{learningPath.length} hitos</p>
+              <p className="text-[1.6rem] font-black leading-none text-[#b45309]">{learningPath.length} <span className="text-[1rem]">hitos</span></p>
             </div>
           </div>
         </div>
@@ -1065,22 +1069,22 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
                 return (
                   <div key={course.enrollmentId ?? course.id} className="overflow-hidden rounded-[20px] border border-[#d7e0ea] bg-white">
                     {/* Course header bar */}
-                    <div className={`relative h-16 bg-gradient-to-r ${colorClass}`}>
+                    <div className={`relative h-24 bg-gradient-to-r ${colorClass}`}>
                       {course.coverImage ? (
                         <img alt={course.title} className="absolute inset-0 h-full w-full object-cover" src={course.coverImage} />
                       ) : null}
-                      <div className="absolute inset-0 bg-black/30" />
-                      <div className="absolute inset-0 flex items-center justify-between px-4">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+                      <div className="absolute inset-0 flex items-end justify-between px-4 pb-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-black text-white">{course.title}</p>
-                          <p className="text-[10px] text-white/80">{course.format}{course.duration ? ` · ${course.duration}` : ""}</p>
+                          <p className="truncate text-base font-black leading-tight text-white drop-shadow">{course.title}</p>
+                          <p className="text-[11px] text-white/80 mt-0.5">{course.format}{course.duration ? ` · ${course.duration}` : ""}</p>
                         </div>
                         <button
-                          className="shrink-0 rounded-xl border border-white/30 bg-white/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/30"
+                          className="shrink-0 rounded-xl bg-white px-3.5 py-2 text-[11px] font-black text-[#1d4ed8] shadow-sm transition hover:bg-[#eef4ff]"
                           onClick={() => handleOpenCourse(course)}
                           type="button"
                         >
-                          Abrir aula
+                          Abrir aula →
                         </button>
                       </div>
                     </div>
@@ -1102,9 +1106,9 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
                     {assignments.length ? (
                       <div className="divide-y divide-[#e7edf5]">
                         {assignments.map((assignment) => (
-                          <div key={assignment.id} className="flex items-start gap-3 p-4 hover:bg-[#f8fbff] transition-colors">
-                            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#d7e0ea] bg-[#f7f9fc]">
-                              <svg aria-hidden="true" className="h-3.5 w-3.5 text-[#6b7a90]" fill="none" viewBox="0 0 24 24">
+                          <div key={assignment.id} className="flex items-start gap-3 p-4 hover:bg-[#f8fbff] hover:shadow-sm transition-all">
+                            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eef4ff]">
+                              <svg aria-hidden="true" className="h-3.5 w-3.5 text-[#1d4ed8]" fill="none" viewBox="0 0 24 24">
                                 <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
                               </svg>
                             </div>

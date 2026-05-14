@@ -576,89 +576,87 @@ export function TeacherExperience(props) {
   }
 
   function renderCoursesSection() {
+    const COURSE_COLORS = ["#2563eb", "#059669", "#7c3aed", "#d97706", "#e11d48", "#0891b2"];
+    const selectedIndex = (courses ?? []).findIndex((c) => c.id === selectedCourse?.id);
+    const selectedColor = COURSE_COLORS[Math.max(selectedIndex, 0) % COURSE_COLORS.length];
+
     return (
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]" id="teacher-courses">
-        {/* Left column — course list */}
+        {/* Left — course list */}
         <div className="grid gap-4 content-start">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
-              <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033]">Clases y grupos</h1>
-              <p className="mt-0.5 text-sm text-[#6b7a90]">Selecciona un curso para ver sus materiales y grupos en el panel derecho.</p>
-            </div>
-            <ActionButton onClick={() => startCreateAssignment(selectedCourse?.id)} type="button">
-              + Agregar material
-            </ActionButton>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Operación docente</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033]">Clases y grupos</h1>
+            <p className="mt-0.5 text-sm text-[#6b7a90]">Selecciona un curso para ver sus materiales y grupos.</p>
           </div>
 
           <div className="overflow-hidden rounded-[18px] border border-[#d8e2f0] bg-white">
             {coursesLoading ? (
               <p className="px-4 py-3 text-sm text-[#617085]">Cargando cursos asignados…</p>
             ) : (courses ?? []).length ? (
-              (courses ?? []).map((course) => {
-                const isSelected = course.id === (selectedCourse?.id);
+              (courses ?? []).map((course, index) => {
+                const isSelected = course.id === selectedCourse?.id;
+                const accent = COURSE_COLORS[index % COURSE_COLORS.length];
+                const initials = String(course.title ?? "")
+                  .trim()
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((p) => p[0]?.toUpperCase() ?? "")
+                  .join("");
                 return (
                   <div
                     key={course.id}
-                    className={`border-b border-[#edf1f7] last:border-b-0 cursor-pointer transition-colors ${isSelected ? "bg-[#eef4ff] border-l-2 border-l-[#1d4ed8]" : "hover:bg-[#f7f9fc]"}`}
+                    className={`flex items-center gap-3 border-b border-[#edf1f7] last:border-b-0 cursor-pointer transition-colors px-3 py-3 ${
+                      isSelected ? "bg-[#eef4ff] border-l-2 border-l-[#1d4ed8]" : "hover:bg-[#f7f9fc]"
+                    }`}
                     onClick={() => setSelectedCourseId(course.id)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCourseId(course.id); }}
                   >
-                    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#8899b0]">
-                          {course.format || "Formato libre"} · {course.audience || "General"}
-                        </p>
-                        <p className="mt-0.5 truncate text-sm font-semibold text-[#172033]">{course.title}</p>
-                        <p className="mt-0.5 text-xs text-[#66758c]">
-                          {course.enrollmentCount ?? 0} matrículas · {course.cohortCount ?? 0} grupos · {course.activeStudentCount ?? 0} activos
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <StatusPill status={isSelected ? "active" : "draft"} label={isSelected ? "Seleccionado" : "Ver"} />
-                        <ActionButton
-                          className="!py-2 !text-xs"
-                          onClick={() => { setSelectedCourseId(course.id); startCreateAssignment(course.id); }}
-                          type="button"
-                        >
-                          + Material
-                        </ActionButton>
-                        <SecondaryButton className="!py-2 !text-xs" onClick={() => startCreateEnrollment(course.id)} type="button">
-                          Matricular
-                        </SecondaryButton>
+                    {/* Color avatar */}
+                    <div
+                      className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center text-[11px] font-black text-white"
+                      style={{ backgroundColor: accent }}
+                    >
+                      {initials || "GB"}
+                    </div>
+
+                    {/* Course info */}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[#172033]">{course.title}</p>
+                      <p className="text-[10px] text-[#8899b0]">
+                        {course.format || "Formato libre"}{course.audience ? ` · ${course.audience}` : ""}
+                      </p>
+                      <div className="mt-0.5 flex items-center gap-3 text-[10px] text-[#66758c]">
+                        <span className="flex items-center gap-1">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          {course.activeStudentCount ?? 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                          </svg>
+                          {(course.assignments ?? []).length} mat.
+                        </span>
                       </div>
                     </div>
 
-                    {/* Cohort/group pills with status indication */}
-                    {(course.cohorts ?? []).length ? (
-                      <div className="bg-[#f8fafc] px-4 pb-3">
-                        <p className="mb-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-[#8899b0]">Grupos / Cohortes</p>
-                        <div className="flex flex-wrap gap-2">
-                          {(course.cohorts ?? []).slice(0, 4).map((cohort) => {
-                            const isActive = cohort.status === "active";
-                            return (
-                              <span
-                                key={cohort.id}
-                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                                  isActive
-                                    ? "border-[#bfdbfe] bg-[#dbeafe] text-[#1d4ed8]"
-                                    : "border-[#d8e2f0] bg-white text-[#536277]"
-                                }`}
-                              >
-                                {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-[#1d4ed8]" /> : null}
-                                {cohort.title}
-                                {cohort.startDate ? <span className="opacity-70">· {formatDate(cohort.startDate)}</span> : null}
-                              </span>
-                            );
-                          })}
-                          {(course.cohorts ?? []).length > 4 ? (
-                            <span className="text-[10px] text-[#8899b0]">+{(course.cohorts ?? []).length - 4} grupos</span>
-                          ) : null}
-                        </div>
-                      </div>
-                    ) : null}
+                    {/* Single action */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <SecondaryButton
+                        className="!py-1.5 !text-xs shrink-0"
+                        onClick={() => setSelectedCourseId(course.id)}
+                        type="button"
+                      >
+                        Entrar →
+                      </SecondaryButton>
+                    </div>
                   </div>
                 );
               })
@@ -673,87 +671,109 @@ export function TeacherExperience(props) {
           </div>
         </div>
 
-        {/* Right column — selected course aula panel */}
+        {/* Right — aula panel */}
         <div className="grid gap-4 content-start">
-          <div className="rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] overflow-hidden">
-            <div className="border-b border-[#c6d4ec] px-4 py-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">Ahora en clase</p>
-              <p className="mt-0.5 text-sm font-semibold text-[#172033]">
+          <div className="overflow-hidden rounded-[18px] border border-[#d7e0ea] bg-white">
+
+            {/* A) Header con color del curso */}
+            <div
+              className="relative px-4 py-4"
+              style={{ background: `linear-gradient(135deg, ${selectedColor}, ${selectedColor}99)` }}
+            >
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/70">Ahora en clase</p>
+              <p className="mt-0.5 text-base font-black leading-tight text-white">
                 {selectedCourse?.title || "Ninguna clase seleccionada"}
               </p>
               {selectedCourse ? (
-                <p className="mt-0.5 text-[10px] text-[#6b7a90]">
-                  {(selectedCourse.cohorts ?? []).filter((c) => c.status === "active").length} grupo{(selectedCourse.cohorts ?? []).filter((c) => c.status === "active").length !== 1 ? "s" : ""} activo{(selectedCourse.cohorts ?? []).filter((c) => c.status === "active").length !== 1 ? "s" : ""}
-                  {" · "}
-                  {(selectedCourse.assignments ?? []).length} material{(selectedCourse.assignments ?? []).length !== 1 ? "es" : ""}
+                <p className="mt-0.5 text-[10px] text-white/70">
+                  {selectedCourse.activeStudentCount ?? 0} activos · {(selectedCourse.assignments ?? []).length} materiales
                 </p>
               ) : null}
-            </div>
-
-            <div className="divide-y divide-[#d8e8f8]">
-              {(selectedCourse?.assignments ?? []).slice(0, 5).map((assignment) => (
-                <div key={assignment.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#e8f0fd] transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-[#172033]">{assignment.title}</p>
-                    {assignment.dueLabel ? <p className="text-[10px] text-[#6b7a90]">{assignment.dueLabel}</p> : null}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <span className="text-[10px] font-semibold text-[#1d4ed8]">Publicado</span>
-                    <SecondaryButton
-                      className="!py-1 !px-2.5 !text-[10px]"
-                      onClick={() => startEditAssignment(selectedCourse?.id, assignment)}
-                      type="button"
-                    >
-                      Editar
-                    </SecondaryButton>
-                  </div>
+              {selectedCourse ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    className="rounded-xl border border-white/30 bg-white/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/30"
+                    onClick={() => startCreateAssignment(selectedCourse.id)}
+                    type="button"
+                  >
+                    + Material
+                  </button>
+                  <button
+                    className="rounded-xl border border-white/30 bg-white/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/30"
+                    onClick={() => startCreateEnrollment(selectedCourse.id)}
+                    type="button"
+                  >
+                    Matricular
+                  </button>
                 </div>
-              ))}
-              {!(selectedCourse?.assignments ?? []).length ? (
-                <p className="px-4 py-4 text-xs text-[#8899b0]">Sin materiales publicados aún en este curso.</p>
               ) : null}
             </div>
 
-            <div className="border-t border-[#c6d4ec] p-3 grid gap-2">
-              <ActionButton className="w-full justify-center" onClick={() => startCreateAssignment(selectedCourse?.id)} type="button">
-                + Agregar material
-              </ActionButton>
-              <SecondaryButton className="w-full justify-center" onClick={() => startCreateEnrollment(selectedCourse?.id)} type="button">
-                Matricular estudiante
-              </SecondaryButton>
-            </div>
-          </div>
-
-          {/* Quick access to other courses */}
-          {(courses ?? []).length > 1 ? (
-            <div className="rounded-[18px] border border-[#d8e2f0] bg-white overflow-hidden">
-              <div className="border-b border-[#e8eef6] px-4 py-3">
-                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cambiar aula</p>
+            {/* B) Grupos activos */}
+            {selectedCourse ? (
+              <div className="border-t border-[#e7edf5] px-4 py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Grupos activos</p>
+                {(selectedCourse.cohorts ?? []).length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(selectedCourse.cohorts ?? []).map((cohort) => {
+                      const isActive = cohort.status === "active";
+                      return (
+                        <span
+                          key={cohort.id}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            isActive
+                              ? "border-[#bfdbfe] bg-[#dbeafe] text-[#1d4ed8]"
+                              : "border-[#d8e2f0] bg-[#f7f9fc] text-[#536277]"
+                          }`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-[#1d4ed8]" : "bg-[#d0d8e4]"}`} />
+                          {cohort.title}
+                          {cohort.startDate ? (
+                            <span className="opacity-60">· {formatDate(cohort.startDate)}</span>
+                          ) : null}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-1.5 text-xs text-[#8899b0]">Sin grupos configurados para este curso.</p>
+                )}
               </div>
-              {(courses ?? []).filter((c) => c.id !== selectedCourse?.id).map((course) => (
-                <div
-                  key={course.id}
-                  className="flex items-center gap-3 border-b border-[#edf1f7] px-4 py-2.5 last:border-b-0 hover:bg-[#f7f9fc] transition-colors cursor-pointer"
-                  onClick={() => setSelectedCourseId(course.id)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCourseId(course.id); }}
-                >
+            ) : null}
+
+            {/* C) Materiales */}
+            <div className="border-t border-[#e7edf5] divide-y divide-[#e7edf5]">
+              {(selectedCourse?.assignments ?? []).slice(0, 6).map((assignment) => (
+                <div key={assignment.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#f8fbff] transition-colors">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eef4ff]">
+                    <svg className="h-3.5 w-3.5 text-[#1d4ed8]" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                    </svg>
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-[#172033]">{course.title}</p>
-                    <p className="text-[10px] text-[#8899b0]">{course.activeStudentCount ?? 0} activos · {(course.assignments ?? []).length} materiales</p>
+                    <p className="truncate text-xs font-semibold text-[#172033]">{assignment.title}</p>
+                    {assignment.dueLabel ? (
+                      <p className="text-[10px] text-[#6b7a90]">{assignment.dueLabel}</p>
+                    ) : null}
                   </div>
                   <SecondaryButton
-                    className="!py-1.5 !text-xs shrink-0"
-                    onClick={(e) => { e.stopPropagation(); setSelectedCourseId(course.id); }}
+                    className="!py-1 !px-2.5 !text-[10px] shrink-0"
+                    onClick={() => startEditAssignment(selectedCourse?.id, assignment)}
                     type="button"
                   >
-                    Abrir
+                    Editar
                   </SecondaryButton>
                 </div>
               ))}
+              <p className="px-4 py-3 text-xs text-[#8899b0]">
+                {selectedCourse
+                  ? (selectedCourse.assignments ?? []).length === 0
+                    ? "Sin materiales publicados aún en este curso."
+                    : null
+                  : "Selecciona un curso de la lista para ver sus materiales."}
+              </p>
             </div>
-          ) : null}
+          </div>
         </div>
       </section>
     );
