@@ -90,6 +90,11 @@ function truncateText(value, maxLength) {
   return `${normalized.slice(0, maxLength).trimEnd()}...`;
 }
 
+function shortBrandName(name) {
+  const raw = String(name ?? "").trim();
+  return raw.split(":")[0].trim() || "GoBeyond";
+}
+
 
 // --- COMPONENTES ATÓMICOS ---
 const SectionTag = ({ children }) => (
@@ -476,7 +481,7 @@ export function PublicExperience({
           <a className="flex items-center gap-3 min-w-0" href="#inicio">
             <img alt="Logo de GoBeyond" className="h-9 w-9 object-contain md:h-10 md:w-10" src="/logo-icon.png" />
             <span className="truncate text-[11px] sm:text-[12px] font-black uppercase tracking-[0.24em] sm:tracking-[0.3em]">
-              {brand.name || "GoBeyond"}
+              {shortBrandName(brand.name)}
             </span>
           </a>
           <nav className="hidden md:flex gap-8">
@@ -572,7 +577,7 @@ export function PublicExperience({
             <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
               <SectionTag>{landing.aboutTitle || "Sobre nosotros"}</SectionTag>
               <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-                {landing.aboutHeading || brand.tagline || brand.name}
+                {landing.aboutHeading || brand.tagline}
               </h2>
               <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
                 {landing.aboutBodyTwo || brand.description}
@@ -974,10 +979,10 @@ export function PublicExperience({
           <div>
             <div className="flex items-center gap-3">
               <img alt="Logo de GoBeyond" className="h-7 w-7 object-contain" src="/logo-icon.png" />
-              <span className="text-[11px] font-black uppercase tracking-[0.3em]">{brand.name || "GoBeyond Academy"}</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.3em]">{shortBrandName(brand.name)}</span>
             </div>
             <p className="mt-4 text-[11px] uppercase tracking-[0.3em] text-gray-600">
-              © {new Date().getFullYear()} {brand.name || "GoBeyond Academy"} · Formación de Alto Impacto · Puerto Limón, CR.
+              © {new Date().getFullYear()} · Formación de Alto Impacto · Puerto Limón, CR.
             </p>
           </div>
 
