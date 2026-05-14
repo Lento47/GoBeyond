@@ -378,11 +378,23 @@ function CoursesSection({ landing, programCards, courses, liveSessions }) {
         </div>
 
         {hasCourseContent ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {programCards.length
-              ? programCards.map((p, i) => <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />)
-              : courses.map((c, i) => <CourseCard key={c.id || i} course={c} index={i} landing={landing} />)}
-          </div>
+          <>
+            {programCards.length ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {programCards.map((p, i) => (
+                  <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
+                ))}
+              </div>
+            ) : null}
+
+            {courses.length ? (
+              <div className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${programCards.length ? "mt-8" : ""}`}>
+                {courses.map((c, i) => (
+                  <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : (
           <EmptyState
             body="Los programas y cursos publicados desde admin apareceran aqui."
