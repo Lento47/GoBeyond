@@ -39,7 +39,7 @@ export function MarkdownContent({ children, className = "" }) {
 
   return (
     <div className={`markdown-content ${className}`.trim()}>
-      <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]} skipHtml>
+      <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
         {content}
       </ReactMarkdown>
     </div>

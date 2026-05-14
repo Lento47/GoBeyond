@@ -366,11 +366,11 @@ function ServicesSection({ landing, content, learningPath }) {
 
 function ProgramCardGrid({ programCards, landing }) {
   const groups = [];
-  let current = { label: null, cards: [] };
+  let current = { label: null, heading: null, subheading: null, cards: [] };
   for (const card of programCards) {
     if (card.type === "section") {
       groups.push(current);
-      current = { label: card.title, cards: [] };
+      current = { label: card.title, heading: card.heading, subheading: card.subheading, cards: [] };
     } else {
       current.cards.push(card);
     }
@@ -380,13 +380,27 @@ function ProgramCardGrid({ programCards, landing }) {
   const nonEmpty = groups.filter((g) => g.cards.length > 0);
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-16">
       {nonEmpty.map((group, gi) => (
         <div key={gi}>
-          {group.label ? (
-            <p className="mb-6 text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400">
-              {group.label}
-            </p>
+          {(group.label || group.heading || group.subheading) ? (
+            <div className="mb-10 text-center gobeyond-reveal">
+              {group.label ? (
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400 mb-3">
+                  {group.label}
+                </p>
+              ) : null}
+              {group.heading ? (
+                <h3 className="text-[clamp(1.6rem,3.5vw,3rem)] font-black tracking-tighter leading-[0.95]">
+                  {group.heading}
+                </h3>
+              ) : null}
+              {group.subheading ? (
+                <p className="mt-3 text-base text-gray-500 leading-relaxed max-w-2xl mx-auto">
+                  {group.subheading}
+                </p>
+              ) : null}
+            </div>
           ) : null}
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {group.cards.map((p, i) => (
