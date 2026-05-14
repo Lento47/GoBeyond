@@ -477,27 +477,46 @@ export function LandingEditorSection({
                     return (
                       <div
                         key={program.id || index}
-                        className={`col-span-full group relative flex items-center gap-4 rounded-2xl border px-6 py-4 transition-all cursor-grab active:cursor-grabbing ${isDragging ? "opacity-40" : ""} ${isOver ? "border-blue-500/40 bg-blue-600/5" : "border-white/10 bg-white/[0.02]"}`}
+                        className={`col-span-full group relative rounded-2xl border px-6 py-5 transition-all cursor-grab active:cursor-grabbing ${isDragging ? "opacity-40" : ""} ${isOver ? "border-blue-500/40 bg-blue-600/5" : "border-white/10 bg-white/[0.02]"}`}
                         draggable
                         onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; setDragIndex(index); }}
                         onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
                         onDrop={(e) => { e.preventDefault(); moveCard(dragIndex, index); setDragIndex(null); setDragOverIndex(null); }}
                         onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                       >
-                        <span className="text-gray-600 select-none">⠿</span>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400 mr-2 shrink-0">Sección:</p>
-                        <EditableField
-                          value={program.title ?? ""}
-                          onChange={(v) => updateCard(index, "title", v)}
-                          as="span"
-                          className="text-sm font-bold text-white flex-1"
-                          placeholder="Nombre de la sección..."
-                        />
-                        <button
-                          onClick={() => removeCard(index)}
-                          className="hidden group-hover:flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-gray-500 text-xs hover:bg-red-900/30 hover:text-red-400 transition-all"
-                          type="button"
-                        >×</button>
+                        <div className="flex items-start gap-3">
+                          <span className="mt-1 text-gray-600 select-none shrink-0">⠿</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400 mb-2">Sección — etiqueta / título / subtítulo</p>
+                            <EditableField
+                              value={program.title ?? ""}
+                              onChange={(v) => updateCard(index, "title", v)}
+                              as="span"
+                              className="block text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400"
+                              placeholder="Etiqueta (ej: Cursos)..."
+                            />
+                            <EditableField
+                              value={program.heading ?? ""}
+                              onChange={(v) => updateCard(index, "heading", v)}
+                              as="p"
+                              className="mt-1 text-2xl font-black tracking-tight text-white"
+                              placeholder="Título grande..."
+                            />
+                            <EditableField
+                              value={program.subheading ?? ""}
+                              onChange={(v) => updateCard(index, "subheading", v)}
+                              as="p"
+                              multiline
+                              className="mt-1 text-sm text-gray-500"
+                              placeholder="Subtítulo o descripción corta..."
+                            />
+                          </div>
+                          <button
+                            onClick={() => removeCard(index)}
+                            className="hidden group-hover:flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-gray-500 text-xs hover:bg-red-900/30 hover:text-red-400 transition-all"
+                            type="button"
+                          >×</button>
+                        </div>
                       </div>
                     );
                   }
