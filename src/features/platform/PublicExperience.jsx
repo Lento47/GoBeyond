@@ -156,27 +156,32 @@ function EmbedFrame({ src, title }) {
   );
 }
 
-// Max 3 highlights from a program card's list fields
-function ProgramHighlights({ program }) {
-  const items = [
-    ...(Array.isArray(program.outcomes) ? program.outcomes : []),
-    ...(Array.isArray(program.includes) ? program.includes : []),
-    ...(Array.isArray(program.benefits) ? program.benefits : []),
-  ]
-    .filter((item) => String(item ?? "").trim())
-    .slice(0, 3);
-
-  if (!items.length) return null;
-
+function ProgramList({ label, items }) {
+  const filtered = (Array.isArray(items) ? items : []).filter((s) => String(s ?? "").trim());
+  if (!filtered.length) return null;
   return (
-    <ul className="mt-4 grid gap-2">
-      {items.map((item, i) => (
-        <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-gray-400">
-          <span className="mt-[0.4rem] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500/60" />
-          <span className="min-w-0 break-words">{item}</span>
-        </li>
-      ))}
-    </ul>
+    <div className="mt-5">
+      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">{label}</p>
+      <ul className="mt-3 grid gap-2">
+        {filtered.map((item, i) => (
+          <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-gray-400">
+            <span className="mt-[0.4rem] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500/60" />
+            <span className="min-w-0 break-words">{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ProgramHighlights({ program }) {
+  return (
+    <>
+      <ProgramList label="Resultados" items={program.outcomes} />
+      <ProgramList label="Programas disponibles" items={program.availablePrograms} />
+      <ProgramList label="Incluye" items={program.includes} />
+      <ProgramList label="Beneficios adicionales" items={program.benefits} />
+    </>
   );
 }
 
