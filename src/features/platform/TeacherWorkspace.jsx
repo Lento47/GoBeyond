@@ -984,139 +984,232 @@ export function TeacherExperience(props) {
       {teacherSection === "teacher-sops" ? renderSopsSection() : null}
 
       {modal === "assignment" ? (
-        <ModalShell
-          onClose={closeModal}
-          subtitle="Los materiales creados aqui solo impactan cursos asignados a este docente."
-          title={assignmentForm.assignmentId ? "Editar material docente" : "Nuevo material docente"}
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2 backdrop-blur-[8px] sm:px-4 sm:py-4"
+          onClick={closeModal}
+          role="presentation"
         >
-          <form className="grid gap-4" onSubmit={handleAssignmentSubmit}>
-            <Select onChange={(event) => setAssignmentForm((current) => ({ ...current, courseId: event.target.value }))} value={assignmentForm.courseId}>
-              <option value="">Selecciona un curso</option>
-              {(courses ?? []).map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
-              ))}
-            </Select>
-            <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, title: event.target.value }))} placeholder="Titulo del material" value={assignmentForm.title} />
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueDate: event.target.value }))} type="date" value={assignmentForm.dueDate} />
-              <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueTime: event.target.value }))} type="time" value={assignmentForm.dueTime} />
-            </div>
-            <Textarea onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Guia, instruccion o contexto para el estudiante" value={assignmentForm.instruction} />
-            <div className="grid gap-3 rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            className="flex w-full max-w-3xl flex-col overflow-hidden rounded-[22px] border border-[#d8e2f0] bg-[#f8fbff] shadow-[0_24px_70px_rgba(15,23,42,0.18)] max-h-[92vh]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Header banner */}
+            <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#1d4ed8] to-[#3b82f6] px-5 py-5 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Archivo adjunto</p>
-                  <p className="mt-1 text-sm text-[#536277]">
-                    Sube una o varias guias, plantillas o recursos para este material.
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">
+                    {assignmentForm.assignmentId ? "Editando material" : "Nuevo material"}
                   </p>
+                  <h3 className="mt-1 text-xl font-black leading-tight text-white sm:text-2xl">
+                    {assignmentForm.title || (assignmentForm.assignmentId ? "Sin título" : "Material sin título")}
+                  </h3>
+                  {assignmentForm.courseId ? (
+                    <p className="mt-1 text-[11px] text-white/70">
+                      {(courses ?? []).find((c) => c.id === assignmentForm.courseId)?.title ?? "Curso seleccionado"}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-white/50">Selecciona un curso abajo</p>
+                  )}
                 </div>
-                {assignmentForm.attachments.length ? (
-                  <span className="rounded-full border border-[#d7e0ea] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#435066]">
-                    {assignmentForm.attachments.length} adjunto{assignmentForm.attachments.length === 1 ? "" : "s"}
-                  </span>
-                ) : null}
+                <button
+                  className="shrink-0 rounded-xl border border-white/25 bg-white/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/25"
+                  onClick={closeModal}
+                  type="button"
+                >
+                  Cerrar
+                </button>
               </div>
-              <input
-                accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv"
-                className="block w-full text-sm text-[#435066] file:mr-4 file:rounded-xl file:border-0 file:bg-[#eef4ff] file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-[#1d4ed8] hover:file:bg-[#dbeafe]"
-                disabled={submitting}
-                onChange={async (event) => {
-                  const files = Array.from(event.target.files ?? []);
-                  if (!files.length) {
-                    return;
-                  }
-
-                  try {
-                    setSubmitting(true);
-                    setActionError("");
-                    const uploads = await Promise.all(files.map((file) => uploadAdminAsset(undefined, file, "assignment-file")));
-                    setAssignmentForm((current) => {
-                      const nextAttachments = [...(current.attachments ?? [])];
-
-                      uploads.forEach((asset, index) => {
-                        nextAttachments.push({
-                          id: createAttachmentId(),
-                          fileKey: asset.key ?? "",
-                          fileName: asset.fileName ?? files[index].name,
-                          fileType: asset.contentType ?? files[index].type,
-                          fileUploadedAt: new Date().toISOString(),
-                          fileExpiresAt: "",
-                          fileUrl: asset.url ?? "",
-                        });
-                      });
-
-                      return {
-                        ...current,
-                        attachments: nextAttachments,
-                        fileKey: nextAttachments[0]?.fileKey ?? "",
-                        fileName: nextAttachments[0]?.fileName ?? "",
-                        fileType: nextAttachments[0]?.fileType ?? "",
-                        fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
-                        fileUrl: nextAttachments[0]?.fileUrl ?? "",
-                      };
-                    });
-                  } catch (uploadError) {
-                    setActionError(uploadError.message);
-                  } finally {
-                    setSubmitting(false);
-                    event.target.value = "";
-                  }
-                }}
-                multiple
-                type="file"
-              />
-              {assignmentForm.attachments.length ? (
-                <div className="grid gap-2">
-                  {assignmentForm.attachments.map((attachment) => (
-                    <div key={attachment.id} className="flex flex-col gap-2 rounded-[14px] border border-[#d7e0ea] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[#172033]">{attachment.fileName}</p>
-                        <p className="mt-1 text-[11px] text-[#6b7a90]">
-                          {attachment.fileUploadedAt ? `cargado ${formatDateTime(attachment.fileUploadedAt)}` : "Adjunto listo"}
-                        </p>
-                      </div>
-                      <SecondaryButton
-                        className="w-full sm:w-auto"
-                        onClick={() =>
-                          setAssignmentForm((current) => {
-                            const nextAttachments = (current.attachments ?? []).filter((item) => item.id !== attachment.id);
-                            return {
-                              ...current,
-                              attachments: nextAttachments,
-                              fileKey: nextAttachments[0]?.fileKey ?? "",
-                              fileName: nextAttachments[0]?.fileName ?? "",
-                              fileType: nextAttachments[0]?.fileType ?? "",
-                              fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
-                              fileUrl: nextAttachments[0]?.fileUrl ?? "",
-                            };
-                          })
-                        }
-                        type="button"
-                      >
-                        Quitar
-                      </SecondaryButton>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <ActionButton disabled={submitting} type="submit">
-                {submitting ? "Guardando..." : assignmentForm.assignmentId ? "Guardar cambios" : "Crear material"}
-              </ActionButton>
               {assignmentForm.assignmentId ? (
-                <SecondaryButton disabled={submitting} onClick={handleAssignmentDelete} type="button">
-                  Eliminar
-                </SecondaryButton>
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
+                  Publicado · editable
+                </span>
               ) : null}
-              <SecondaryButton onClick={closeModal} type="button">
-                Cancelar
-              </SecondaryButton>
             </div>
-          </form>
-        </ModalShell>
+
+            {/* Timeline form body */}
+            <form className="min-h-0 flex-1 overflow-y-auto" onSubmit={handleAssignmentSubmit}>
+              <div className="px-5 py-5 sm:px-6 sm:py-6">
+
+                {/* Step 1 — Curso */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1d4ed8] text-[11px] font-black text-white">1</div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#c6d4ec] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#1d4ed8]">Curso</p>
+                    <Select onChange={(event) => setAssignmentForm((current) => ({ ...current, courseId: event.target.value }))} value={assignmentForm.courseId}>
+                      <option value="">Selecciona un curso</option>
+                      {(courses ?? []).map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.title}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Step 2 — Contenido */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1d4ed8] text-[11px] font-black text-white">2</div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#c6d4ec] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#1d4ed8]">Contenido</p>
+                    <input
+                      className="block w-full rounded-[14px] border border-[#d8e2f0] bg-white px-4 py-3 text-lg font-semibold text-[#172033] placeholder-[#b0bfcf] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#1d4ed8]/15 mb-3"
+                      onChange={(event) => setAssignmentForm((current) => ({ ...current, title: event.target.value }))}
+                      placeholder="Título del material"
+                      value={assignmentForm.title}
+                    />
+                    <Textarea onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Guía, instrucción o contexto para el estudiante" value={assignmentForm.instruction} />
+                  </div>
+                </div>
+
+                {/* Step 3 — Fecha límite */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#c6d4ec] bg-white text-[11px] font-black text-[#6b7a90]">3</div>
+                    <div className="mt-1 w-px flex-1 bg-gradient-to-b from-[#c6d4ec] to-transparent" />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-6">
+                    <p className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Fecha límite <span className="font-normal normal-case tracking-normal opacity-60">— opcional</span></p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueDate: event.target.value }))} type="date" value={assignmentForm.dueDate} />
+                      <Input onChange={(event) => setAssignmentForm((current) => ({ ...current, dueTime: event.target.value }))} type="time" value={assignmentForm.dueTime} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 4 — Archivos */}
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#c6d4ec] bg-white text-[11px] font-black text-[#6b7a90]">4</div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Archivos <span className="font-normal normal-case tracking-normal opacity-60">— opcional</span></p>
+                    <label className="flex cursor-pointer flex-col items-center gap-2 rounded-[16px] border-2 border-dashed border-[#c6d4ec] bg-[#f7f9fc] px-4 py-5 text-center transition hover:border-[#93b4e8] hover:bg-[#eef4ff]">
+                      <svg className="h-7 w-7 text-[#8899b0]" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      </svg>
+                      <span className="text-sm font-semibold text-[#536277]">Subir archivos</span>
+                      <span className="text-[11px] text-[#8899b0]">PDF, DOCX, XLSX, PPTX, TXT, CSV</span>
+                      <input
+                        accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv"
+                        className="sr-only"
+                        disabled={submitting}
+                        onChange={async (event) => {
+                          const files = Array.from(event.target.files ?? []);
+                          if (!files.length) return;
+                          try {
+                            setSubmitting(true);
+                            setActionError("");
+                            const uploads = await Promise.all(files.map((file) => uploadAdminAsset(undefined, file, "assignment-file")));
+                            setAssignmentForm((current) => {
+                              const nextAttachments = [...(current.attachments ?? [])];
+                              uploads.forEach((asset, index) => {
+                                nextAttachments.push({
+                                  id: createAttachmentId(),
+                                  fileKey: asset.key ?? "",
+                                  fileName: asset.fileName ?? files[index].name,
+                                  fileType: asset.contentType ?? files[index].type,
+                                  fileUploadedAt: new Date().toISOString(),
+                                  fileExpiresAt: "",
+                                  fileUrl: asset.url ?? "",
+                                });
+                              });
+                              return {
+                                ...current,
+                                attachments: nextAttachments,
+                                fileKey: nextAttachments[0]?.fileKey ?? "",
+                                fileName: nextAttachments[0]?.fileName ?? "",
+                                fileType: nextAttachments[0]?.fileType ?? "",
+                                fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
+                                fileUrl: nextAttachments[0]?.fileUrl ?? "",
+                              };
+                            });
+                          } catch (uploadError) {
+                            setActionError(uploadError.message);
+                          } finally {
+                            setSubmitting(false);
+                            event.target.value = "";
+                          }
+                        }}
+                        multiple
+                        type="file"
+                      />
+                    </label>
+
+                    {assignmentForm.attachments.length ? (
+                      <div className="mt-3 grid gap-2">
+                        {assignmentForm.attachments.map((attachment) => (
+                          <div key={attachment.id} className="flex items-center gap-3 rounded-[14px] border border-[#d7e0ea] bg-white px-3 py-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eef4ff]">
+                              <svg className="h-4 w-4 text-[#1d4ed8]" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-semibold text-[#172033]">{attachment.fileName}</p>
+                              <p className="text-[10px] text-[#6b7a90]">
+                                {attachment.fileUploadedAt ? `Cargado ${formatDateTime(attachment.fileUploadedAt)}` : "Listo para publicar"}
+                              </p>
+                            </div>
+                            <button
+                              className="shrink-0 rounded-lg border border-[#d7e0ea] bg-[#f7f9fc] px-2.5 py-1 text-[10px] font-semibold text-[#536277] transition hover:bg-[#fee2e2] hover:text-[#dc2626] hover:border-[#fecaca]"
+                              onClick={() =>
+                                setAssignmentForm((current) => {
+                                  const nextAttachments = (current.attachments ?? []).filter((item) => item.id !== attachment.id);
+                                  return {
+                                    ...current,
+                                    attachments: nextAttachments,
+                                    fileKey: nextAttachments[0]?.fileKey ?? "",
+                                    fileName: nextAttachments[0]?.fileName ?? "",
+                                    fileType: nextAttachments[0]?.fileType ?? "",
+                                    fileUploadedAt: nextAttachments[0]?.fileUploadedAt ?? "",
+                                    fileUrl: nextAttachments[0]?.fileUrl ?? "",
+                                  };
+                                })
+                              }
+                              type="button"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky footer */}
+              <div className="sticky bottom-0 border-t border-[#d8e2f0] bg-[#f8fbff]/96 px-5 py-4 backdrop-blur sm:px-6">
+                {actionError ? <p className="mb-3 text-sm text-[#dc2626]">{actionError}</p> : null}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <ActionButton disabled={submitting} type="submit">
+                      {submitting ? "Guardando..." : assignmentForm.assignmentId ? "Guardar cambios" : "Publicar material"}
+                    </ActionButton>
+                    <SecondaryButton onClick={closeModal} type="button">
+                      Cancelar
+                    </SecondaryButton>
+                  </div>
+                  {assignmentForm.assignmentId ? (
+                    <SecondaryButton disabled={submitting} onClick={handleAssignmentDelete} type="button">
+                      Eliminar material
+                    </SecondaryButton>
+                  ) : null}
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
 
       {modal === "enrollment" ? (
