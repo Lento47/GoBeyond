@@ -620,7 +620,7 @@ export function PublicExperience({
             <div className="gobeyond-reveal opacity-0 translate-y-10 transition-all duration-700">
               <SectionTag>{landing.aboutTitle || "Sobre nosotros"}</SectionTag>
               <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 sm:mb-8">
-                {brand.tagline || brand.name}
+                {brand.name}
               </h2>
               <MarkdownContent className="text-base sm:text-lg md:text-xl text-gray-500 leading-relaxed font-light">
                 {landing.aboutBody || brand.description}
