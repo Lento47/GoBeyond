@@ -1028,6 +1028,16 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
       .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))
       .slice(0, 5);
 
+    // Performance stats
+    const avgProgress = activeCourses.length
+      ? Math.round(activeCourses.reduce((sum, c) => sum + (c.enhancement?.progressPercent ?? 0), 0) / activeCourses.length)
+      : 0;
+    const totalMaterials = activeCourses.reduce((sum, c) => sum + (c.assignments ?? []).length, 0);
+    const passedCount = activeCourses.filter((c) => c.completionStatus === "passed").length;
+    const maxStreak = activeCourses.reduce((max, c) => Math.max(max, c.enhancement?.streakDays ?? 0), 0);
+    const totalPoints = activeCourses.reduce((sum, c) => sum + (c.enhancement?.points ?? 0), 0);
+    const hasGamification = activeCourses.some((c) => c.enhancement?.gamificationEnabled);
+
     return (
       <section id="portal-courses" className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_22rem]">
         {/* Left — stream grouped by course */}
@@ -1165,48 +1175,61 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
           )}
         </div>
 
-        {/* Right — quick access + upcoming */}
+        {/* Right — performance stats + upcoming */}
         <div className="grid gap-4 content-start">
-          {/* Course quick access */}
+          {/* Performance panel */}
           <div className="overflow-hidden rounded-[20px] border border-[#d7e0ea] bg-white">
             <div className="border-b border-[#e7edf5] px-4 py-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Acceso rápido</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Tu desempeño</p>
             </div>
+
             {activeCourses.length ? (
-              activeCourses.map((course, index) => {
-                const colorClass = gcColors[index % gcColors.length];
-                const pct = course.enhancement?.progressPercent ?? 0;
-                const isPassed = course.completionStatus === "passed";
-                const isFailed = course.completionStatus === "failed";
-                return (
-                  <button
-                    key={course.enrollmentId ?? course.id}
-                    className="flex w-full items-center gap-3 border-b border-[#f0f4f8] px-4 py-3 text-left last:border-b-0 hover:bg-[#f8fbff] transition-colors"
-                    onClick={() => handleOpenCourse(course)}
-                    type="button"
-                  >
-                    <div className={`h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br ${colorClass}`}>
-                      {course.coverImage ? (
-                        <img alt={course.title} className="h-full w-full object-cover" src={course.coverImage} />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-[#172033]">{course.title}</p>
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <div className="h-1 flex-1 rounded-full bg-[#e7edf5]">
-                          <div
-                            className={`h-1 rounded-full ${isPassed ? "bg-[#15803d]" : isFailed ? "bg-[#dc2626]" : "bg-[#1d4ed8]"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="shrink-0 text-[10px] font-bold text-[#8899b0]">{pct}%</span>
+              <div className="px-4 py-4 space-y-4">
+                {/* Average progress bar */}
+                <div>
+                  <div className="flex items-end justify-between gap-2 mb-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">Promedio de avance</p>
+                    <p className="text-[1.4rem] font-black leading-none text-[#172033]">{avgProgress}<span className="text-sm font-semibold text-[#6b7a90]">%</span></p>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-[#e7edf5]">
+                    <div
+                      className="h-2.5 rounded-full bg-[#1d4ed8] transition-all"
+                      style={{ width: `${avgProgress}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[10px] text-[#8899b0]">sobre {activeCourses.length} curso{activeCourses.length !== 1 ? "s" : ""} activo{activeCourses.length !== 1 ? "s" : ""}</p>
+                </div>
+
+                {/* Stats grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-[14px] border border-[#e7edf5] bg-[#f7f9fc] px-3 py-2.5">
+                    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#6b7a90]">Materiales</p>
+                    <p className="mt-1 text-xl font-black text-[#172033]">{totalMaterials}</p>
+                    <p className="text-[10px] text-[#8899b0]">en todos los cursos</p>
+                  </div>
+                  <div className="rounded-[14px] border border-[#e7edf5] bg-[#f7f9fc] px-3 py-2.5">
+                    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#6b7a90]">Aprobados</p>
+                    <p className="mt-1 text-xl font-black text-[#15803d]">{passedCount}</p>
+                    <p className="text-[10px] text-[#8899b0]">curso{passedCount !== 1 ? "s" : ""} completado{passedCount !== 1 ? "s" : ""}</p>
+                  </div>
+                  {hasGamification ? (
+                    <>
+                      <div className="rounded-[14px] border border-[#e7edf5] bg-[#f7f9fc] px-3 py-2.5">
+                        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#6b7a90]">Racha</p>
+                        <p className="mt-1 text-xl font-black text-[#d97706]">{maxStreak}<span className="text-sm font-semibold"> d</span></p>
+                        <p className="text-[10px] text-[#8899b0]">días consecutivos</p>
                       </div>
-                    </div>
-                  </button>
-                );
-              })
+                      <div className="rounded-[14px] border border-[#e7edf5] bg-[#f7f9fc] px-3 py-2.5">
+                        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#6b7a90]">Puntos</p>
+                        <p className="mt-1 text-xl font-black text-[#7c3aed]">{totalPoints}</p>
+                        <p className="text-[10px] text-[#8899b0]">acumulados</p>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
             ) : (
-              <p className="px-4 py-4 text-sm text-[#8899b0]">Sin cursos activos.</p>
+              <p className="px-4 py-4 text-sm text-[#8899b0]">Sin cursos activos para calcular estadísticas.</p>
             )}
           </div>
 
