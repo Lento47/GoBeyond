@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+const listToLines = (val = []) => (Array.isArray(val) ? val : []).join("\n");
+const linesToList = (val = "") => String(val).split("\n").map((s) => s.trim()).filter(Boolean);
+
 // ── Atomic components matching PublicExperience visuals ──────────────────────
 
 const SectionTag = ({ children }) => (
@@ -659,18 +662,49 @@ export function LandingEditorSection({
                               />
                             </div>
                           ) : null}
-                          <ProgramList items={program.outcomes} title="Resultados" />
-                          <ProgramList items={program.availablePrograms} title="Programas disponibles" />
-                          <ProgramList items={program.includes} title="Incluye" />
-                          <ProgramList items={program.benefits} title="Beneficios adicionales" />
-                          {program.certificationNote ? (
-                            <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{program.certificationNote}</p>
-                          ) : null}
-                        </div>
-                        <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                          <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-gray-600">
-                            Imagen, resultados, URL y CTA → formulario avanzado
-                          </p>
+                          {[
+                            { key: "outcomes", label: "Resultados" },
+                            { key: "availablePrograms", label: "Programas disponibles" },
+                            { key: "includes", label: "Incluye" },
+                            { key: "benefits", label: "Beneficios adicionales" },
+                          ].map(({ key, label }) => (
+                            <div key={key} className="mt-5">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400 mb-2">{label}</p>
+                              <textarea
+                                value={listToLines(program[key])}
+                                onChange={(e) => updateCard(index, key, linesToList(e.target.value))}
+                                placeholder={`Un elemento por línea...`}
+                                rows={3}
+                                className="w-full resize-y bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-300 placeholder-gray-600 outline-none focus:border-blue-500/50 focus:bg-white/[0.06] transition-colors"
+                              />
+                            </div>
+                          ))}
+                          <div className="mt-5">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400 mb-2">Nota de certificación</p>
+                            <DarkInput
+                              value={program.certificationNote ?? ""}
+                              onChange={(v) => updateCard(index, "certificationNote", v)}
+                              placeholder="Ej: Certificación internacional incluida"
+                            />
+                          </div>
+                          <div className="mt-5 grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400 mb-2">Texto del botón</p>
+                              <DarkInput
+                                value={program.ctaLabel ?? ""}
+                                onChange={(v) => updateCard(index, "ctaLabel", v)}
+                                placeholder="Coordinar implementación"
+                              />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400 mb-2">URL del botón</p>
+                              <DarkInput
+                                value={program.href ?? ""}
+                                onChange={(v) => updateCard(index, "href", v)}
+                                placeholder="#contacto"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </GlassCard>
                     </div>
