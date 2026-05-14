@@ -24,8 +24,14 @@ const markdownComponents = {
   a: MarkdownLink,
 };
 
+function normalizeNewlines(text) {
+  // Preserve existing double newlines, convert lone \n to \n\n so single
+  // line breaks in admin textarea input become paragraph breaks in markdown.
+  return text.replace(/(?<!\n)\n(?!\n)/g, "\n\n");
+}
+
 export function MarkdownContent({ children, className = "" }) {
-  const content = String(children ?? "").trim();
+  const content = normalizeNewlines(String(children ?? "").trim());
 
   if (!content) {
     return null;
