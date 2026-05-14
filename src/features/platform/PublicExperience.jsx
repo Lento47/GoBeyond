@@ -378,11 +378,23 @@ function CoursesSection({ landing, programCards, courses, liveSessions }) {
         </div>
 
         {hasCourseContent ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {programCards.length
-              ? programCards.map((p, i) => <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />)
-              : courses.map((c, i) => <CourseCard key={c.id || i} course={c} index={i} landing={landing} />)}
-          </div>
+          <>
+            {courses.length ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {courses.map((c, i) => (
+                  <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
+                ))}
+              </div>
+            ) : null}
+
+            {programCards.length ? (
+              <div className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${courses.length ? "mt-8" : ""}`}>
+                {programCards.map((p, i) => (
+                  <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : (
           <EmptyState
             body="Los programas y cursos publicados desde admin apareceran aqui."
@@ -447,9 +459,12 @@ function ProgramCard({ program, index, landing }) {
         ) : null}
 
         {program.relevance ? (
-          <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-300 break-words">
-            {truncate(program.relevance, 160)}
-          </MarkdownContent>
+          <div className="mt-5 rounded-xl border border-white/8 bg-white/[0.04] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
+            <MarkdownContent className="mt-2 text-sm leading-relaxed text-gray-200">
+              {truncate(program.relevance, 200)}
+            </MarkdownContent>
+          </div>
         ) : null}
 
         <ProgramHighlights program={program} />

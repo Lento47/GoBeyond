@@ -107,7 +107,7 @@ export function LandingEditorSection({
   const benefitLines = useMemo(
     () =>
       String(landingForm?.benefits ?? "")
-        .split("\n")
+        .split(/\n\n+/)
         .map((s) => s.trim())
         .filter(Boolean),
     [landingForm?.benefits]
@@ -138,12 +138,12 @@ export function LandingEditorSection({
   const updateBenefit = (i, val) => {
     const lines = [...benefitLines];
     lines[i] = val;
-    setLanding("benefits", lines.join("\n"));
+    setLanding("benefits", lines.join("\n\n"));
   };
   const addBenefit = () =>
-    setLanding("benefits", (landingForm?.benefits ?? "") + "\nNuevo beneficio");
+    setLanding("benefits", (landingForm?.benefits ?? "") + "\n\nNuevo beneficio");
   const removeBenefit = (i) =>
-    setLanding("benefits", benefitLines.filter((_, idx) => idx !== i).join("\n"));
+    setLanding("benefits", benefitLines.filter((_, idx) => idx !== i).join("\n\n"));
 
   const setContactInfo = (key, val) =>
     setLanding("contactInfo", { ...contactInfo, [key]: val });

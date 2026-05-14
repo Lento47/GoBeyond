@@ -242,8 +242,8 @@ function normalizeLandingState(landing = {}) {
       : "Inicio, Sobre nosotros, Servicios, Impacto, Testimonios, Contacto",
     // Sobre nosotros
     benefits: Array.isArray(landing?.benefits) && landing.benefits.length
-      ? landing.benefits.join("\n")
-      : "Alianza con centros educativos y apertura para jovenes independientes.\nPreparacion orientada a certificaciones internacionales con valor real de empleabilidad.\nImpacto social concreto para reducir brechas de acceso a formacion especializada.\nHerramientas practicas que amplian oportunidades dentro y fuera de Limon.",
+      ? landing.benefits.join("\n\n")
+      : "Alianza con centros educativos y apertura para jovenes independientes.\n\nPreparacion orientada a certificaciones internacionales con valor real de empleabilidad.\n\nImpacto social concreto para reducir brechas de acceso a formacion especializada.\n\nHerramientas practicas que amplian oportunidades dentro y fuera de Limon.",
     // Servicios
     servicesTitle: landing?.servicesTitle ?? "Nuestros servicios",
     subscriptionLabel: landing?.subscriptionLabel ?? "",
@@ -1225,7 +1225,7 @@ export function AdminWorkspace({
         .map((item) => item.trim())
         .filter(Boolean),
       benefits: String(landingForm.benefits ?? "")
-        .split("\n")
+        .split(/\n\n+/)
         .map((item) => item.trim())
         .filter(Boolean),
       servicesTitle: String(landingForm.servicesTitle ?? "").trim(),
