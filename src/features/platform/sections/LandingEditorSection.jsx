@@ -933,6 +933,30 @@ export function LandingEditorSection({
                     </p>
                   </div>
                 </div>
+
+                <div className="mt-6 grid gap-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-200">Botón de formulario de contacto</p>
+                  <DarkInput
+                    value={landingForm?.contactFormUrl ?? ""}
+                    onChange={(v) => setLanding("contactFormUrl", v)}
+                    placeholder="https://form.jotform.com/... (URL del formulario)"
+                  />
+                  <DarkInput
+                    value={landingForm?.contactFormLabel ?? ""}
+                    onChange={(v) => setLanding("contactFormLabel", v)}
+                    placeholder="Texto del botón (ej: Formulario de contacto)"
+                  />
+                  {landingForm?.contactFormUrl && (
+                    <a
+                      className="inline-flex items-center gap-2 self-start rounded-xl bg-white px-5 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-50"
+                      href={landingForm.contactFormUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {landingForm?.contactFormLabel || "Formulario de contacto"} →
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>

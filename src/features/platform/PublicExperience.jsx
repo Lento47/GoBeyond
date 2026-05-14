@@ -235,10 +235,10 @@ function InstitutionsDisplay({ institutions }) {
 
 // ─── Section components ──────────────────────────────────────────────────────
 
-function HeroSection({ hero, brand, landing, metrics }) {
+function HeroSection({ id = "inicio", contactoId = "contacto", cursosId = "cursos", hero, brand, landing, metrics }) {
   return (
     <section
-      id="inicio"
+      id={id}
       className="relative flex min-h-screen items-center pb-16 pt-28 sm:pb-20 sm:pt-32"
     >
       <div className="container mx-auto grid items-center gap-10 px-5 sm:px-6 lg:px-8 lg:grid-cols-2">
@@ -253,13 +253,13 @@ function HeroSection({ hero, brand, landing, metrics }) {
           </MarkdownContent>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <a
-              href="#contacto"
+              href={`#${contactoId}`}
               className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-8 py-4 text-sm font-bold text-white transition hover:bg-blue-500 hover:-translate-y-0.5 active:scale-95"
             >
               {landing.heroPrimaryCtaLabel || "Empezar ahora"}
             </a>
             <a
-              href="#cursos"
+              href={`#${cursosId}`}
               className="inline-flex items-center justify-center rounded-xl border border-white/12 px-8 py-4 text-sm font-bold text-white transition hover:bg-white/5 hover:-translate-y-0.5 active:scale-95"
             >
               {landing.heroSecondaryCtaLabel || "Ver programas"}
@@ -295,9 +295,9 @@ function HeroSection({ hero, brand, landing, metrics }) {
   );
 }
 
-function AboutSection({ landing, brand, benefits }) {
+function AboutSection({ id = "sobre-nosotros", landing, brand, benefits }) {
   return (
-    <section id="sobre-nosotros" className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
+    <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:gap-16 lg:grid-cols-2 items-start">
           <div className="gobeyond-reveal">
@@ -325,9 +325,9 @@ function AboutSection({ landing, brand, benefits }) {
   );
 }
 
-function ServicesSection({ landing, content, learningPath }) {
+function ServicesSection({ id = "servicios", landing, content, learningPath }) {
   return (
-    <section id="servicios" className="py-24 sm:py-28 lg:py-32">
+    <section id={id} className="py-24 sm:py-28 lg:py-32">
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
         <div className="max-w-3xl gobeyond-reveal">
           <SectionTag>{landing.servicesTitle || "Nuestros servicios"}</SectionTag>
@@ -418,11 +418,11 @@ function ProgramCardGrid({ programCards, landing }) {
   );
 }
 
-function CoursesSection({ landing, programCards, courses, liveSessions }) {
+function CoursesSection({ id = "cursos", landing, programCards, courses, liveSessions }) {
   const hasCourseContent = programCards.length || courses.length;
 
   return (
-    <section id="cursos" className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
+    <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center mb-14 gobeyond-reveal">
           <SectionTag>{landing.coursesTitle || "Programas y cursos"}</SectionTag>
@@ -594,11 +594,11 @@ function CourseCard({ course, index, landing }) {
   );
 }
 
-function InstitutionsSection({ landing, visibleInstitutions }) {
+function InstitutionsSection({ id = "instituciones", landing, visibleInstitutions }) {
   if (!visibleInstitutions.length) return null;
 
   return (
-    <section id="instituciones" className="py-24 sm:py-28 lg:py-32">
+    <section id={id} className="py-24 sm:py-28 lg:py-32">
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
         <div className="max-w-3xl mb-12 gobeyond-reveal">
           <SectionTag>
@@ -620,6 +620,7 @@ function InstitutionsSection({ landing, visibleInstitutions }) {
 }
 
 function TestimonialsSection({
+  id = "testimonios",
   landing,
   brand,
   testimonials,
@@ -628,7 +629,7 @@ function TestimonialsSection({
   setTestimonialStartIndex,
 }) {
   return (
-    <section id="testimonios" className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
+    <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
         <div className="max-w-3xl gobeyond-reveal">
           <SectionTag>{landing.trustTitle || "Confian en nosotros"}</SectionTag>
@@ -724,6 +725,7 @@ function TestimonialsSection({
 }
 
 function NewsLandingSection({
+  id = "noticias",
   landing,
   publishedNews,
   featuredNews,
@@ -735,7 +737,7 @@ function NewsLandingSection({
 }) {
   if (noticiasLoading) {
     return (
-      <section id="noticias" className="py-24 sm:py-28 lg:py-32">
+      <section id={id} className="py-24 sm:py-28 lg:py-32">
         <div className="container mx-auto px-5 sm:px-6 lg:px-8">
           <EmptyState title="Cargando noticias" body="Consultando publicaciones recientes…" />
         </div>
@@ -745,7 +747,7 @@ function NewsLandingSection({
 
   if (noticiasError) {
     return (
-      <section id="noticias" className="py-24 sm:py-28 lg:py-32">
+      <section id={id} className="py-24 sm:py-28 lg:py-32">
         <div className="container mx-auto px-5 sm:px-6 lg:px-8">
           <EmptyState title="No pudimos cargar las noticias" body={noticiasError} />
         </div>
@@ -755,11 +757,11 @@ function NewsLandingSection({
 
   if (!publishedNews.length) {
     // Don't render a hole — just a minimal anchor section
-    return <div id="noticias" aria-hidden="true" />;
+    return <div id={id} aria-hidden="true" />;
   }
 
   return (
-    <section id="noticias" className="py-24 sm:py-28 lg:py-32">
+    <section id={id} className="py-24 sm:py-28 lg:py-32">
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
         <div className="max-w-3xl mb-12 gobeyond-reveal">
           <SectionTag>{landing.newsTitle || "Noticias"}</SectionTag>
@@ -886,11 +888,11 @@ function NewsLandingSection({
   );
 }
 
-function ContactSection({ landing, contactInfo, news, institutions, socialLinks }) {
+function ContactSection({ id = "contacto", landing, contactInfo, news, institutions, socialLinks }) {
   const actions = landing.contactActions ?? [];
 
   return (
-    <section id="contacto" className="py-24 sm:py-28 lg:py-32 bg-[#1d4ed8]">
+    <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#1d4ed8]">
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-2 items-start">
           <div className="gobeyond-reveal">
@@ -949,7 +951,18 @@ function ContactSection({ landing, contactInfo, news, institutions, socialLinks 
               </div>
             ) : null}
 
-            {!contactInfo.emailValue && !contactInfo.phoneValue && !actions.length ? (
+            {landing.contactFormUrl ? (
+              <a
+                className="flex items-center justify-center gap-3 rounded-xl bg-white px-6 py-4 text-sm font-bold text-blue-700 transition hover:bg-blue-50 hover:-translate-y-0.5 active:scale-95"
+                href={landing.contactFormUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {landing.contactFormLabel || "Formulario de contacto"} &rarr;
+              </a>
+            ) : null}
+
+            {!contactInfo.emailValue && !contactInfo.phoneValue && !actions.length && !landing.contactFormUrl ? (
               <p className="text-sm text-blue-100/60 leading-relaxed">
                 Configura los datos de contacto desde el panel de administracion.
               </p>
@@ -1058,6 +1071,18 @@ export function PublicExperience({
     () => navLabels.map((label) => ({ label, id: slugify(label) })),
     [navLabels]
   );
+
+  // Section IDs derived from nav positions (order matches DEFAULT_NAV)
+  const sid = {
+    inicio:       navItems[0]?.id ?? "inicio",
+    sobreNos:     navItems[1]?.id ?? "sobre-nosotros",
+    servicios:    navItems[2]?.id ?? "servicios",
+    cursos:       navItems[3]?.id ?? "cursos",
+    instituciones:navItems[4]?.id ?? "instituciones",
+    testimonios:  navItems[5]?.id ?? "testimonios",
+    noticias:     navItems[6]?.id ?? "noticias",
+    contacto:     navItems[7]?.id ?? "contacto",
+  };
 
   const [activeSection, setActiveSection] = useState(navItems[0]?.id ?? "inicio");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1192,32 +1217,40 @@ export function PublicExperience({
       {/* ── SECTIONS ── */}
       <main>
         <HeroSection
+          id={sid.inicio}
+          contactoId={sid.contacto}
+          cursosId={sid.cursos}
           hero={hero}
           brand={brand}
           landing={landing}
           metrics={metrics}
         />
         <AboutSection
+          id={sid.sobreNos}
           landing={landing}
           brand={brand}
           benefits={benefits}
         />
         <ServicesSection
+          id={sid.servicios}
           landing={landing}
           content={content}
           learningPath={learningPath}
         />
         <CoursesSection
+          id={sid.cursos}
           landing={landing}
           programCards={programCards}
           courses={courses}
           liveSessions={liveSessions}
         />
         <InstitutionsSection
+          id={sid.instituciones}
           landing={landing}
           visibleInstitutions={visibleInstitutions}
         />
         <TestimonialsSection
+          id={sid.testimonios}
           landing={landing}
           brand={brand}
           testimonials={testimonials}
@@ -1226,6 +1259,7 @@ export function PublicExperience({
           setTestimonialStartIndex={setTestimonialStartIndex}
         />
         <NewsLandingSection
+          id={sid.noticias}
           landing={landing}
           publishedNews={publishedNews}
           featuredNews={featuredNews}
@@ -1236,6 +1270,7 @@ export function PublicExperience({
           onNavigateToNewsArchive={onNavigateToNewsArchive}
         />
         <ContactSection
+          id={sid.contacto}
           landing={landing}
           contactInfo={contactInfo}
           news={news}
@@ -1257,6 +1292,16 @@ export function PublicExperience({
             <p className="mt-4 text-[11px] uppercase tracking-[0.26em] text-gray-600">
               © {new Date().getFullYear()} · Formación de Alto Impacto · Puerto Limón, CR.
             </p>
+            {landing.contactFormUrl ? (
+              <a
+                className="mt-5 inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest text-white transition hover:bg-blue-500"
+                href={landing.contactFormUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {landing.contactFormLabel || "Contacto"} &rarr;
+              </a>
+            ) : null}
           </div>
           <nav className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:justify-items-end">
             {legalFooterLinks.map((item) => (
