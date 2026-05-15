@@ -12,6 +12,7 @@
     "cf:migrate:remote": "wrangler d1 migrations apply gobeyond-db --remote"
   },
   "dependencies": {
+    "animejs": "^4.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",

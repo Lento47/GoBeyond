@@ -1,5 +1,7 @@
+import { useEffect, useRef } from "react";
 import { workspaceChrome } from "../../workspaceTheme";
 import { MarkdownContent } from "../../../../shared/MarkdownContent";
+import { revealModal } from "../../../../shared/workspaceAnimations";
 
 const focusRing =
   "outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]";
@@ -237,6 +239,9 @@ export function ModalShell({
   bodyClassName = "",
   panelClassName = "",
 }) {
+  const panelRef = useRef(null);
+  useEffect(() => { revealModal(panelRef.current); }, []);
+
   const panelSizeClass =
     size === "full"
       ? "max-h-[calc(100vh-1rem)] max-w-[min(98rem,calc(100vw-1rem))] sm:max-h-[calc(100vh-1.5rem)] sm:max-w-[min(110rem,calc(100vw-2rem))]"
@@ -251,7 +256,8 @@ export function ModalShell({
       role="presentation"
     >
       <div
-      className={`flex w-full flex-col overflow-hidden rounded-[22px] border border-[#d8e2f0] bg-[#f8fbff] shadow-[0_24px_70px_rgba(15,23,42,0.16)] ${panelSizeClass} ${panelClassName}`}
+        ref={panelRef}
+        className={`flex w-full flex-col overflow-hidden rounded-[22px] border border-[#d8e2f0] bg-[#f8fbff] shadow-[0_24px_70px_rgba(15,23,42,0.16)] ${panelSizeClass} ${panelClassName}`}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

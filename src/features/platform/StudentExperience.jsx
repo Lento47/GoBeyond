@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { WorkspaceView } from "../../shared/WorkspaceView";
 import {
   ackStudentNotification,
   askStudentAssistant,
@@ -1389,11 +1390,13 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
         </section>
       ) : null}
 
-      {studentSection === "portal-overview" ? renderOverviewSection() : null}
-      {studentSection === "portal-courses" ? renderCoursesSection() : null}
-      {studentSection === "portal-path" ? renderPathSection() : null}
-      {studentSection === "portal-openings" ? renderOpeningsSection() : null}
-      {studentSection === "portal-support" ? renderSupportSection() : null}
+      <WorkspaceView key={studentSection}>
+        {studentSection === "portal-overview" ? renderOverviewSection() : null}
+        {studentSection === "portal-courses" ? renderCoursesSection() : null}
+        {studentSection === "portal-path" ? renderPathSection() : null}
+        {studentSection === "portal-openings" ? renderOpeningsSection() : null}
+        {studentSection === "portal-support" ? renderSupportSection() : null}
+      </WorkspaceView>
 
       <CourseDetailModal course={selectedCourse} onClose={handleCloseCourseModal} />
       <CourseInterestModal
