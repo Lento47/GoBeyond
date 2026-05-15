@@ -28,3 +28,8 @@ TURNSTILE_SITE_KEY = ""
 binding = "MEDIA_BUCKET"
 bucket_name = "gobeyond-media"
 preview_bucket_name = "gobeyond-media"
+
+[[kv_namespaces]]
+binding = "CONTENT_KV"
+id = "b0cb35895fc74194aa7fc61e334555d5"
+preview_id = "b0cb35895fc74194aa7fc61e334555d5"

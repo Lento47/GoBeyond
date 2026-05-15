@@ -68,7 +68,21 @@ async function purgeExpiredClosedItems(env) {
   }
 }
 
+const CONTENT_CACHE_KEY = "content:v1";
+
+export async function invalidateContentCache(env) {
+  if (!env.CONTENT_KV) return;
+  try { await env.CONTENT_KV.delete(CONTENT_CACHE_KEY); } catch {}
+}
+
 export async function getContent(env) {
+  if (env.CONTENT_KV) {
+    try {
+      const cached = await env.CONTENT_KV.get(CONTENT_CACHE_KEY, "json");
+      if (cached) return cached;
+    } catch {}
+  }
+
   await purgeExpiredClosedItems(env);
   await purgeExpiredCommunityThreads(env);
   const content = structuredClone(defaultContent);
@@ -134,6 +148,14 @@ export async function getContent(env) {
 
       content[section] = Array.from(mergedById.values());
     }
+  }
+
+  if (env.CONTENT_KV) {
+    try {
+      await env.CONTENT_KV.put(CONTENT_CACHE_KEY, JSON.stringify(content), {
+        expirationTtl: 300,
+      });
+    } catch {}
   }
 
   return content;
@@ -215,6 +237,7 @@ export async function saveBlock(env, section, value, userId) {
   )
     .bind(section, JSON.stringify(value), userId)
     .run();
+  await invalidateContentCache(env);
 }
 
 export async function createCollectionItem(env, section, item) {
@@ -253,6 +276,7 @@ export async function createCollectionItem(env, section, item) {
 
     throw dbError;
   }
+  await invalidateContentCache(env);
 }
 
 export async function updateCollectionItem(env, section, item) {
@@ -297,10 +321,12 @@ export async function updateCollectionItem(env, section, item) {
 
     throw dbError;
   }
+  await invalidateContentCache(env);
 }
 
 export async function deleteCollectionItem(env, section, id) {
   await env.DB.prepare("DELETE FROM collection_items WHERE section = ? AND id = ?")
     .bind(section, id)
     .run();
+  await invalidateContentCache(env);
 }
