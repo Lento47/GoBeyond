@@ -645,6 +645,12 @@ function TestimonialsSection({
 }) {
   return (
     <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
+      <style>{`
+        @keyframes t-fadein {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
         <div className="max-w-3xl gobeyond-reveal">
           <SectionTag>{landing.trustTitle || "Confian en nosotros"}</SectionTag>
@@ -697,6 +703,7 @@ function TestimonialsSection({
                 return (
                   <article
                     key={item.id || `${item.author}-${i}`}
+                    style={{ animation: `t-fadein 0.7s cubic-bezier(0.33,1,0.68,1) ${i * 90}ms both` }}
                     className={`overflow-hidden rounded-2xl border p-5 sm:p-7 transition-colors ${
                       isFirst
                         ? "border-l-4 border-l-blue-500 border-t-white/8 border-r-white/8 border-b-white/8 bg-white/[0.04]"
@@ -1152,7 +1159,7 @@ export function PublicExperience({
     }
     const id = window.setInterval(
       () => setTestimonialStartIndex((c) => (c + 1) % testimonials.length),
-      5000
+      7500
     );
     return () => window.clearInterval(id);
   }, [testimonials]);
