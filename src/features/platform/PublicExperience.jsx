@@ -690,23 +690,23 @@ function TestimonialsSection({
           ) : null}
 
           {testimonials.length ? (
-            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-2 md:overflow-x-visible md:pb-0 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {rotatingTestimonials.map((item, i) => {
                 const initials = getInitials(item.author);
                 const isFirst = i === 0 && rotatingTestimonials.length > 1;
                 return (
                   <article
                     key={item.id || `${item.author}-${i}`}
-                    className={`min-w-[85vw] sm:min-w-[70vw] md:min-w-0 flex-shrink-0 snap-start overflow-hidden rounded-2xl border p-5 sm:p-7 transition-colors ${
+                    className={`overflow-hidden rounded-2xl border p-5 sm:p-7 transition-colors ${
                       isFirst
                         ? "border-l-4 border-l-blue-500 border-t-white/8 border-r-white/8 border-b-white/8 bg-white/[0.04]"
                         : "border-white/8 bg-white/[0.02]"
                     }`}
                   >
-                    <span className="block font-serif text-[2.5rem] sm:text-[3.5rem] leading-none text-blue-900 select-none -mb-2 sm:-mb-3">
+                    <span className="block font-serif text-[3rem] leading-none text-blue-900 select-none -mb-2">
                       "
                     </span>
-                    <blockquote className="font-serif text-base leading-relaxed text-white break-words sm:text-lg">
+                    <blockquote className="font-serif text-base leading-relaxed text-white break-words">
                       <MarkdownContent>{item.quote}</MarkdownContent>
                     </blockquote>
                     <div className="mt-4 flex items-center gap-3 border-t border-white/8 pt-4">
