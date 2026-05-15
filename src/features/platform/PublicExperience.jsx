@@ -690,26 +690,26 @@ function TestimonialsSection({
           ) : null}
 
           {testimonials.length ? (
-            <div className="grid gap-5 xl:grid-cols-3">
+            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-2 md:overflow-x-visible md:pb-0 xl:grid-cols-3">
               {rotatingTestimonials.map((item, i) => {
                 const initials = getInitials(item.author);
                 const isFirst = i === 0 && rotatingTestimonials.length > 1;
                 return (
                   <article
                     key={item.id || `${item.author}-${i}`}
-                    className={`rounded-2xl border p-7 transition-colors ${
+                    className={`min-w-[85vw] sm:min-w-[70vw] md:min-w-0 flex-shrink-0 snap-start overflow-hidden rounded-2xl border p-5 sm:p-7 transition-colors ${
                       isFirst
                         ? "border-l-4 border-l-blue-500 border-t-white/8 border-r-white/8 border-b-white/8 bg-white/[0.04]"
                         : "border-white/8 bg-white/[0.02]"
                     }`}
                   >
-                    <span className="block font-serif text-[3.5rem] leading-none text-blue-900 select-none -mb-3">
+                    <span className="block font-serif text-[2.5rem] sm:text-[3.5rem] leading-none text-blue-900 select-none -mb-2 sm:-mb-3">
                       "
                     </span>
-                    <blockquote className="font-serif text-lg leading-relaxed text-white break-words sm:text-xl">
+                    <blockquote className="font-serif text-base leading-relaxed text-white break-words sm:text-lg">
                       <MarkdownContent>{item.quote}</MarkdownContent>
                     </blockquote>
-                    <div className="mt-5 flex items-center gap-3 border-t border-white/8 pt-4">
+                    <div className="mt-4 flex items-center gap-3 border-t border-white/8 pt-4">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-blue-500/25 bg-blue-600/8 text-xs font-semibold text-blue-300">
                         {initials}
                       </div>
