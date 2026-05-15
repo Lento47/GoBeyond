@@ -692,11 +692,13 @@ export function LandingEditorSection({
                           </div>
                           <div className="mt-5 grid grid-cols-2 gap-3">
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400 mb-2">Texto del botón</p>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400 mb-2">
+                                Texto del botón <span className="normal-case font-normal text-gray-500">(vacío = ocultar)</span>
+                              </p>
                               <DarkInput
                                 value={program.ctaLabel ?? ""}
                                 onChange={(v) => updateCard(index, "ctaLabel", v)}
-                                placeholder="Coordinar implementación"
+                                placeholder="Dejar vacío para ocultar"
                               />
                             </div>
                             <div>

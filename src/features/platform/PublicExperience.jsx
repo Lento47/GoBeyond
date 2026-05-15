@@ -36,6 +36,19 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+// Find the nav item whose slug matches any of the candidates (exact first, then prefix)
+function findSectionId(navItems, candidates, fallback) {
+  for (const c of candidates) {
+    const m = navItems.find((i) => i.id === c);
+    if (m) return m.id;
+  }
+  for (const c of candidates) {
+    const m = navItems.find((i) => i.id.startsWith(c));
+    if (m) return m.id;
+  }
+  return fallback;
+}
+
 function normalizeText(value) {
   return String(value ?? "")
     .toLowerCase()
@@ -522,15 +535,17 @@ function ProgramCard({ program, index, landing }) {
         ) : null}
       </div>
 
-      <a
-        className="mt-6 inline-flex items-center justify-between rounded-full border border-white/10 px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:border-blue-500/25 hover:text-blue-300"
-        href={program.href || "#contacto"}
-        rel={external ? "noreferrer" : undefined}
-        target={external ? "_blank" : undefined}
-      >
-        <span>{program.ctaLabel || "Aplicar"}</span>
-        <span>&rarr;</span>
-      </a>
+      {program.ctaLabel ? (
+        <a
+          className="mt-6 inline-flex items-center justify-between rounded-full border border-white/10 px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:border-blue-500/25 hover:text-blue-300"
+          href={program.href || "#contacto"}
+          rel={external ? "noreferrer" : undefined}
+          target={external ? "_blank" : undefined}
+        >
+          <span>{program.ctaLabel}</span>
+          <span>&rarr;</span>
+        </a>
+      ) : null}
     </LandingCard>
   );
 }
@@ -1072,16 +1087,16 @@ export function PublicExperience({
     [navLabels]
   );
 
-  // Section IDs derived from nav positions (order matches DEFAULT_NAV)
+  // Section IDs matched by slug — robust when nav items are renamed or reordered
   const sid = {
-    inicio:       navItems[0]?.id ?? "inicio",
-    sobreNos:     navItems[1]?.id ?? "sobre-nosotros",
-    servicios:    navItems[2]?.id ?? "servicios",
-    cursos:       navItems[3]?.id ?? "cursos",
-    instituciones:navItems[4]?.id ?? "instituciones",
-    testimonios:  navItems[5]?.id ?? "testimonios",
-    noticias:     navItems[6]?.id ?? "noticias",
-    contacto:     navItems[7]?.id ?? "contacto",
+    inicio:        findSectionId(navItems, ["inicio", "home", "principal"],                    "inicio"),
+    sobreNos:      findSectionId(navItems, ["sobre-nosotros", "sobre", "nosotros", "about"],   "sobre-nosotros"),
+    servicios:     findSectionId(navItems, ["servicios", "services", "servicio"],              "servicios"),
+    cursos:        findSectionId(navItems, ["programas", "cursos", "programs", "courses"],     "cursos"),
+    instituciones: findSectionId(navItems, ["instituciones", "institutions", "institucion"],   "instituciones"),
+    testimonios:   findSectionId(navItems, ["testimonios", "testimonials", "testimonio"],      "testimonios"),
+    noticias:      findSectionId(navItems, ["noticias", "news", "noticia"],                    "noticias"),
+    contacto:      findSectionId(navItems, ["contacto", "contact", "contactanos", "formulario"], "contacto"),
   };
 
   const [activeSection, setActiveSection] = useState(navItems[0]?.id ?? "inicio");
