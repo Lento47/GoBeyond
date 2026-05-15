@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { WorkspaceView } from "../../shared/WorkspaceView";
 import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX, extractEmbedUrl } from "../../shared/embedPolicy";
 import { MarkdownContent } from "../../shared/MarkdownContent";
 import {
@@ -4646,15 +4647,17 @@ export function AdminWorkspace({
         </div>
       ) : null}
 
-      {activeView === "landing" ? renderLandingView() : null}
-      {activeView === "queue" ? renderQueueView() : null}
-      {activeView === "identity" ? renderIdentityView() : null}
-      {activeView === "catalog" ? renderCatalogView() : null}
-      {activeView === "people" ? renderPeopleView() : null}
-      {activeView === "support" ? renderSupportView() : null}
-      {activeView === "community" ? renderCommunityView() : null}
-      {activeView === "sops" ? renderSopsView() : null}
-      {activeView === "search" ? renderSearchView() : null}
+      <WorkspaceView key={activeView} className="grid gap-5">
+        {activeView === "landing" ? renderLandingView() : null}
+        {activeView === "queue" ? renderQueueView() : null}
+        {activeView === "identity" ? renderIdentityView() : null}
+        {activeView === "catalog" ? renderCatalogView() : null}
+        {activeView === "people" ? renderPeopleView() : null}
+        {activeView === "support" ? renderSupportView() : null}
+        {activeView === "community" ? renderCommunityView() : null}
+        {activeView === "sops" ? renderSopsView() : null}
+        {activeView === "search" ? renderSearchView() : null}
+      </WorkspaceView>
 
       {renderModal()}
     </div>

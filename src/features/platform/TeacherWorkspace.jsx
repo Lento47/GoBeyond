@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WorkspaceView } from "../../shared/WorkspaceView";
 import {
   ActionButton,
   CompactBand,
@@ -977,11 +978,13 @@ export function TeacherExperience(props) {
     <div className="grid gap-6">
       <WorkspaceNotice message={actionMessage} />
       <WorkspaceNotice message={actionError || dashboardError || coursesError || enrollmentsError || supportError} tone="error" />
-      {teacherSection === "teacher-overview" ? renderOverviewSection() : null}
-      {teacherSection === "teacher-courses" ? renderCoursesSection() : null}
-      {teacherSection === "teacher-assignments" ? renderAssignmentsSection() : null}
-      {teacherSection === "teacher-operations" ? renderOperationsSection() : null}
-      {teacherSection === "teacher-sops" ? renderSopsSection() : null}
+      <WorkspaceView key={teacherSection}>
+        {teacherSection === "teacher-overview" ? renderOverviewSection() : null}
+        {teacherSection === "teacher-courses" ? renderCoursesSection() : null}
+        {teacherSection === "teacher-assignments" ? renderAssignmentsSection() : null}
+        {teacherSection === "teacher-operations" ? renderOperationsSection() : null}
+        {teacherSection === "teacher-sops" ? renderSopsSection() : null}
+      </WorkspaceView>
 
       {modal === "assignment" ? (
         <div
