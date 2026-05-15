@@ -347,7 +347,8 @@ export const defaultContent = {
       phoneValue: "(+506) 8530 5317",
     },
     contactActions: ["Contacto", "Noticias", "Facebook", "LinkedIn"],
-    contactFormUrl: "",
+    contactFormUrl: "https://form.jotform.com/260358820111044",
+    contactFormLabel: "Aplicar al programa",
     socialLinks: {
       facebook: "https://www.facebook.com/profile.php?id=61588185384903",
       linkedin: "https://www.linkedin.com/company/go-beyondcri",
