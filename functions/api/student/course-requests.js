@@ -1,7 +1,7 @@
 import { requireAuth } from "../../_lib/auth";
 import { createCollectionItem } from "../../_lib/content";
 import { listStudentEnrollments } from "../../_lib/enrollments";
-import { assertTrustedOrigin, readJsonBody } from "../../_lib/requestSecurity";
+import { assertTrustedOrigin, readJsonBody, enforceRequestThrottle, recordRequestAttempt, throttlePolicies } from "../../_lib/requestSecurity";
 import { error, json, options } from "../../_lib/response";
 import { createId } from "../../_lib/util";
 
@@ -25,6 +25,7 @@ export async function onRequestPost(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["student"]);
     assertTrustedOrigin(context.request, context.env);
+    await enforceRequestThrottle(context.env, context.request, throttlePolicies.studentCourseRequest, { actorUserId: auth.user.id });
     const body = await readJsonBody(context.request, { maxBytes: 24_000 });
 
     const courseId = clean(body.courseId, 120);
@@ -88,6 +89,7 @@ export async function onRequestPost(context) {
     };
 
     await createCollectionItem(context.env, "courseInterestRequests", request);
+    await recordRequestAttempt(context.env, context.request, throttlePolicies.studentCourseRequest, { actorUserId: auth.user.id });
 
     return json({
       request,

@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { MarkdownEditor } from "../../shared/MarkdownEditor";
+import { MarkdownContent } from "../../shared/MarkdownContent";
 import { WorkspaceView } from "../../shared/WorkspaceView";
 import {
   ActionButton,
@@ -532,9 +535,9 @@ export function TeacherExperience(props) {
             <h1 className="mt-1 text-2xl font-black tracking-tight text-[#172033] sm:text-3xl">
               {dashboard?.welcomeTitle || `Workspace docente`}
             </h1>
-            <p className="mt-1 text-sm leading-relaxed text-[#6b7a90]">
+            <MarkdownContent className="mt-1 text-sm leading-relaxed text-[#6b7a90]">
               {dashboard?.summary || "Tu espacio operativo para gestionar clases, contenidos, estudiantes y actividades académicas."}
-            </p>
+            </MarkdownContent>
           </div>
 
           <CompactBand>
@@ -988,7 +991,7 @@ export function TeacherExperience(props) {
 
       {modal === "assignment" ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2 backdrop-blur-[8px] sm:px-4 sm:py-4"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2  sm:px-4 sm:py-4"
           onClick={closeModal}
           role="presentation"
         >
@@ -1069,7 +1072,41 @@ export function TeacherExperience(props) {
                       placeholder="Título del material"
                       value={assignmentForm.title}
                     />
-                    <Textarea onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Guía, instrucción o contexto para el estudiante" value={assignmentForm.instruction} />
+                    <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Instrucciones</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-[10px] font-bold uppercase tracking-[0.1em] text-blue-500 hover:text-blue-700"
+                        onClick={async () => {
+                          if (!assignmentForm.title?.trim()) return;
+                          try {
+                            const res = await fetch("/api/teacher/ai/generate-instruction", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                title: assignmentForm.title,
+                                courseTitle: (courses ?? []).find(c => c.id === assignmentForm.courseId)?.title || "",
+                                format: (courses ?? []).find(c => c.id === assignmentForm.courseId)?.format || "",
+                                duration: (courses ?? []).find(c => c.id === assignmentForm.courseId)?.duration || "",
+                              }),
+                            });
+                            if (res.ok) {
+                              const data = await res.json();
+                              setAssignmentForm(c => ({ ...c, instruction: data.instruction }));
+                            }
+                          } catch {}
+                        }}
+                        type="button"
+                        disabled={!assignmentForm.title?.trim()}
+                      >
+                        <svg className="size-3.5 mr-1.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+                        AI Generar
+                      </Button>
+                    </div>
+                    <MarkdownEditor onChange={(event) => setAssignmentForm((current) => ({ ...current, instruction: event.target.value }))} placeholder="Guia, instruccion o contexto para el estudiante. Usa **negrita**, listas y encabezados." value={assignmentForm.instruction} />
+                  </div>
                   </div>
                 </div>
 
@@ -1217,7 +1254,7 @@ export function TeacherExperience(props) {
 
       {modal === "enrollment" ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2 backdrop-blur-[8px] sm:px-4 sm:py-4"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2  sm:px-4 sm:py-4"
           onClick={closeModal}
           role="presentation"
         >
@@ -1500,7 +1537,7 @@ export function TeacherExperience(props) {
               </Select>
             ) : null}
 
-            <Textarea onChange={(event) => setSupportForm((current) => ({ ...current, adminNote: event.target.value }))} placeholder="Nota operativa interna" value={supportForm.adminNote} />
+            <MarkdownEditor onChange={(event) => setSupportForm((current) => ({ ...current, adminNote: event.target.value }))} placeholder="Nota operativa interna" value={supportForm.adminNote} />
 
             <div className="flex flex-wrap gap-3">
               <ActionButton disabled={submitting} type="submit">

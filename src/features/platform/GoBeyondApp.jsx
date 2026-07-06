@@ -1,4 +1,8 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   useAdminContent,
   useAdminEnrollments,
@@ -211,45 +215,57 @@ function WorkspaceSidebarButton({ item, onSelect, variant = "default" }) {
   const isTeacherVariant = variant === "teacher";
   const isStudentVariant = variant === "student";
   const isRoleVariant = isAdminVariant || isTeacherVariant || isStudentVariant;
+
+  const baseClasses = "group relative w-full text-left transition-all duration-200 ease-out active:scale-[0.97]";
+
+  const variantClasses = isAdminVariant
+    ? item.active
+      ? "rounded-[14px] bg-slate-800 px-3 py-2.5 text-[11px] font-semibold text-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.15)] ring-1 ring-slate-700/50"
+      : "rounded-[14px] px-3 py-2.5 text-[11px] font-semibold text-slate-500 hover:bg-slate-800/50 hover:text-slate-300"
+    : isTeacherVariant
+      ? item.active
+        ? "rounded-[12px] bg-blue-50 px-3 py-2.5 text-[11px] font-semibold text-blue-600 shadow-[0_2px_8px_rgba(29,78,216,0.08)] ring-1 ring-blue-200/50"
+        : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+      : isStudentVariant
+        ? item.active
+          ? "rounded-[12px] bg-blue-50 px-3 py-2.5 text-[11px] font-semibold text-blue-600 shadow-[0_2px_8px_rgba(29,78,216,0.08)] ring-1 ring-blue-200/50"
+          : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+        : item.active
+          ? "rounded-2xl border border-blue-200 bg-blue-50/60 px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-[0_2px_8px_rgba(29,78,216,0.06)]"
+          : "rounded-2xl border border-transparent px-3 py-2.5 text-sm font-semibold text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-900";
+
+  const iconClasses = isAdminVariant
+    ? item.active
+      ? "bg-slate-700 text-blue-300 shadow-[0_1px_4px_rgba(0,0,0,0.2)]"
+      : "bg-transparent text-slate-500 group-hover:text-slate-300 group-hover:bg-slate-800/50"
+    : isTeacherVariant || isStudentVariant
+      ? item.active
+        ? "bg-white text-blue-600 shadow-[0_1px_4px_rgba(29,78,216,0.12)]"
+        : "bg-transparent text-slate-400 group-hover:text-slate-600 group-hover:bg-white"
+      : item.active
+        ? "bg-white text-blue-600 shadow-[0_1px_4px_rgba(29,78,216,0.12)]"
+        : "bg-transparent text-slate-400 group-hover:text-slate-600 group-hover:bg-white";
+
   return (
     <button
-      className={`group relative w-full text-left transition active:scale-[0.98] ${
-        isAdminVariant
-          ? item.active
-            ? "rounded-[12px] bg-[#111827] px-3 py-2.5 text-[11px] font-semibold text-[#c2cfdf]"
-            : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
-          : isTeacherVariant
-            ? item.active
-              ? "rounded-[12px] bg-[#eef4ff] px-3 py-2.5 text-[11px] font-semibold text-[#1d4ed8]"
-              : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
-            : isStudentVariant
-              ? item.active
-                ? "rounded-[12px] bg-[#eef4ff] px-3 py-2.5 text-[11px] font-semibold text-[#1d4ed8]"
-                : "rounded-[12px] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90] hover:bg-[#f7f9fc] hover:text-[#172033]"
-              : item.active
-                ? "rounded-2xl border border-[#c6d4ec] bg-[#eef4ff] px-3 py-2.5 text-[#172033] shadow-[0_1px_2px_rgba(29,78,216,0.06)]"
-                : "rounded-2xl border border-transparent bg-transparent px-3 py-2.5 text-[#536277] hover:border-[#d7e0ea] hover:bg-white"
-      }`}
+      className={`${baseClasses} ${variantClasses}`}
       onClick={() => onSelect(item)}
       type="button"
     >
+      {/* Active accent bar — non-role variants only */}
       {!isRoleVariant && item.active && (
-        <span className="absolute inset-y-2.5 left-0 w-[3px] rounded-full bg-[#1d4ed8]" />
+        <span className="absolute inset-y-2.5 left-0 w-[3px] rounded-full bg-blue-600 transition-all duration-300 ease-out group-hover:scale-y-110" />
       )}
       <div className="flex items-center gap-2.5">
         {item.icon ? (
-          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition ${
-            isAdminVariant
-              ? item.active ? "text-[#93c5fd]" : "text-[#4b5563] group-hover:text-[#172033]"
-              : item.active
-                ? "bg-white text-[#1d4ed8] shadow-[0_1px_4px_rgba(29,78,216,0.12)]"
-                : "bg-transparent text-[#8a97ab] group-hover:bg-white group-hover:text-[#435066]"
-          }`}>
+          <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ease-out group-hover:scale-105 ${iconClasses}`}>
             <NavIcon name={item.icon} />
           </span>
         ) : null}
         <div className="min-w-0 flex-1">
-          <p className={`truncate font-semibold leading-none ${isRoleVariant ? "text-[11px]" : "text-sm"}`}>{item.label}</p>
+          <p className={`truncate font-semibold leading-none ${isRoleVariant ? "text-[11px]" : "text-sm"}`}>
+            {item.label}
+          </p>
           {item.caption && !isRoleVariant ? (
             <p className="mt-0.5 hidden text-xs leading-relaxed text-inherit/70 lg:block">{item.caption}</p>
           ) : null}
@@ -261,158 +277,87 @@ function WorkspaceSidebarButton({ item, onSelect, variant = "default" }) {
 
 function WorkspaceStatusChip({ children }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-[#d7e0ea] bg-white px-3 py-2 text-[11px] font-semibold text-[#435066]">
-      <span className="h-2 w-2 rounded-full bg-[#1d4ed8]" />
+    <Badge variant="outline" className="gap-2 rounded-full px-3 py-2 text-[11px] font-semibold">
+      <span className="h-2 w-2 rounded-full bg-primary" />
       {children}
-    </div>
+    </Badge>
   );
 }
+function TopbarAI({ currentUser, variant = "student" }) {
+  const [promptIndex, setPromptIndex] = useState(0);
+  const [fading, setFading] = useState(false);
+  const [prompts, setPrompts] = useState(null);
+  const greeting = useMemo(() => { const h = new Date().getHours(); return h < 12 ? "Buenos dias" : h < 18 ? "Buenas tardes" : "Buenas noches"; }, []);
+  const firstName = currentUser?.fullName?.split(" ")[0] ?? "";
 
-function WorkspaceContextGlyph({ className = "" }) {
+  // Fetch AI-generated prompts on mount
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch("/api/ai/topbar-prompts")
+      .then(r => r.json())
+      .then(d => { if (d.prompts?.length) setPrompts(d.prompts); })
+      .catch(() => {});
+  }, [currentUser?.id]);
+
+  const displayPrompts = prompts || ["Cargando sugerencias..."];
+
+  useEffect(() => { const t = setInterval(() => { setFading(true); setTimeout(() => { setPromptIndex(p => (p + 1) % displayPrompts.length); setFading(false); }, 400); }, 600000); return () => clearInterval(t); }, [displayPrompts.length]);
+
+  if (!currentUser) return <div className="flex-1"><div className="h-2.5 w-24 animate-pulse rounded bg-slate-200" /><div className="mt-1.5 h-6 w-72 animate-pulse rounded-full bg-slate-100" /></div>;
+
   return (
-    <span
-      aria-hidden="true"
-      className={`inline-flex flex-col items-center justify-center font-mono text-[11px] font-bold leading-[0.72] tracking-[-0.16em] ${className}`}
-    >
-      <span>{"<"}</span>
-      <span>{">"}</span>
-    </span>
+    <div className="min-w-0 flex-1 flex items-center justify-between gap-6">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-sm font-semibold text-slate-600 whitespace-nowrap">{greeting},</span>
+        {firstName && <span className="text-sm font-bold text-slate-800 truncate">{firstName}</span>}
+      </div>
+      <span className={`shrink hidden sm:inline-block text-sm text-slate-500 italic transition-opacity duration-300 truncate max-w-md ${fading ? "opacity-0" : "opacity-100"}`}>
+        {displayPrompts[promptIndex]}
+      </span>
+    </div>
   );
 }
 
 function WorkspaceContextSwitcher({ currentUser, onRoleSwitch, compact = false, menuPlacement = "bottom" }) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef(null);
   const roles = Array.isArray(currentUser?.roles) ? currentUser.roles : [];
-
-  useEffect(() => {
-    function handlePointerDown(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => window.removeEventListener("pointerdown", handlePointerDown);
-  }, []);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [currentUser?.role]);
-
-  if (!currentUser || roles.length <= 1 || !onRoleSwitch) {
-    return null;
-  }
+  if (!currentUser || roles.length <= 1 || !onRoleSwitch) return null;
 
   const activeRoleMeta = workspaceRoleMeta[currentUser.role] ?? workspaceRoleMeta.student;
-  const controlId = `workspace-context-options-${compact ? "compact" : "full"}`;
-  const compactMenuClass = menuPlacement === "top" ? "bottom-full mb-2" : "top-full mt-2";
 
   return (
-    <div className={`min-w-0 ${compact ? "relative" : "rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"}`} ref={containerRef}>
-      {compact ? (
-        <button
-          aria-controls={controlId}
-          aria-expanded={open}
-          className={`grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-[14px] border px-3 py-2.5 text-left transition ${
-            open
-              ? "border-[#c6d4ec] bg-[#eef4ff]"
-              : "border-[#d7e0ea] bg-[#f5f7fb] hover:border-[#bbc8d9]"
-          }`}
-          onClick={() => setOpen((current) => !current)}
-          type="button"
-        >
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${activeRoleMeta.accent}`} />
-          <span className="min-w-0 whitespace-nowrap text-sm font-semibold leading-none text-[#172033]">{activeRoleMeta.label}</span>
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center justify-self-end text-[#6b7a90]">
-            <WorkspaceContextGlyph className="text-[10px]" />
-          </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors py-1" type="button">
+          <span className={"size-2.5 rounded-full " + activeRoleMeta.accent} />
+          {activeRoleMeta.label}
+          <svg className="size-3 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6"/></svg>
         </button>
-      ) : (
-        <button
-          aria-controls={controlId}
-          aria-expanded={open}
-          className={`grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-[20px] border px-4 py-3 text-left transition ${
-            open
-              ? "border-[#c8d7f2] bg-[linear-gradient(180deg,#f6f9ff_0%,#edf4ff_100%)] shadow-[0_12px_26px_rgba(29,78,216,0.1)]"
-              : "border-[#d7e2f1] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[0_10px_22px_rgba(15,23,42,0.05)] hover:border-[#bfd0eb]"
-          }`}
-          onClick={() => setOpen((current) => !current)}
-          type="button"
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[1rem] border border-[#d9e3ef] bg-[#f8fbff]">
-              <span className={`h-4 w-4 rounded-full ${activeRoleMeta.accent}`} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cambiar contexto</span>
-              <span className="mt-1 block text-[0.98rem] font-semibold leading-none text-[#172033]">{activeRoleMeta.label}</span>
-            </span>
-          </span>
-          <span className="shrink-0 rounded-full border border-[#d9e3ef] bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-[#5f6f86]">
-            {currentUser.status}
-          </span>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#d9e3ef] bg-white text-[#5f6f86]">
-            <WorkspaceContextGlyph className="text-[10px]" />
-          </span>
-        </button>
-      )}
-
-      {open ? (
-        <div
-          className={`grid w-full min-w-0 gap-2 rounded-[16px] border border-[#d7e0ea] bg-[#f5f7fb] p-2 ${compact ? `absolute left-0 right-0 z-20 shadow-[0_12px_26px_rgba(15,23,42,0.06)] ${compactMenuClass}` : "mt-1 shadow-[0_12px_26px_rgba(15,23,42,0.06)]"}`}
-          id={controlId}
-          role="listbox"
-        >
-          {roles.map((role) => {
-            const roleMeta = workspaceRoleMeta[role] ?? workspaceRoleMeta.student;
-            const isActive = role === currentUser.role;
-
-            return (
-              <button
-                aria-selected={isActive}
-                className={`grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-[12px] border px-3 py-2.5 text-left transition ${
-                  isActive
-                    ? "border-[#c6d4ec] bg-[#eef4ff] text-[#1d4ed8]"
-                    : "border-[#d7e0ea] bg-white text-[#172033] hover:border-[#bbc8d9] hover:bg-[#f5f7fb]"
-                }`}
-                key={role}
-                onClick={async () => {
-                  if (isActive) {
-                    setOpen(false);
-                    return;
-                  }
-
-                  setOpen(false);
-                  try {
-                    await onRoleSwitch(role);
-                  } catch {
-                    // El shell principal ya expone el error de autenticacion.
-                  }
-                }}
-                type="button"
-              >
-                <span className={`h-2.5 w-2.5 rounded-full ${roleMeta.accent}`} />
-                <span className="min-w-0">
-                  <span className={`block text-sm font-semibold leading-none ${isActive ? "text-[#1d4ed8]" : "text-[#172033]"}`}>
-                    {roleMeta.label}
-                  </span>
-                  <span className={`mt-1 block text-[11px] leading-[1.15] ${isActive ? "text-[#45608d]" : "text-[#6b7a90]"}`}>
-                    {roleMeta.description}
-                  </span>
-                </span>
-                <span className="flex h-5 w-5 items-center justify-center justify-self-end">
-                  {isActive ? <span className={`h-2 w-2 rounded-full ${roleMeta.accent}`} /> : null}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side="top" className="w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+        {roles.map((role) => {
+          const meta = workspaceRoleMeta[role] ?? workspaceRoleMeta.student;
+          const isActive = role === currentUser.role;
+          return (
+            <DropdownMenuItem
+              key={role}
+              onClick={async () => { if (!isActive) try { await onRoleSwitch(role); } catch {} }}
+              className={"flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer " + (isActive ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50")}
+            >
+              <span className={"size-2.5 shrink-0 rounded-full " + meta.accent} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{meta.label}</p>
+                <p className="text-[11px] text-slate-500">{meta.description}</p>
+              </div>
+              {isActive && (
+                <svg className="size-4 shrink-0 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+              )}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
-
 function groupWorkspaceNavigationItems(items) {
   const groups = [];
   const groupMap = new Map();
@@ -493,38 +438,38 @@ function WorkspaceShell({
   const isTeacherVariant = variant === "teacher";
   const isStudentVariant = variant === "student";
   const shellRootClass = isAdminVariant || isStudentVariant
-    ? "min-h-screen bg-[linear-gradient(180deg,#f9fbfe_0%,#f3f7fc_48%,#eef3f8_100%)] text-[#172033]"
-    : `min-h-screen ${workspaceChrome.canvas} text-[#172033]`;
+    ? "min-h-screen w-full bg-slate-50 text-slate-900"
+    : `min-h-screen w-full ${workspaceChrome.canvas} text-[#172033]`;
   const sidebarClass = isAdminVariant
-    ? "border-r border-[#d7e0ea] bg-[#fbfcfe]"
+    ? "border-r border-slate-200 bg-white"
     : "border-r border-[#d7e0ea] bg-[#fbfcfe]";
   const brandPanelClass = isAdminVariant
-    ? "rounded-[22px] border border-[#d7e0ea] bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+    ? "rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm"
     : isStudentVariant
-      ? "rounded-[22px] border border-[#d7e0ea] bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+      ? "rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm"
     : isTeacherVariant
-      ? "rounded-[22px] border border-[#d7e0ea] bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+      ? "rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm"
     : `${workspaceChrome.shellPanel} p-4`;
   const accessPanelClass = isAdminVariant
-    ? "mt-4 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] px-4 py-4 shadow-[0_12px_24px_rgba(29,78,216,0.08)]"
+    ? "mt-3 rounded-[16px] border border-blue-100 bg-blue-50/60 px-4 py-3.5"
     : isStudentVariant
-      ? "mt-4 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] px-4 py-4 shadow-[0_12px_24px_rgba(29,78,216,0.08)]"
+      ? "mt-3 rounded-[16px] border border-blue-100 bg-blue-50/60 px-4 py-3.5"
     : isTeacherVariant
-      ? "mt-4 rounded-[18px] border border-[#c6d4ec] bg-[#eef4ff] px-4 py-4 shadow-[0_12px_24px_rgba(29,78,216,0.08)]"
-    : "mt-4 rounded-2xl border border-[#e7edf5] bg-[#f7f9fc] px-3 py-3";
+      ? "mt-3 rounded-[16px] border border-blue-100 bg-blue-50/60 px-4 py-3.5"
+    : "mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3";
   const navPanelClass = isAdminVariant
-    ? "flex-1 min-h-0 overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+    ? "flex-1 min-h-0 overflow-hidden rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm"
     : isStudentVariant
-      ? "flex-1 min-h-0 overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+      ? "flex-1 min-h-0 overflow-hidden rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm"
     : isTeacherVariant
-      ? "flex-1 min-h-0 overflow-hidden rounded-[22px] border border-[#d7e0ea] bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+      ? "flex-1 min-h-0 overflow-hidden rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm"
     : `${workspaceChrome.shellPanel} flex-1 min-h-0 overflow-hidden p-3`;
   const sessionPanelClass = isAdminVariant
-    ? "rounded-[22px] border border-[#d7e0ea] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+    ? "rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm"
     : isStudentVariant
-      ? "rounded-[22px] border border-[#d7e0ea] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+      ? "rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm"
     : isTeacherVariant
-      ? "rounded-[22px] border border-[#d7e0ea] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+      ? "rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm"
     : `${workspaceChrome.shellPanel} p-4`;
   const topbarClass = isAdminVariant || isStudentVariant
     ? "sticky top-0 z-30 border-b border-[#d7e0ea] bg-[#fbfcfe]/96 backdrop-blur-xl"
@@ -558,90 +503,91 @@ function WorkspaceShell({
       <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
         <div
           aria-hidden={!sidebarOpen}
-          className={`fixed inset-0 z-40 bg-[#0f172a]/32 backdrop-blur-[2px] transition lg:hidden ${
+          className={`fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm transition lg:hidden ${
             sidebarOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
           }`}
           onClick={() => setSidebarOpen(false)}
         />
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-[17rem] ${sidebarClass} px-4 py-5 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-40 w-[17rem] ${sidebarClass} px-4 py-5 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="flex h-full min-h-0 flex-col gap-5">
-            <div className={brandPanelClass}>
+          <div className="flex h-full min-h-0 flex-col gap-4">
+            {/* Brand — flat, no card */}
+            <div className="px-3 pt-2">
               <WorkspaceHomeButton contextInitial={contextInitial} subtitle={subtitle} variant={variant} />
-              <div className={accessPanelClass}>
-                <p className={`text-[10px] font-black uppercase tracking-[0.22em] ${
-                  isAdminVariant || isTeacherVariant || isStudentVariant ? "text-[#1d4ed8]" : "text-[#6b7a90]"
-                }`}>Acceso</p>
-                <p className="mt-2 text-sm font-semibold text-[#172033]">
-                  {currentUser?.role === "admin"
-                    ? "Control administrativo"
-                    : currentUser?.role === "teacher"
-                      ? "Experiencia docente"
-                      : "Experiencia estudiantil"}
+            </div>
+            {currentUser ? (
+              <div className="px-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Acceso</p>
+                <p className="mt-0.5 text-[13px] font-semibold text-slate-800">
+                  {currentUser?.role === "admin" ? "Panel administrativo" : currentUser?.role === "teacher" ? "Experiencia docente" : "Experiencia estudiantil"}
                 </p>
-                <p className={`mt-1 text-xs leading-relaxed ${
-                  isAdminVariant || isTeacherVariant || isStudentVariant ? "text-[#45608d]" : "text-[#5d6b80]"
-                }`}>
-                  {accessDetail ?? (currentUser ? `${currentUser.email} · ${formatUserRoles(currentUser)}` : "Workspace operativo seguro")}
-                </p>
+                <p className="text-[11px] text-slate-500 truncate">{currentUser.email}</p>
               </div>
+            ) : null}
+
+            {/* Navigation — flat list, no card wrapper */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-2">
+              {navigationItems.length ? (
+                groupedNavigationItems.map((group, index) => (
+                  <div className="mb-3" key={group.label || `nav-group-${index}`}>
+                    {group.label ? (
+                      <p className="px-2 mb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400">{group.label}</p>
+                    ) : null}
+                    {group.items.map((item) => (
+                      <SidebarMenuItem key={`${group.label}-${item.label}`}>
+                        <SidebarMenuButton
+                          isActive={item.active}
+                          onClick={() => handleNavigation(item)}
+                          tooltip={item.label}
+                        >
+                          {item.icon && <NavIcon name={item.icon} />}
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                    {index < groupedNavigationItems.length - 1 && (
+                      <div className="mx-3 my-2 h-px bg-slate-100" />
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="px-3 py-8 text-center text-xs text-slate-400">Sin accesos disponibles</p>
+              )}
             </div>
 
-            <nav className={navPanelClass}>
-              <p className={`px-2 font-black uppercase text-[#6b7a90] ${isAdminVariant || isTeacherVariant || isStudentVariant ? "text-[8px] tracking-[0.3em]" : "text-[10px] tracking-[0.22em]"}`}>Navegacion</p>
-              <div className="mt-3 grid max-h-full gap-2 overflow-y-auto pr-1">
-                {navigationItems.length ? (
-                  groupedNavigationItems.map((group, index) => (
-                    <div className="grid gap-2" key={group.label || `nav-group-${index}`}>
-                      {group.label ? (
-                        <p className={`px-2 font-black uppercase text-[#6b7a90] ${isAdminVariant || isTeacherVariant || isStudentVariant ? "text-[8px] tracking-[0.3em]" : "text-[10px] tracking-[0.22em]"}`}>{group.label}</p>
-                      ) : null}
-                      {group.items.map((item) => (
-                        <WorkspaceSidebarButton item={item} key={`${group.label}-${item.label}`} onSelect={handleNavigation} variant={variant} />
-                      ))}
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-[#d7e0ea] bg-[#f7f9fc] px-4 py-5 text-sm leading-relaxed text-[#5d6b80]">
-                    Esta vista no expone accesos secundarios.
-                  </div>
-                )}
-              </div>
-            </nav>
-
-            <div className={`${sessionPanelClass} mt-auto min-w-0 overflow-visible safe-bottom`}>
+            {/* Session — flat footer */}
+            <div className="px-3 pb-2 mt-auto border-t border-slate-100 pt-3 safe-bottom">
               {currentUser ? (
                 <>
                   <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#c6d4ec] bg-[#eef4ff] text-[11px] font-bold text-[#1d4ed8]">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[10px] font-bold text-white">
                       {sessionInitials}
                     </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#172033]">{currentUser.fullName}</p>
-                      <p className="truncate text-[11px] text-[#6b7a90]">{currentUser.email}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 min-w-0">
-                    {currentUser?.roles?.length > 1 && onRoleSwitch ? (
-                      <WorkspaceContextSwitcher currentUser={currentUser} compact menuPlacement="top" onRoleSwitch={onRoleSwitch} />
-                    ) : (
-                      <div className="rounded-[14px] border border-[#d7e0ea] bg-[#f5f7fb] px-3 py-2.5 text-[11px] font-semibold text-[#6b7a90]">
-                        {workspaceRoleLabels[currentUser.role] ?? currentUser.role} · {currentUser.status}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-slate-800">{currentUser.fullName}</p>
+                      <div className="mt-0.5">
+                        {currentUser?.roles?.length > 1 && onRoleSwitch ? (
+                          <WorkspaceContextSwitcher currentUser={currentUser} compact menuPlacement="top" onRoleSwitch={onRoleSwitch} />
+                        ) : (
+                          <Badge variant="outline" className="text-[9px]">{workspaceRoleLabels[currentUser.role] ?? currentUser.role}</Badge>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  {sessionAction ? (
-                    <div className="mt-3 [&>button]:w-full [&>button]:rounded-xl [&>button]:border [&>button]:border-[#d7e0ea] [&>button]:bg-white [&>button]:px-4 [&>button]:py-2.5 [&>button]:text-[11px] [&>button]:font-semibold [&>button]:text-[#9a3412] [&>button]:transition [&>button]:hover:border-[#fecaca] [&>button]:hover:bg-[#fff7ed]">
-                      {sessionAction}
                     </div>
-                  ) : null}
+                  </div>
+                  {sessionAction ? <div className="mt-2">{sessionAction}</div> : null}
                 </>
               ) : (
-                <p className="mt-2 text-sm leading-relaxed text-[#5d6b80]">Validando identidad del workspace.</p>
+                <div className="flex items-center gap-3">
+                  <div className="size-8 rounded-full bg-slate-200 animate-pulse" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-3 w-24 rounded-full bg-slate-200 animate-pulse" />
+                    <div className="h-2 w-36 rounded-full bg-slate-100 animate-pulse" />
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -658,16 +604,14 @@ function WorkspaceShell({
               >
                 <ShellMenuIcon open={sidebarOpen} />
               </button>
-              <div className="min-w-0 flex-1">
-                <p className={`text-[10px] font-black uppercase ${
-                  isAdminVariant || isTeacherVariant
-                    ? "tracking-[0.42em] text-[#c07d36]"
-                    : isStudentVariant
-                      ? "tracking-[0.42em] text-[#1d4ed8]"
-                      : "tracking-[0.24em] text-[#6b7a90]"
-                }`}>{titleEyebrow}</p>
-                <h1 className="truncate text-lg font-semibold text-[#172033] sm:text-[1.35rem]">{subtitle}</h1>
-              </div>
+              {!isAdminVariant && !isTeacherVariant && !isStudentVariant ? (
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#6b7a90]">{titleEyebrow}</p>
+                  <h1 className="truncate text-lg font-semibold text-[#172033] sm:text-[1.35rem]">{subtitle}</h1>
+                </div>
+              ) : (
+                <TopbarAI currentUser={currentUser} variant={variant} />
+              )}
               <div className="hidden items-center gap-3 lg:flex">
                 {utility}
                 {actions}
@@ -1364,7 +1308,7 @@ export default function GoBeyondApp() {
           onRoleSwitch={handleRoleSwitch}
           sessionAction={
             <button
-              className="w-full rounded-xl bg-[#1d4ed8] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e40af]"
+              className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md active:scale-[0.98]"
               onClick={handleStudentLogout}
               type="button"
             >
@@ -1422,7 +1366,7 @@ export default function GoBeyondApp() {
           onRoleSwitch={handleRoleSwitch}
           sessionAction={
             <button
-              className="w-full rounded-xl bg-[#1d4ed8] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e40af]"
+              className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md active:scale-[0.98]"
               onClick={handleStudentLogout}
               type="button"
             >
@@ -1491,7 +1435,7 @@ export default function GoBeyondApp() {
           onRoleSwitch={handleRoleSwitch}
           sessionAction={
             <button
-              className="w-full rounded-xl bg-[#1d4ed8] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e40af]"
+              className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-md active:scale-[0.98]"
               onClick={handleStudentLogout}
               type="button"
             >
@@ -1551,7 +1495,7 @@ export default function GoBeyondApp() {
           onRoleSwitch={handleRoleSwitch}
           sessionAction={
             <button
-              className="w-full rounded-xl bg-[#1d4ed8] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e40af]"
+              className="w-full rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-200 transition-all duration-200 hover:bg-red-600 hover:text-white hover:shadow-[0_4px_14px_rgba(220,38,38,0.25)] active:scale-[0.98]"
               onClick={handleLogout}
               type="button"
             >
@@ -1563,7 +1507,7 @@ export default function GoBeyondApp() {
           variant="admin"
           wide
         >
-          <div>
+          <div key={adminView} className="animate-in fade-in slide-in-from-right-4 duration-300">
             <AdminExperience
               activeView={adminView}
               authError={authError || adminError || usersError || enrollmentsError || socialSourcesError}

@@ -229,6 +229,26 @@ export async function askStudentAssistant(token, payload) {
   });
 }
 
+// ── AI Agents ──
+export async function aiStudyBuddy(payload) {
+  return request("/student/ai/chat", { method: "POST", body: payload });
+}
+export async function aiAssignmentCoach(payload) {
+  return request("/student/ai/coach", { method: "POST", body: payload });
+}
+export async function aiLearningNavigator(payload) {
+  return request("/student/ai/navigator", { method: "POST", body: payload });
+}
+export async function aiCommunityMentor(payload) {
+  return request("/student/ai/community-mentor", { method: "POST", body: payload });
+}
+export async function aiQuickAction(payload) {
+  return request("/student/ai/quick", { method: "POST", body: payload });
+}
+export async function aiAdminGenerate(token, payload) {
+  return request("/admin/ai/generate", { method: "POST", token, body: payload });
+}
+
 export async function createStudentTicket(token, payload) {
   return request("/student/tickets", {
     method: "POST",

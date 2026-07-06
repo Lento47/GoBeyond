@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { aiCommunityMentor } from "../../services/contentApi";
+import { MarkdownEditor } from "../../shared/MarkdownEditor";
+import { MarkdownContent } from "../../shared/MarkdownContent";
 import { workspaceChrome } from "./workspaceTheme";
 
 const THREAD_TEMPLATE = `Que necesito:
@@ -336,7 +340,7 @@ export function StudentCommunityExperience({
                       </span>
                     </div>
                     <h3 className="mt-4 break-words text-xl font-semibold leading-tight text-[#172033]">{thread.title}</h3>
-                    <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-[#536277]">{thread.body}</p>
+                    <div className="mt-3 line-clamp-3 text-sm leading-relaxed text-[#536277]"><MarkdownContent>{thread.body}</MarkdownContent></div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {(thread.tags ?? []).slice(0, 4).map((tag) => (
                         <span key={tag} className="rounded-full border border-[#d7e0ea] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-[#6b7a90]">{tag}</span>
@@ -378,7 +382,7 @@ export function StudentCommunityExperience({
                       {selectedThread.status === "resolved" ? <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#166534]">Resuelta</span> : null}
                     </div>
                     <h2 className="mt-5 break-words text-[1.8rem] font-semibold leading-tight text-[#172033] sm:text-[2.2rem]">{selectedThread.title}</h2>
-                    <p className="mt-5 text-base leading-relaxed text-[#536277]">{selectedThread.body}</p>
+                    <div className="mt-5 text-base leading-relaxed text-[#536277]"><MarkdownContent>{selectedThread.body}</MarkdownContent></div>
                   </div>
                   {selectedThread.authorId === user.id ? (
                     <button className="rounded-xl border border-[#d7e0ea] bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#172033] disabled:opacity-50" disabled={threadUpdating} onClick={() => toggleResolved(selectedThread.id)} type="button">
@@ -401,7 +405,7 @@ export function StudentCommunityExperience({
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{reply.authorName}</p>
-                          <p className="mt-2 text-sm leading-relaxed text-[#536277]">{reply.body}</p>
+                          <div className="mt-2 text-sm leading-relaxed text-[#536277]"><MarkdownContent>{reply.body}</MarkdownContent></div>
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2">
                           {selectedThread.bestReplyId === reply.id ? <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#166534]">Mejor respuesta</span> : null}
@@ -429,7 +433,7 @@ export function StudentCommunityExperience({
                 </div>
                 <div className="rounded-xl border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">{user.fullName || "Estudiante GoBeyond"}</div>
               </div>
-              <textarea className="mt-6 min-h-[180px] w-full rounded-[18px] border border-[#d7e0ea] bg-white px-5 py-4 text-sm leading-7 text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setReplyDraft(event.target.value)} placeholder="Comparte una respuesta clara, aplicable y respetuosa." value={replyDraft} />
+              <MarkdownEditor className="mt-6" onChange={(event) => setReplyDraft(event.target.value)} placeholder="Comparte una respuesta clara, aplicable y respetuosa." value={replyDraft} />
               <div className="mt-5 flex flex-wrap gap-3">
                 <button className="rounded-xl bg-[#1d4ed8] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#1e40af] disabled:opacity-50" disabled={replySubmitting || !replyDraft.trim()} type="submit">{replySubmitting ? "Publicando..." : "Publicar respuesta"}</button>
                 <button className="rounded-xl border border-[#d7e0ea] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#172033]" onClick={openComposer} type="button">Abrir nueva pregunta</button>
@@ -439,7 +443,7 @@ export function StudentCommunityExperience({
       </section>
 
       {showComposer ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-4 py-6 backdrop-blur-[8px] sm:py-8">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-4 py-6 sm:py-8">
           <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[24px] border border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.18)]">
             <div className="sticky top-0 z-10 border-b border-[#d7e0ea] bg-[#f5f7fb]/96 px-4 py-5 backdrop-blur sm:px-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -462,8 +466,43 @@ export function StudentCommunityExperience({
                     {activeCourses.map((course) => <option key={course.id || course.enrollmentId} value={course.id}>{course.title}</option>)}
                   </select>
                 </div>
-                <input className="w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setThreadDraft((current) => ({ ...current, tags: event.target.value }))} placeholder="Etiquetas separadas por coma" value={threadDraft.tags} />
-                <textarea className="min-h-[220px] w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm leading-7 text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setThreadDraft((current) => ({ ...current, body: event.target.value }))} value={threadDraft.body} />
+                <div className="flex items-center gap-2">
+                  <input className="flex-1 w-full rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]" onChange={(event) => setThreadDraft((current) => ({ ...current, tags: event.target.value }))} placeholder="Etiquetas separadas por coma" value={threadDraft.tags} />
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
+                    onClick={async () => {
+                      if (!threadDraft.body?.trim()) return;
+                      try {
+                        const result = await aiCommunityMentor({ action: "tag", content: threadDraft.body });
+                        setThreadDraft(c => ({
+                          ...c,
+                          title: result.result?.suggestedTitle || c.title,
+                          tags: (result.result?.tags || []).join(", "),
+                          category: result.result?.category || c.category,
+                        }));
+                      } catch {}
+                    }}
+                  >
+                    AI Auto-tag
+                  </Badge>
+                </div>
+                <div>
+                  <MarkdownEditor onChange={(event) => setThreadDraft((current) => ({ ...current, body: event.target.value }))} placeholder="Describe tu pregunta o tema. Usa **negrita**, listas y encabezados." value={threadDraft.body} />
+                  <button
+                    type="button"
+                    className="mt-2 text-[10px] font-bold uppercase tracking-[0.1em] text-blue-500 hover:text-blue-700 transition-colors"
+                    onClick={async () => {
+                      if (!threadDraft.body?.trim()) return;
+                      try {
+                        const result = await aiCommunityMentor({ action: "improve", content: threadDraft.body });
+                        setThreadDraft(c => ({ ...c, body: result.result?.improved || c.body }));
+                      } catch {}
+                    }}
+                  >
+                    AI Improve formatting
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-3">
                   <button className="rounded-xl bg-[#1d4ed8] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#1e40af] disabled:opacity-50" disabled={composerSubmitting} type="submit">{composerSubmitting ? "Guardando..." : "Publicar hilo"}</button>
                   <button className="rounded-xl border border-[#d7e0ea] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#172033]" onClick={() => setShowComposer(false)} type="button">Cancelar</button>

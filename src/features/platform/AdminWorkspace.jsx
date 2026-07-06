@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceView } from "../../shared/WorkspaceView";
 import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX, extractEmbedUrl } from "../../shared/embedPolicy";
+import { MarkdownEditor } from "../../shared/MarkdownEditor";
 import { MarkdownContent } from "../../shared/MarkdownContent";
 import {
   ActionButton,
@@ -2908,8 +2909,8 @@ export function AdminWorkspace({
                       <Field label="Etiqueta de sección" hint="Texto pequeño en azul que aparece encima del título.">
                         <Input value={landingForm.aboutTitle ?? ""} onChange={(e) => setLanding("aboutTitle", e.target.value)} placeholder="Sobre nosotros" />
                       </Field>
-                      <Field label="Párrafo principal" hint="Texto debajo del nombre, lado izquierdo.">
-                        <Textarea value={landingForm.aboutBody ?? ""} onChange={(e) => setLanding("aboutBody", e.target.value)} placeholder="Breve descripción de la organización..." />
+                      <Field label="Párrafo principal" hint="Usa **negrita**, *cursiva*, ## encabezados y listas. Las herramientas de formato estan arriba.">
+                        <MarkdownEditor value={landingForm.aboutBody ?? ""} onChange={(e) => setLanding("aboutBody", e.target.value)} placeholder="Breve descripción de la organización..." />
                       </Field>
                       <Field label="Párrafo secundario" hint="Panel derecho de la sección.">
                         <Textarea value={landingForm.aboutBodyTwo ?? ""} onChange={(e) => setLanding("aboutBodyTwo", e.target.value)} placeholder="Más contexto sobre la misión..." />
@@ -3409,13 +3410,13 @@ export function AdminWorkspace({
                   </div>
                   <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{preview.track || "Ruta academica"}</p>
                   <h3 className="mt-2 text-[1.45rem] font-semibold leading-tight text-[#172033]">{preview.title || "Titulo del hito"}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-[#536277]">
+                  <MarkdownContent className="mt-3 text-sm leading-relaxed text-[#536277]">
                     {preview.description || "La descripcion breve del hito aparecera aqui como vista previa del roadmap."}
-                  </p>
+                  </MarkdownContent>
                   {preview.outcome ? (
                     <div className="mt-4 rounded-[18px] border border-[#d7e0ea] bg-white/90 p-4">
                       <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Resultado esperado</p>
-                      <p className="mt-2 text-sm leading-relaxed text-[#435066]">{preview.outcome}</p>
+                      <MarkdownContent className="mt-2 text-sm leading-relaxed text-[#435066]">{preview.outcome}</MarkdownContent>
                     </div>
                   ) : null}
                 </div>
@@ -3626,16 +3627,16 @@ export function AdminWorkspace({
               <p className="mt-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#748197]">
                 {courseForm.audience || "Publico objetivo"}
               </p>
-              <p className="mt-4 text-sm leading-6 text-[#617085]">
+              <MarkdownContent className="mt-4 text-sm leading-6 text-[#617085]">
                 {courseForm.detailSummary || "Los detalles adicionales del curso apareceran aqui para una experiencia mas completa."}
-              </p>
-              <p className="mt-4 leading-7 text-[#324154]">
+              </MarkdownContent>
+              <MarkdownContent className="mt-4 leading-7 text-[#324154]">
                 {courseForm.description || "La descripcion aparecera aqui para que puedas revisar tono y claridad antes de guardar."}
-              </p>
-              <p className="mt-4 border-t border-[#e2e8f0] pt-4 text-sm leading-6 text-[#617085]">
-                <strong className="text-[#172033]">Resultados esperados:</strong>{" "}
-                {courseForm.outcomes || "Los resultados del curso se mostraran aqui como vista previa."}
-              </p>
+              </MarkdownContent>
+              <div className="mt-4 border-t border-[#e2e8f0] pt-4 text-sm leading-6 text-[#617085]">
+                <p><strong className="text-[#172033]">Resultados esperados:</strong></p>
+                <MarkdownContent>{courseForm.outcomes || "Los resultados del curso se mostraran aqui como vista previa."}</MarkdownContent>
+              </div>
               <div className="mt-4 border-t border-[#e2e8f0] pt-4 text-sm text-[#617085]">
                 <strong className="text-[#172033]">Asignaciones:</strong> {(courseForm.assignments ?? []).length}
               </div>
@@ -4149,7 +4150,7 @@ export function AdminWorkspace({
                 <p className="text-sm leading-6 text-[#617085]">
                   Expira el {formatDate(currentThread?.expiresAt)}{currentThread?.lastAdminActionAt ? ` · ultima gestion ${formatDate(currentThread.lastAdminActionAt)}` : ""}
                 </p>
-                {currentThread?.adminNote ? <p className="text-sm leading-6 text-[#617085]">{currentThread.adminNote}</p> : null}
+                {currentThread?.adminNote ? <MarkdownContent className="text-sm leading-6 text-[#617085]">{currentThread.adminNote}</MarkdownContent> : null}
               </RowCard>
 
               <div>
@@ -4647,7 +4648,7 @@ export function AdminWorkspace({
         </div>
       ) : null}
 
-      <WorkspaceView key={activeView} className="grid gap-5">
+      <WorkspaceView key={activeView} className="grid gap-6 max-w-6xl mx-auto animate-in fade-in slide-in-from-right-4">
         {activeView === "landing" ? renderLandingView() : null}
         {activeView === "queue" ? renderQueueView() : null}
         {activeView === "identity" ? renderIdentityView() : null}

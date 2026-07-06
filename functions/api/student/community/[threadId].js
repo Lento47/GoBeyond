@@ -1,6 +1,6 @@
 import { requireAuth } from "../../../_lib/auth";
 import { listCommunityThreads, replyToCommunityThread, updateCommunityThreadByStudent } from "../../../_lib/community";
-import { assertTrustedOrigin, readJsonBody } from "../../../_lib/requestSecurity";
+import { assertTrustedOrigin, readJsonBody, enforceRequestThrottle, recordRequestAttempt, throttlePolicies } from "../../../_lib/requestSecurity";
 import { error, json, options } from "../../../_lib/response";
 
 export function onRequestOptions() {
@@ -15,7 +15,9 @@ export async function onRequestPut(context) {
     const action = String(body.action ?? "").trim().toLowerCase();
 
     if (action === "reply") {
+      await enforceRequestThrottle(context.env, context.request, throttlePolicies.studentCommunityReply, { actorUserId: auth.user.id });
       const thread = await replyToCommunityThread(context.request, context.env, auth, context.params.threadId, body);
+      await recordRequestAttempt(context.env, context.request, throttlePolicies.studentCommunityReply, { actorUserId: auth.user.id });
       const threads = await listCommunityThreads(context.env);
       return json({ thread, threads });
     }

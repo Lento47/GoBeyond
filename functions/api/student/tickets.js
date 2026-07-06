@@ -1,7 +1,7 @@
 import { requireAuth } from "../../_lib/auth";
 import { createCollectionItem } from "../../_lib/content";
 import { listStudentEnrollments } from "../../_lib/enrollments";
-import { assertTrustedOrigin, readJsonBody } from "../../_lib/requestSecurity";
+import { assertTrustedOrigin, readJsonBody, enforceRequestThrottle, recordRequestAttempt, throttlePolicies } from "../../_lib/requestSecurity";
 import { error, json, options } from "../../_lib/response";
 
 function createId(prefix) {
@@ -20,6 +20,7 @@ export async function onRequestPost(context) {
   try {
     const auth = await requireAuth(context.request, context.env, ["student"]);
     assertTrustedOrigin(context.request, context.env);
+    await enforceRequestThrottle(context.env, context.request, throttlePolicies.studentTicket, { actorUserId: auth.user.id });
     const body = await readJsonBody(context.request, { maxBytes: 24_000 });
     const subject = clean(body.subject, 140);
     const description = clean(body.description, 2000);
@@ -64,6 +65,7 @@ export async function onRequestPost(context) {
     };
 
     await createCollectionItem(context.env, "supportTickets", ticket);
+    await recordRequestAttempt(context.env, context.request, throttlePolicies.studentTicket, { actorUserId: auth.user.id });
 
     return json({
       ticket,

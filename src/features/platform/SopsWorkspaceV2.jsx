@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import { ActionButton, Input, ModalShell, SecondaryButton, SectionCard, Select, Textarea } from "./components/admin/AdminUI";
+import { ActionButton, Field, Input, ModalShell, SecondaryButton, SectionCard, Select, Textarea } from "./components/admin/AdminUI";
 import {
   DocumentSummaryStats,
   DocumentViewer,
@@ -329,9 +329,9 @@ export function AdminSopsSection({
       <NoticeBox message={message} />
       <NoticeBox message={error} tone="error" />
 
-      <SectionCard title="Hub documental SOP" description="La seccion de SOP funciona como biblioteca web interna: escribir, editar, ocultar y eliminar documentos desde la misma plataforma.">
+      <div><h2 class="text-base font-semibold text-slate-800">Hub documental SOP</h2><p class="mt-1 text-sm text-slate-500">La seccion de SOP funciona como biblioteca web interna: escribir, editar, ocultar y eliminar documentos desde la misma plataforma.</p><div class="mt-4">
         <DocumentSummaryStats activeRequests={activeRequests} items={normalizedSops} showHidden />
-      </SectionCard>
+      </div></div>
 
       <div className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <SopLibraryPanel
@@ -371,83 +371,160 @@ export function AdminSopsSection({
       </div>
 
       {modal === "sop" ? (
-        <ModalShell
-          bodyClassName="p-0 sm:p-0"
-          onClose={closeModal}
-          size="full"
-          subtitle="Escribe y administra el documento completo desde la web. El adjunto es opcional; el contenido principal vive dentro de la plataforma."
-          title={sopForm.id ? "Editar documento" : "Nuevo documento"}
-        >
-          <form className="grid min-h-[calc(100vh-10.5rem)] gap-0 xl:grid-cols-[minmax(24rem,38rem)_minmax(0,1fr)]" onSubmit={handleSopSubmit}>
-            <div className="grid content-start gap-4 border-b border-[#dbe3ec] bg-white p-5 sm:p-6 xl:max-h-[calc(100vh-10.5rem)] xl:overflow-y-auto xl:border-b-0 xl:border-r">
+        <div className="grid gap-0" style={{ minHeight: "calc(100vh - 8rem)" }}>
+          {/* Top bar */}
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Editor SOP</p>
+              <h2 className="text-lg font-bold text-slate-900">{sopForm.id ? "Editar documento" : "Nuevo documento"}</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <ActionButton disabled={submitting} form="sop-editor-form" type="submit">
+                {submitting ? "Guardando..." : sopForm.id ? "Guardar cambios" : "Crear documento"}
+              </ActionButton>
+              {sopForm.id ? (
+                <SecondaryButton disabled={submitting} onClick={() => handleDeleteSop(selectedSop ?? previewSop)} type="button">
+                  Eliminar
+                </SecondaryButton>
+              ) : null}
+              <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
+            </div>
+          </div>
+          <form id="sop-editor-form" className="grid xl:grid-cols-[1fr_0.85fr] flex-1" onSubmit={handleSopSubmit}>
+            {/* LEFT: Form fields */}
+            <div className="grid content-start gap-5 bg-white p-6 sm:p-8 xl:overflow-y-auto">
               <NoticeBox message={importMessage} />
               <NoticeBox message={importError} tone="error" />
-              <div className="grid gap-4 md:grid-cols-2">
-                <Input onChange={(event) => setSopForm((current) => ({ ...current, code: event.target.value }))} placeholder="POL-GB-AREA-001" value={sopForm.code} />
-                <Select onChange={(event) => setSopForm((current) => ({ ...current, type: event.target.value }))} value={sopForm.type}>
-                  {SOP_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}
-                </Select>
+
+              {/* Identificacion */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-3">Identificacion</p>
+                <div className="grid gap-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="Codigo">
+                      <Input onChange={(e) => setSopForm(c => ({ ...c, code: e.target.value }))} placeholder="POL-GB-AREA-001" value={sopForm.code} />
+                    </Field>
+                    <Field label="Tipo">
+                      <Select onChange={(e) => setSopForm(c => ({ ...c, type: e.target.value }))} value={sopForm.type}>
+                        {SOP_TYPES.map(item => <option key={item} value={item}>{item}</option>)}
+                      </Select>
+                    </Field>
+                  </div>
+                  <Field label="Titulo">
+                    <Input onChange={(e) => setSopForm(c => ({ ...c, title: e.target.value }))} placeholder="Titulo del documento" value={sopForm.title} />
+                  </Field>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="Categoria">
+                      <Select onChange={(e) => setSopForm(c => ({ ...c, category: e.target.value }))} value={sopForm.category}>
+                        {SOP_CATEGORIES.map(item => <option key={item} value={item}>{item}</option>)}
+                      </Select>
+                    </Field>
+                    <Field label="Version">
+                      <Input onChange={(e) => setSopForm(c => ({ ...c, version: e.target.value }))} placeholder="1.0" value={sopForm.version} />
+                    </Field>
+                  </div>
+                </div>
               </div>
-              <Input onChange={(event) => setSopForm((current) => ({ ...current, title: event.target.value }))} placeholder="Titulo del documento" value={sopForm.title} />
-              <div className="grid gap-4 md:grid-cols-2">
-                <Select onChange={(event) => setSopForm((current) => ({ ...current, category: event.target.value }))} value={sopForm.category}>
-                  {SOP_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
-                </Select>
-                <Input onChange={(event) => setSopForm((current) => ({ ...current, version: event.target.value }))} placeholder="1.0" value={sopForm.version} />
+
+              <div className="h-px bg-slate-100" />
+
+              {/* Estado */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-3">Estado y visibilidad</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Estado">
+                    <Select onChange={(e) => setSopForm(c => ({ ...c, status: e.target.value }))} value={sopForm.status}>
+                      {SOP_STATUS_OPTIONS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </Select>
+                  </Field>
+                  <Field label="Visibilidad">
+                    <Select onChange={(e) => setSopForm(c => ({ ...c, visibility: e.target.value }))} value={sopForm.visibility}>
+                      {SOP_VISIBILITY_OPTIONS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </Select>
+                  </Field>
+                </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Select onChange={(event) => setSopForm((current) => ({ ...current, status: event.target.value }))} value={sopForm.status}>
-                  {SOP_STATUS_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                </Select>
-                <Select onChange={(event) => setSopForm((current) => ({ ...current, visibility: event.target.value }))} value={sopForm.visibility}>
-                  {SOP_VISIBILITY_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                </Select>
+
+              <div className="h-px bg-slate-100" />
+
+              {/* Responsables */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-3">Responsables y fechas</p>
+                <div className="grid gap-4">
+                  <Field label="Fecha de emision">
+                    <Input onChange={(e) => setSopForm(c => ({ ...c, effectiveDate: e.target.value }))} placeholder="05 de abril de 2026" value={sopForm.effectiveDate} />
+                  </Field>
+                  <Field label="Area responsable">
+                    <Input onChange={(e) => setSopForm(c => ({ ...c, areaOwner: e.target.value }))} placeholder="Area responsable" value={sopForm.areaOwner} />
+                  </Field>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Field label="Elaborado por">
+                      <Input onChange={(e) => setSopForm(c => ({ ...c, preparedBy: e.target.value }))} placeholder="Nombre" value={sopForm.preparedBy} />
+                    </Field>
+                    <Field label="Revisado por">
+                      <Input onChange={(e) => setSopForm(c => ({ ...c, reviewedBy: e.target.value }))} placeholder="Nombre" value={sopForm.reviewedBy} />
+                    </Field>
+                    <Field label="Aprobado por">
+                      <Input onChange={(e) => setSopForm(c => ({ ...c, approvedBy: e.target.value }))} placeholder="Nombre" value={sopForm.approvedBy} />
+                    </Field>
+                  </div>
+                </div>
               </div>
-              <Input onChange={(event) => setSopForm((current) => ({ ...current, effectiveDate: event.target.value }))} placeholder="05 de abril de 2026" value={sopForm.effectiveDate} />
-              <Input onChange={(event) => setSopForm((current) => ({ ...current, areaOwner: event.target.value }))} placeholder="Area responsable" value={sopForm.areaOwner} />
-              <div className="grid gap-4 md:grid-cols-3">
-                <Input onChange={(event) => setSopForm((current) => ({ ...current, preparedBy: event.target.value }))} placeholder="Elaborado por" value={sopForm.preparedBy} />
-                <Input onChange={(event) => setSopForm((current) => ({ ...current, reviewedBy: event.target.value }))} placeholder="Revisado por" value={sopForm.reviewedBy} />
-                <Input onChange={(event) => setSopForm((current) => ({ ...current, approvedBy: event.target.value }))} placeholder="Aprobado por" value={sopForm.approvedBy} />
+
+              <div className="h-px bg-slate-100" />
+
+              {/* Contenido */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-3">Contenido</p>
+                <div className="grid gap-4">
+                  <Field label="Descripcion" hint="Resumen corto para la biblioteca y tarjetas del documento">
+                    <Textarea className="min-h-[6rem]" onChange={(e) => setSopForm(c => ({ ...c, description: e.target.value }))} placeholder="Descripcion breve del documento" value={sopForm.description} />
+                  </Field>
+                  <Field label="Resumen ejecutivo" hint="Texto opcional para la cabecera del documento">
+                    <Textarea className="min-h-[6rem]" onChange={(e) => setSopForm(c => ({ ...c, summary: e.target.value }))} placeholder="Resumen ejecutivo opcional" value={sopForm.summary} />
+                  </Field>
+                </div>
               </div>
-              <Textarea className="min-h-[9rem]" onChange={(event) => setSopForm((current) => ({ ...current, description: event.target.value }))} placeholder="Resumen corto para la biblioteca y tarjetas del documento" value={sopForm.description} />
-              <Textarea className="min-h-[10rem]" onChange={(event) => setSopForm((current) => ({ ...current, summary: event.target.value }))} placeholder="Resumen ejecutivo opcional para la cabecera del documento" value={sopForm.summary} />
-              <div className="grid gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+
+              <div className="h-px bg-slate-100" />
+
+              {/* Cuerpo */}
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Cuerpo del documento</p>
-                    <p className="mt-2 text-sm leading-6 text-[#536277]">Usa Markdown con tablas y encabezados `##` para activar la navegacion y el plegado por secciones.</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Cuerpo del documento</p>
+                    <p className="mt-1 text-xs text-slate-500">Usa Markdown con `##` para activar navegacion por secciones.</p>
                   </div>
                   <SecondaryButton onClick={() => {
-                    if (sopForm.body.trim() && !globalThis.confirm("Esto reemplazara el contenido actual por la plantilla oficial. ¿Deseas continuar?")) return;
-                    setSopForm((current) => ({ ...current, body: createTemplateContent(current) }));
-                  }} type="button">
-                    Usar plantilla
-                  </SecondaryButton>
+                    if (sopForm.body.trim() && !globalThis.confirm("Esto reemplazara el contenido actual. ¿Continuar?")) return;
+                    setSopForm(c => ({ ...c, body: createTemplateContent(c) }));
+                  }} type="button">Usar plantilla</SecondaryButton>
                 </div>
-                <Textarea className="min-h-[34rem] font-mono leading-6" onChange={(event) => setSopForm((current) => ({ ...current, body: event.target.value }))} placeholder="Escribe aqui el documento completo en Markdown" value={sopForm.body} />
+                <Textarea className="min-h-[28rem] font-mono text-[13px] leading-relaxed" onChange={(e) => setSopForm(c => ({ ...c, body: e.target.value }))} placeholder="Escribe el documento en Markdown..." value={sopForm.body} />
               </div>
-              <div className="grid gap-3 rounded-[18px] border border-[#dbe3ec] bg-[#f8fafc] p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Adjunto opcional</p>
-                <p className="text-sm leading-6 text-[#536277]">Si subes un archivo `.md` o `.txt`, el editor intentara autopoblar los placeholders y el cuerpo del documento antes de guardar.</p>
-                <Input accept=".md,.markdown,.txt,.pdf,.docx,.xlsx,.pptx,.csv" onChange={(event) => handleSopFileSelection(event.target.files?.[0] ?? null)} type="file" />
-                {importingFile ? <p className="text-sm leading-6 text-[#1d4ed8]">Leyendo archivo e interpretando secciones del documento...</p> : null}
+
+              <div className="h-px bg-slate-100" />
+
+              {/* Adjunto */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-3">Adjunto opcional</p>
+                <p className="text-xs text-slate-500 mb-3">Si subes un archivo `.md` o `.txt`, el editor intentara autopoblar los campos antes de guardar.</p>
+                <Input accept=".md,.markdown,.txt,.pdf,.docx,.xlsx,.pptx,.csv" onChange={(e) => handleSopFileSelection(e.target.files?.[0] ?? null)} type="file" />
+                {importingFile ? <p className="mt-2 text-sm text-blue-600">Leyendo archivo...</p> : null}
               </div>
-              <div className="flex flex-wrap gap-3">
-                <ActionButton disabled={submitting} type="submit">{submitting ? "Guardando..." : sopForm.id ? "Guardar cambios" : "Crear documento"}</ActionButton>
-                {sopForm.id ? <SecondaryButton disabled={submitting} onClick={() => handleDeleteSop(selectedSop ?? previewSop)} type="button">Eliminar</SecondaryButton> : null}
-                <SecondaryButton onClick={closeModal} type="button">Cancelar</SecondaryButton>
-              </div>
+
             </div>
-            <div className="grid content-start gap-4 bg-[#eef3f9] p-5 sm:p-6 xl:max-h-[calc(100vh-10.5rem)] xl:overflow-y-auto">
-              <div className="rounded-[18px] border border-[#dbe3ec] bg-white p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Vista previa</p>
-                <p className="mt-2 text-sm leading-6 text-[#536277]">La derecha funciona como una lectura web del documento para que puedas validar estructura, jerarquia y tablas antes de guardar.</p>
+
+            {/* RIGHT: Preview */}
+            <div className="grid content-start gap-4 bg-slate-50 border-l border-slate-200 p-6 sm:p-8 xl:overflow-y-auto">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">Vista previa</p>
+                <p className="text-xs text-slate-500">Asi se vera el documento publicado. Valida estructura, jerarquia y tablas.</p>
               </div>
-              <DocumentViewer emptyBody="La vista previa del documento aparecera aqui a medida que completes los campos." sop={previewSop} />
+              <DocumentViewer emptyBody="Completa los campos para ver la vista previa del documento." sop={previewSop} />
             </div>
           </form>
-        </ModalShell>
+        </div>
       ) : null}
 
       {modal === "request" && currentRequest ? (
@@ -561,9 +638,9 @@ export function TeacherSopsSection({
         </section>
       ) : null}
 
-      <SectionCard title="Biblioteca de SOPs" description="Consulta los documentos desde una vista tipo wiki, con lectura clara, navegacion por secciones y comentarios de cambio.">
+      <div><h2 class="text-base font-semibold text-slate-800">Biblioteca de SOPs</h2><p class="mt-1 text-sm text-slate-500">Consulta los documentos desde una vista tipo wiki, con lectura clara, navegacion por secciones y comentarios de cambio.</p><div class="mt-4">
         <DocumentSummaryStats activeRequests={activeRequests} items={normalizedSops} />
-      </SectionCard>
+      </div></div>
 
       <section className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]" id="teacher-sops">
         <SopLibraryPanel

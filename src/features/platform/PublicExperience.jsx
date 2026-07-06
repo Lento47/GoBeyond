@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import HeroArcadePanel from "./components/HeroArcadePanel";
-import { getDomainLabel, getEmbedDescriptor, normalizePublicMediaUrl } from "./embedUtils";
-import { normalizeLearningPath } from "./learningPath";
-import { getPublishedNews, normalizeSocialNewsItem } from "./newsUtils";
-import { EMBED_IFRAME_ALLOW, EMBED_IFRAME_SANDBOX } from "../../shared/embedPolicy";
+import BlueprintDiscovery from "./components/BlueprintDiscovery";
+import { SecurityTurnstile } from "./components/SecurityTurnstile";
+import { normalizePublicMediaUrl } from "./embedUtils";
 import { MarkdownContent } from "../../shared/MarkdownContent";
 import { PublicImageWithFallback } from "../../shared/PublicImageWithFallback";
 
@@ -14,1340 +12,916 @@ const legalFooterLinks = [
   { href: "/aviso-legal", label: "Aviso Legal" },
 ];
 
-const DEFAULT_NAV = [
-  "Inicio",
-  "Sobre nosotros",
-  "Servicios",
-  "Cursos",
-  "Instituciones",
-  "Testimonios",
-  "Noticias",
-  "Contacto",
-];
-
-// ─── Pure helpers ────────────────────────────────────────────────────────────
-
-function slugify(value) {
+function slugifySectionLabel(value) {
   return String(value ?? "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
 
-// Find the nav item whose slug matches any of the candidates (exact first, then prefix)
-function findSectionId(navItems, candidates, fallback) {
-  for (const c of candidates) {
-    const m = navItems.find((i) => i.id === c);
-    if (m) return m.id;
-  }
-  for (const c of candidates) {
-    const m = navItems.find((i) => i.id.startsWith(c));
-    if (m) return m.id;
-  }
-  return fallback;
-}
+// --- LIGHT THEME IMMERSIVE COMPONENTS ---
 
-function normalizeText(value) {
-  return String(value ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
-}
-
-function isSixSigmaItem(item) {
-  return normalizeText(item?.title).includes("six sigma");
-}
-
-function removeSixSigma(value) {
-  return typeof value === "string" ? value.replace(/Six Sigma/gi, "IA") : value;
-}
-
-function normalizeMetric(item) {
-  return {
-    ...item,
-    label: removeSixSigma(item?.label),
-    value: removeSixSigma(item?.value),
-    description: removeSixSigma(item?.description),
-  };
-}
-
-function getContactActionHref(label, news, institutions, socialLinks) {
-  const n = normalizeText(label);
-  const ref = [...(news ?? []), ...(institutions ?? [])].find((i) => i?.link)?.link;
-  if (n.includes("noticia")) return "/noticias";
-  if (n.includes("contact")) return "#contacto";
-  if (n.includes("facebook")) return socialLinks?.facebook || ref || "#instituciones";
-  if (n.includes("linkedin")) return socialLinks?.linkedin || ref || "#instituciones";
-  if (n.includes("instagram")) return socialLinks?.instagram || ref || "#instituciones";
-  return "#inicio";
-}
-
-function isExternalHref(href) {
-  return /^https?:\/\//i.test(String(href ?? ""));
-}
-
-function getEmailHref(v) {
-  const e = String(v ?? "").trim();
-  return e ? `mailto:${e}` : "";
-}
-
-function getPhoneHref(v) {
-  const p = String(v ?? "").trim().replace(/[^\d+]/g, "");
-  return p ? `tel:${p}` : "";
-}
-
-function truncate(value, max) {
-  const s = String(value ?? "").trim();
-  return s.length <= max ? s : `${s.slice(0, max).trimEnd()}…`;
-}
-
-function shortBrand(name) {
-  return (String(name ?? "").trim().split(":")[0].trim()) || "GoBeyond";
-}
-
-function getInitials(name) {
-  return String(name ?? "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
-// ─── Atomic components ───────────────────────────────────────────────────────
-
-const SectionTag = ({ children }) => (
-  <span className="mb-4 block text-[10px] font-bold uppercase tracking-[0.46em] text-blue-500">
-    {children}
-  </span>
+const Aurora = () => (
+  <div className="aurora-container" aria-hidden="true">
+    <div className="aurora-bg" />
+  </div>
 );
 
-const Badge = ({ children }) => (
-  <span className="inline-block rounded-full border border-blue-600/20 bg-blue-600/8 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">
-    {children}
-  </span>
-);
-
-const LandingCard = ({ children, className = "", highlight = false }) => (
-  <div
-    className={`rounded-2xl border p-6 transition-colors ${
-      highlight
-        ? "border-blue-500/20 bg-blue-600/[0.03]"
-        : "border-white/8 bg-white/[0.02] hover:border-white/14"
-    } ${className}`}
+const Reveal = ({ children, className = "", delay = 0 }) => (
+  <div 
+    className={`canvas-reveal ${className}`} 
+    style={{ transitionDelay: `${delay}ms` }}
   >
     {children}
   </div>
 );
 
-function EmptyState({ title, body }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-white/10 p-8 text-sm text-gray-500">
-      <p className="font-semibold text-white/70">{title}</p>
-      {body ? <p className="mt-2 leading-relaxed">{body}</p> : null}
-    </div>
-  );
-}
+const BentoCard = ({ children, className = "", span = "col-span-1" }) => (
+  <div className={`glass-immersive p-8 rounded-[2rem] ${span} ${className}`}>
+    {children}
+  </div>
+);
 
-function EmbedFrame({ src, title }) {
-  return (
-    <iframe
-      allow={EMBED_IFRAME_ALLOW}
-      allowFullScreen
-      className="h-full w-full border-0"
-      height="100%"
-      loading="lazy"
-      referrerPolicy="strict-origin-when-cross-origin"
-      sandbox={EMBED_IFRAME_SANDBOX}
-      src={src}
-      title={title}
-      width="100%"
-    />
-  );
-}
-
-function ProgramList({ label, items }) {
-  const filtered = (Array.isArray(items) ? items : []).filter((s) => String(s ?? "").trim());
-  if (!filtered.length) return null;
-  return (
-    <div className="mt-5">
-      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">{label}</p>
-      <ul className="mt-3 grid gap-2">
-        {filtered.map((item, i) => (
-          <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-gray-400">
-            <span className="mt-[0.4rem] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500/60" />
-            <span className="min-w-0 break-words">{item}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function ProgramHighlights({ program }) {
-  return (
-    <>
-      <ProgramList label="Resultados" items={program.outcomes} />
-      <ProgramList label="Programas disponibles" items={program.availablePrograms} />
-      <ProgramList label="Incluye" items={program.includes} />
-      <ProgramList label="Beneficios adicionales" items={program.benefits} />
-    </>
-  );
-}
-
-// Clean logo card for institutions — white surface, object-contain, safe fallback
-function InstitutionLogoCard({ institution }) {
-  const image = normalizePublicMediaUrl(institution.image);
-  const initials = getInitials(institution.name);
-  const shortName = String(institution.name ?? "").trim().split(" ").slice(0, 2).join(" ");
-
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="flex h-28 w-full items-center justify-center overflow-hidden rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-        <PublicImageWithFallback
-          alt={institution.name}
-          className="h-full w-full object-contain"
-          src={image}
-          fallback={
-            <div className="flex flex-col items-center justify-center gap-1 text-center">
-              <span className="text-2xl font-black text-gray-300">{initials || "GB"}</span>
-            </div>
-          }
-        />
-      </div>
-      <p className="text-center text-[11px] font-semibold leading-tight tracking-wide text-gray-400">
-        {shortName || institution.name}
-      </p>
-    </div>
-  );
-}
-
-// For institutions that have embeds, we still use the carousel (fixed elsewhere)
-// Institutions always render as a logo grid — social embed URLs (LinkedIn,
-// Facebook, etc.) are valid for news but not for institution logo cards since
-// those platforms block external iframes. The embed field is ignored here.
-function InstitutionsDisplay({ institutions }) {
-  const cols =
-    institutions.length <= 2
-      ? "grid-cols-2"
-      : institutions.length <= 4
-      ? "grid-cols-2 sm:grid-cols-4"
-      : "grid-cols-2 sm:grid-cols-3";
-
-  return (
-    <div className={`grid gap-5 ${cols}`}>
-      {institutions.map((item, index) => (
-        <InstitutionLogoCard key={item.id || index} institution={item} />
-      ))}
-    </div>
-  );
-}
-
-// ─── Section components ──────────────────────────────────────────────────────
-
-function HeroSection({ id = "inicio", contactoId = "contacto", cursosId = "cursos", hero, brand, landing, metrics }) {
-  return (
-    <section
-      id={id}
-      className="relative flex min-h-screen items-center pb-16 pt-28 sm:pb-20 sm:pt-32"
-    >
-      <div className="container mx-auto grid items-center gap-10 px-5 sm:px-6 lg:px-8 lg:grid-cols-2">
-        {/* Text — always visible, no reveal on above-the-fold content */}
-        <div className="z-10">
-          <SectionTag>{hero.eyebrow || "Aprende con nosotros"}</SectionTag>
-          <h1 className="text-[clamp(2.4rem,7.5vw,5.8rem)] font-[900] leading-[0.9] tracking-[-0.05em] break-words">
-            {hero.title || brand.name}
-          </h1>
-          <MarkdownContent className="mt-7 max-w-xl text-base sm:text-lg text-gray-400 font-light leading-relaxed">
-            {hero.description}
-          </MarkdownContent>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={`#${contactoId}`}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-8 py-4 text-sm font-bold text-white transition hover:bg-blue-500 hover:-translate-y-0.5 active:scale-95"
-            >
-              {landing.heroPrimaryCtaLabel || "Empezar ahora"}
-            </a>
-            <a
-              href={`#${cursosId}`}
-              className="inline-flex items-center justify-center rounded-xl border border-white/12 px-8 py-4 text-sm font-bold text-white transition hover:bg-white/5 hover:-translate-y-0.5 active:scale-95"
-            >
-              {landing.heroSecondaryCtaLabel || "Ver programas"}
-            </a>
-          </div>
-
-          {metrics.length ? (
-            <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {metrics.map((item, i) => (
-                <div
-                  key={`${item.label}-${i}`}
-                  className="rounded-xl border border-white/8 bg-white/[0.02] p-4"
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400">
-                    {item.label}
-                  </p>
-                  <p className="mt-2 text-lg font-black tracking-tight text-white">{item.value}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-gray-500">{item.description}</p>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        {/* Visual */}
-        <div className="gobeyond-reveal relative flex h-[260px] items-center sm:h-[360px] md:h-[480px] lg:h-[560px]">
-          <div className="h-full w-full">
-            <HeroArcadePanel />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function AboutSection({ id = "sobre-nosotros", landing, brand, benefits }) {
-  return (
-    <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:gap-16 lg:grid-cols-2 items-start">
-          <div className="gobeyond-reveal">
-            <SectionTag>{landing.aboutTitle || "Sobre nosotros"}</SectionTag>
-            <h2 className="text-[clamp(1.9rem,4.5vw,4rem)] font-black tracking-tighter leading-[0.95] break-words">
-              {landing.aboutHeading || brand.tagline}
-            </h2>
-            <MarkdownContent className="mt-6 text-base sm:text-lg text-gray-500 leading-relaxed font-light">
-              {landing.aboutBodyTwo || landing.aboutBody || brand.description}
-            </MarkdownContent>
-          </div>
-
-          {benefits.length ? (
-            <div className="gobeyond-reveal grid gap-3 sm:grid-cols-2">
-              {benefits.map((item, i) => (
-                <div key={i} className="rounded-xl border border-white/8 bg-white/[0.02] p-5">
-                  <MarkdownContent className="text-sm leading-relaxed text-gray-300 break-words">{item}</MarkdownContent>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ServicesSection({ id = "servicios", landing, content, learningPath }) {
-  return (
-    <section id={id} className="py-24 sm:py-28 lg:py-32">
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="max-w-3xl gobeyond-reveal">
-          <SectionTag>{landing.servicesTitle || "Nuestros servicios"}</SectionTag>
-          <h2 className="text-[clamp(1.9rem,4.5vw,4rem)] font-black tracking-tighter leading-[0.95] break-words">
-            {landing.subscriptionLabel ||
-              content?.subscription?.label ||
-              "Ruta de desarrollo continuo."}
-          </h2>
-          <MarkdownContent className="mt-6 text-base sm:text-lg text-gray-500 leading-relaxed font-light">
-            {landing.relevanceBody || content?.subscription?.description}
-          </MarkdownContent>
-        </div>
-
-        <div className="mt-12 lg:mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {learningPath.length ? (
-            learningPath.map((item, i) => (
-              <LandingCard key={item.id || i} className="gobeyond-reveal flex flex-col">
-                <Badge>{item.track}</Badge>
-                <h3 className="mt-4 text-xl font-bold tracking-tight break-words">{item.title}</h3>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
-                  {item.stageLabel}
-                </p>
-                <MarkdownContent className="mt-3 flex-1 text-sm leading-relaxed text-gray-500">
-                  {item.description}
-                </MarkdownContent>
-              </LandingCard>
-            ))
-          ) : (
-            <div className="md:col-span-2 lg:col-span-3">
-              <EmptyState
-                body="Las rutas de aprendizaje publicadas desde admin apareceran aqui."
-                title="Sin servicios publicados"
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ProgramCardGrid({ programCards, landing }) {
-  const groups = [];
-  let current = { label: null, heading: null, subheading: null, cards: [] };
-  for (const card of programCards) {
-    if (card.type === "section") {
-      groups.push(current);
-      current = { label: card.title, heading: card.heading, subheading: card.subheading, cards: [] };
-    } else {
-      current.cards.push(card);
+function TestimonialSubmissionForm({ createTestimonialSubmission, turnstileSiteKey }) {
+    const [form, setForm] = useState({ quote: "", author: "", organization: "" });
+    const [message, setMessage] = useState("");
+    const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [turnstileToken, setTurnstileToken] = useState("");
+    const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+    const requiresTurnstile = Boolean(turnstileSiteKey);
+  
+    async function handleSubmit(event) {
+      event.preventDefault();
+      if (requiresTurnstile && !turnstileToken) {
+        setError("Completa la verificacion de seguridad.");
+        return;
+      }
+  
+      setSubmitting(true);
+      setMessage("");
+      setError("");
+  
+      try {
+        const response = await createTestimonialSubmission({
+          ...form,
+          turnstileToken,
+        });
+        setMessage(response.message);
+        setForm({ quote: "", author: "", organization: "" });
+        setTurnstileResetKey((current) => current + 1);
+        setTurnstileToken("");
+      } catch (requestError) {
+        setError(requestError.message);
+        setTurnstileResetKey((current) => current + 1);
+        setTurnstileToken("");
+      } finally {
+        setSubmitting(false);
+      }
     }
-  }
-  groups.push(current);
-
-  const nonEmpty = groups.filter((g) => g.cards.length > 0);
-
-  return (
-    <div className="space-y-16">
-      {nonEmpty.map((group, gi) => (
-        <div key={gi}>
-          {(group.label || group.heading || group.subheading) ? (
-            <div className="mb-10 text-center gobeyond-reveal">
-              {group.label ? (
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400 mb-3">
-                  {group.label}
-                </p>
-              ) : null}
-              {group.heading ? (
-                <h3 className="text-[clamp(1.6rem,3.5vw,3rem)] font-black tracking-tighter leading-[0.95]">
-                  {group.heading}
-                </h3>
-              ) : null}
-              {group.subheading ? (
-                <p className="mt-3 text-base text-gray-500 leading-relaxed max-w-2xl mx-auto">
-                  {group.subheading}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {group.cards.map((p, i) => (
-              <ProgramCard key={p.id || i} program={p} index={i} landing={landing} />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CoursesSection({ id = "cursos", landing, programCards, courses, liveSessions }) {
-  const hasCourseContent = programCards.length || courses.length;
-
-  return (
-    <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center mb-14 gobeyond-reveal">
-          <SectionTag>{landing.coursesTitle || "Programas y cursos"}</SectionTag>
-          <h2 className="text-[clamp(1.9rem,4.5vw,4rem)] font-black tracking-tighter leading-[0.95]">
-            {landing.coursesHeading || "Creados para el Impacto Real."}
-          </h2>
-        </div>
-
-        {hasCourseContent ? (
-          programCards.length
-            ? <ProgramCardGrid programCards={programCards} landing={landing} />
-            : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {courses.map((c, i) => (
-                  <CourseCard key={c.id || i} course={c} index={i} landing={landing} />
-                ))}
-              </div>
-            )
-        ) : (
-          <EmptyState
-            body="Los programas y cursos publicados desde admin apareceran aqui."
-            title="Sin cursos publicados"
+  
+    return (
+      <form
+        className="glass-immersive p-8 rounded-[2rem] grid gap-6"
+        onSubmit={handleSubmit}
+      >
+        <p className="text-caption">Tu Impacto</p>
+        <div>
+          <label htmlFor="testimonial-quote" className="sr-only">Tu testimonio</label>
+          <textarea
+            id="testimonial-quote"
+            className="min-h-[120px] w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-900"
+            disabled={submitting}
+            onChange={(event) => setForm((current) => ({ ...current, quote: event.target.value }))}
+            placeholder="¿Cómo te ha transformado GoBeyond?"
+            value={form.quote}
           />
-        )}
-
-        {liveSessions.length ? (
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {liveSessions.map((item, i) => (
-              <div key={item.id || i} className="gobeyond-reveal rounded-xl border border-white/8 p-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-blue-400">
-                  {item.date}
-                </p>
-                <h3 className="mt-3 text-lg font-bold text-white break-words">{item.title}</h3>
-                <p className="mt-1 text-sm text-gray-500">{item.format}</p>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-function ProgramCard({ program, index, landing }) {
-  const external = isExternalHref(program.href);
-  const image = normalizePublicMediaUrl(program.image || "");
-  const initials = getInitials(program.title);
-
-  return (
-    <LandingCard
-      highlight={index === 0}
-      className="gobeyond-reveal flex flex-col"
-    >
-      <div>
-        {/* Cover */}
-        <div className="mb-5 overflow-hidden rounded-xl border border-white/8 bg-[#0b0f17]">
-          {image ? (
-            <img alt={program.title} className="h-40 w-full object-cover" src={image} />
-          ) : (
-            <div className="relative flex h-40 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.28),rgba(10,14,24,0.95)_60%)] p-4">
-              <div className="absolute right-3 top-3 text-3xl font-black text-white/8">
-                {initials || "GB"}
-              </div>
-              <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-blue-400">
-                Go Beyond
-              </p>
-            </div>
-          )}
         </div>
-
-        {program.eyebrow ? <Badge>{program.eyebrow}</Badge> : null}
-        <h3 className="mt-4 text-xl font-black leading-tight tracking-tight text-white break-words">
-          {program.title}
-        </h3>
-
-        {program.description ? (
-          <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-400 break-words">
-            {program.description}
-          </MarkdownContent>
-        ) : null}
-
-        {program.relevance ? (
-          <div className="mt-5 rounded-xl border border-white/8 bg-white/[0.04] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">¿Por qué es relevante?</p>
-            <MarkdownContent className="mt-2 text-sm leading-relaxed text-gray-200">
-              {program.relevance}
-            </MarkdownContent>
-          </div>
-        ) : null}
-
-        <ProgramHighlights program={program} />
-
-        {program.certificationNote ? (
-          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">
-            {program.certificationNote}
-          </p>
-        ) : null}
-      </div>
-
-      {program.ctaLabel ? (
-        <a
-          className="mt-6 inline-flex items-center justify-between rounded-full border border-white/10 px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:border-blue-500/25 hover:text-blue-300"
-          href={program.href || "#contacto"}
-          rel={external ? "noreferrer" : undefined}
-          target={external ? "_blank" : undefined}
-        >
-          <span>{program.ctaLabel}</span>
-          <span>&rarr;</span>
-        </a>
-      ) : null}
-    </LandingCard>
-  );
-}
-
-function CourseCard({ course, index, landing }) {
-  const image = normalizePublicMediaUrl(course.coverImage || course.image || "");
-  const initials = getInitials(course.title);
-
-  return (
-    <LandingCard
-      highlight={index === 0}
-      className="gobeyond-reveal flex flex-col"
-    >
-      <div>
-        <div className="mb-5 overflow-hidden rounded-xl border border-white/8 bg-[#0b0f17]">
-          {image ? (
-            <img alt={course.title} className="h-40 w-full object-cover" src={image} />
-          ) : (
-            <div className="relative flex h-40 w-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.28),rgba(10,14,24,0.95)_60%)] p-4">
-              <div className="absolute right-3 top-3 text-3xl font-black text-white/8">
-                {initials || "GB"}
-              </div>
-              <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-blue-300">
-                Go Beyond
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="mb-4 flex items-start justify-between gap-3">
-          {(course.format || course.duration) ? (
-            <Badge>{[course.format, course.duration].filter(Boolean).join(" · ")}</Badge>
-          ) : null}
-          <span className={`shrink-0 text-lg font-black tracking-tighter ${index === 0 ? "text-blue-500" : "text-gray-600"}`}>
-            {initials || "GB"}
-          </span>
-        </div>
-
-        <h3 className="text-xl font-black tracking-tight break-words">{course.title}</h3>
-        {course.audience ? (
-          <p className="mt-2 text-sm font-medium text-gray-400 break-words">{course.audience}</p>
-        ) : null}
-        {course.description ? (
-          <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-500 break-words">
-            {course.description}
-          </MarkdownContent>
-        ) : null}
-      </div>
-
-      {course.outcomes ? (
-        <div className="mt-5 border-t border-white/5 pt-4">
-          <p className={`text-[10px] uppercase tracking-widest font-bold ${index === 0 ? "text-blue-400" : "text-gray-400"}`}>
-            {landing.courseResultsLabel || "Resultados:"}
-          </p>
-          <MarkdownContent className="mt-2 text-sm text-gray-400 leading-relaxed">
-            {course.outcomes}
-          </MarkdownContent>
-        </div>
-      ) : null}
-    </LandingCard>
-  );
-}
-
-function InstitutionsSection({ id = "instituciones", landing, visibleInstitutions }) {
-  if (!visibleInstitutions.length) return null;
-
-  return (
-    <section id={id} className="py-24 sm:py-28 lg:py-32">
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mb-12 gobeyond-reveal">
-          <SectionTag>
-            {landing.institutionsCarouselTitle || "Instituciones con convenio"}
-          </SectionTag>
-          {landing.institutionsCarouselBody ? (
-            <MarkdownContent className="text-base sm:text-lg leading-relaxed text-gray-500 font-light">
-              {landing.institutionsCarouselBody}
-            </MarkdownContent>
-          ) : null}
-        </div>
-
-        <div className="gobeyond-reveal">
-          <InstitutionsDisplay institutions={visibleInstitutions} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TestimonialsSection({
-  id = "testimonios",
-  landing,
-  brand,
-  testimonials,
-  rotatingTestimonials,
-  testimonialStartIndex,
-  setTestimonialStartIndex,
-}) {
-  return (
-    <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#080808]">
-      <style>{`
-        @keyframes t-fadein {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="max-w-3xl gobeyond-reveal">
-          <SectionTag>{landing.trustTitle || "Confian en nosotros"}</SectionTag>
-          <h2 className="text-[clamp(1.9rem,4.5vw,4rem)] font-black tracking-tighter leading-[0.95] break-words">
-            {landing.testimonialTitle || "Testimonios"}
-          </h2>
-          <MarkdownContent className="mt-6 text-base sm:text-lg text-gray-500 leading-relaxed font-light">
-            {landing.trustBody || brand.description}
-          </MarkdownContent>
-        </div>
-
-        <div className="mt-12 lg:mt-16">
-          {testimonials.length > 3 ? (
-            <div className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-blue-400">
-                {landing.testimonialsCarouselLabel || "Rotando testimonios"}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  aria-label="Testimonio anterior"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white transition hover:border-white/20"
-                  onClick={() =>
-                    setTestimonialStartIndex(
-                      (c) => (c - 1 + testimonials.length) % testimonials.length
-                    )
-                  }
-                  type="button"
-                >
-                  ←
-                </button>
-                <button
-                  aria-label="Siguiente testimonio"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white transition hover:border-white/20"
-                  onClick={() =>
-                    setTestimonialStartIndex((c) => (c + 1) % testimonials.length)
-                  }
-                  type="button"
-                >
-                  →
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          {testimonials.length ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {rotatingTestimonials.map((item, i) => {
-                const initials = getInitials(item.author);
-                const isFirst = i === 0 && rotatingTestimonials.length > 1;
-                return (
-                  <article
-                    key={item.id || `${item.author}-${i}`}
-                    style={{ animation: `t-fadein 0.7s cubic-bezier(0.33,1,0.68,1) ${i * 90}ms both` }}
-                    className={`overflow-hidden rounded-2xl border p-5 sm:p-7 transition-colors ${
-                      isFirst
-                        ? "border-l-4 border-l-blue-500 border-t-white/8 border-r-white/8 border-b-white/8 bg-white/[0.04]"
-                        : "border-white/8 bg-white/[0.02]"
-                    }`}
-                  >
-                    <span className="block font-serif text-[3rem] leading-none text-blue-900 select-none -mb-2">
-                      "
-                    </span>
-                    <blockquote className="font-serif text-base leading-relaxed text-white break-words">
-                      <MarkdownContent>{item.quote}</MarkdownContent>
-                    </blockquote>
-                    <div className="mt-4 flex items-center gap-3 border-t border-white/8 pt-4">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-blue-500/25 bg-blue-600/8 text-xs font-semibold text-blue-300">
-                        {initials}
-                      </div>
-                      <p className="min-w-0 text-xs uppercase tracking-[0.18em] text-white/80 truncate">
-                        {item.author}
-                        {item.organization ? (
-                          <>
-                            <span className="mx-1.5 text-white/25">·</span>
-                            <span className="text-gray-400">{item.organization}</span>
-                          </>
-                        ) : null}
-                      </p>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState
-              body="Los testimonios aprobados desde admin apareceran aqui."
-              title="Sin testimonios publicados"
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="testimonial-author" className="sr-only">Nombre</label>
+            <input
+              id="testimonial-author"
+              className="w-full bg-slate-50 border border-slate-200 rounded-full px-5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-900 disabled:opacity-50"
+              disabled={submitting}
+              onChange={(event) => setForm((current) => ({ ...current, author: event.target.value }))}
+              placeholder="Nombre"
+              value={form.author}
             />
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function NewsLandingSection({
-  id = "noticias",
-  landing,
-  publishedNews,
-  featuredNews,
-  featuredNewsEmbed,
-  secondaryNewsCards,
-  noticiasLoading,
-  noticiasError,
-  onNavigateToNewsArchive,
-}) {
-  if (noticiasLoading) {
-    return (
-      <section id={id} className="py-24 sm:py-28 lg:py-32">
-        <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-          <EmptyState title="Cargando noticias" body="Consultando publicaciones recientes…" />
-        </div>
-      </section>
-    );
-  }
-
-  if (noticiasError) {
-    return (
-      <section id={id} className="py-24 sm:py-28 lg:py-32">
-        <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-          <EmptyState title="No pudimos cargar las noticias" body={noticiasError} />
-        </div>
-      </section>
-    );
-  }
-
-  if (!publishedNews.length) {
-    // Don't render a hole — just a minimal anchor section
-    return <div id={id} aria-hidden="true" />;
-  }
-
-  return (
-    <section id={id} className="py-24 sm:py-28 lg:py-32">
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mb-12 gobeyond-reveal">
-          <SectionTag>{landing.newsTitle || "Noticias"}</SectionTag>
-        </div>
-
-        <div className="grid gap-6">
-          {featuredNews ? (
-            <article className="gobeyond-reveal overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02] transition-colors hover:border-white/14">
-              <div className="aspect-[16/8] overflow-hidden bg-[#0b0f17]">
-                <PublicImageWithFallback
-                  alt={featuredNews.title}
-                  className="h-full w-full object-cover"
-                  fallback={
-                    featuredNewsEmbed.embedUrl ? (
-                      <EmbedFrame src={featuredNewsEmbed.embedUrl} title={featuredNews.title} />
-                    ) : (
-                      <div className="flex h-full flex-col justify-end bg-[linear-gradient(135deg,rgba(37,99,235,0.12),rgba(8,8,8,0.96))] p-6">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">
-                          {getDomainLabel(featuredNews.link || featuredNewsEmbed.externalUrl) ||
-                            "Referencia externa"}
-                        </p>
-                      </div>
-                    )
-                  }
-                  src={featuredNews.image}
-                />
-              </div>
-              <div className="p-6 sm:p-7">
-                <p className="text-[10px] uppercase tracking-[0.26em] text-blue-400">
-                  {featuredNews.source || featuredNews.category || "Noticia"}
-                  {featuredNews.publishedAt
-                    ? ` · ${new Date(featuredNews.publishedAt).toLocaleDateString("es-CR")}`
-                    : ""}
-                </p>
-                <h3 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl break-words">
-                  {featuredNews.title}
-                </h3>
-                {featuredNews.summary ? (
-                  <MarkdownContent className="mt-3 text-sm leading-relaxed text-gray-400 sm:text-base">
-                    {featuredNews.summary}
-                  </MarkdownContent>
-                ) : null}
-                {featuredNews.link ? (
-                  <a
-                    className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-400 transition hover:gap-3 hover:text-blue-300"
-                    href={featuredNews.link}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    Ver referencia <span>&rarr;</span>
-                  </a>
-                ) : null}
-              </div>
-            </article>
-          ) : null}
-
-          {secondaryNewsCards.length ? (
-            <div className="grid gap-3">
-              {secondaryNewsCards.map(({ item, embed, externalDomain }) => (
-                <article
-                  key={item.id}
-                  className="overflow-hidden rounded-xl border border-white/8 bg-white/[0.02] transition-colors hover:border-white/14"
-                >
-                  <div className="grid sm:grid-cols-[5.5rem_minmax(0,1fr)]">
-                    <div className="h-full min-h-[5.5rem] overflow-hidden bg-[#0b0f17]">
-                      <PublicImageWithFallback
-                        alt={item.title}
-                        className="h-full w-full object-cover"
-                        fallback={
-                          embed.embedUrl ? (
-                            <EmbedFrame src={embed.embedUrl} title={item.title} />
-                          ) : (
-                            <div className="flex h-full min-h-[5.5rem] items-center justify-center bg-white/[0.02]">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">
-                                {externalDomain || "Ref."}
-                              </p>
-                            </div>
-                          )
-                        }
-                        src={item.image}
-                      />
-                    </div>
-                    <div className="flex min-w-0 items-center justify-between gap-4 p-4">
-                      <div className="min-w-0">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-blue-400">
-                          {item.source || item.category || "Noticia"}
-                        </p>
-                        <h4 className="mt-1 truncate text-base font-black tracking-tight text-white">
-                          {item.title}
-                        </h4>
-                        {item.summary ? (
-                          <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
-                            {truncate(item.summary, 130)}
-                          </p>
-                        ) : null}
-                      </div>
-                      {item.link ? (
-                        <a
-                          className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white transition hover:border-white/20"
-                          href={item.link}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          Ver
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : null}
-
-          <button
-            className="w-fit rounded-full border border-white/10 bg-white/[0.02] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.22em] text-white transition hover:border-white/20"
-            onClick={onNavigateToNewsArchive}
-            type="button"
-          >
-            {landing.newsArchiveLabel || "Ver mas noticias"}
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ContactSection({ id = "contacto", landing, contactInfo, news, institutions, socialLinks }) {
-  const actions = landing.contactActions ?? [];
-
-  return (
-    <section id={id} className="py-24 sm:py-28 lg:py-32 bg-[#1d4ed8]">
-      <div className="container mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-2 items-start">
-          <div className="gobeyond-reveal">
-            <SectionTag>{landing.contactTitle || "Contacto"}</SectionTag>
-            <h2 className="text-[clamp(1.9rem,4.5vw,4rem)] font-black tracking-tighter leading-[0.95] text-white break-words">
-              {landing.contactBody || "Ponte en contacto con GoBeyond."}
-            </h2>
           </div>
-
-          <div className="gobeyond-reveal grid gap-4">
-            {contactInfo.emailValue ? (
-              <a
-                className="block rounded-xl border border-white/15 bg-white/10 px-5 py-5 text-white transition hover:bg-white/15"
-                href={getEmailHref(contactInfo.emailValue)}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-100">
-                  {contactInfo.emailLabel || "Email"}
-                </p>
-                <p className="mt-3 text-lg font-semibold break-all">{contactInfo.emailValue}</p>
-              </a>
-            ) : null}
-
-            {contactInfo.phoneValue ? (
-              <a
-                className="block rounded-xl border border-white/15 bg-white/10 px-5 py-5 text-white transition hover:bg-white/15"
-                href={getPhoneHref(contactInfo.phoneValue)}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-100">
-                  {contactInfo.phoneLabel || "Telefono"}
-                </p>
-                {contactInfo.phonePrompt ? (
-                  <p className="mt-1 text-sm text-blue-100/75">{contactInfo.phonePrompt}</p>
-                ) : null}
-                <p className="mt-2 text-lg font-semibold">{contactInfo.phoneValue}</p>
-              </a>
-            ) : null}
-
-            {actions.length ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {actions.map((item) => {
-                  const href = getContactActionHref(item, news, institutions, socialLinks);
-                  const external = isExternalHref(href);
-                  return (
-                    <a
-                      key={item}
-                      className="flex items-center justify-between rounded-xl border border-white/15 bg-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:bg-white/15"
-                      href={href}
-                      rel={external ? "noreferrer" : undefined}
-                      target={external ? "_blank" : undefined}
-                    >
-                      <span>{item}</span>
-                      <span>&rarr;</span>
-                    </a>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {landing.contactFormUrl ? (
-              <a
-                className="flex items-center justify-center gap-3 rounded-xl bg-white px-6 py-4 text-sm font-bold text-blue-700 transition hover:bg-blue-50 hover:-translate-y-0.5 active:scale-95"
-                href={landing.contactFormUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {landing.contactFormLabel || "Formulario de contacto"} &rarr;
-              </a>
-            ) : null}
-
-            {!contactInfo.emailValue && !contactInfo.phoneValue && !actions.length && !landing.contactFormUrl ? (
-              <p className="text-sm text-blue-100/60 leading-relaxed">
-                Configura los datos de contacto desde el panel de administracion.
-              </p>
-            ) : null}
+          <div>
+            <label htmlFor="testimonial-org" className="sr-only">Organización</label>
+            <input
+              id="testimonial-org"
+              className="w-full bg-slate-50 border border-slate-200 rounded-full px-5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-slate-900 disabled:opacity-50"
+              disabled={submitting}
+              onChange={(event) => setForm((current) => ({ ...current, organization: event.target.value }))}
+              placeholder="Organización"
+              value={form.organization}
+            />
           </div>
         </div>
-      </div>
-    </section>
-  );
+        <SecurityTurnstile
+          action="public-testimonial"
+          onTokenChange={setTurnstileToken}
+          resetKey={turnstileResetKey}
+          siteKey={turnstileSiteKey}
+        />
+        <button
+          className="bg-blue-600 text-white font-black h-12 px-8 rounded-full hover:bg-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20"
+          disabled={submitting || (requiresTurnstile && !turnstileToken)}
+          type="submit"
+        >
+          {submitting ? "Publicando..." : "Publicar Impacto"}
+        </button>
+        {message ? <p className="text-sm text-blue-600 font-bold">{message}</p> : null}
+        {error ? <p className="text-sm text-red-600 font-bold">{error}</p> : null}
+      </form>
+    );
 }
 
-// ─── Main orchestrator ───────────────────────────────────────────────────────
-
-export function PublicExperience({
-  content,
-  noticiasPosts = [],
-  noticiasLoading = false,
-  noticiasError = "",
-  onNavigateToNewsArchive,
-  onRequestLogin,
-}) {
+export function PublicExperience({ content, createTestimonialSubmission, onRequestLogin, noticiasPosts = [], noticiasLoading = false, noticiasError = "" }) {
   const landing = content?.landing ?? {};
-  const contactInfo = landing?.contactInfo ?? {};
-  const socialLinks = useMemo(
-    () => ({
-      facebook: landing?.socialLinks?.facebook ?? "",
-      linkedin: landing?.socialLinks?.linkedin ?? "",
-      instagram: landing?.socialLinks?.instagram ?? "",
-    }),
-    [landing?.socialLinks?.facebook, landing?.socialLinks?.linkedin, landing?.socialLinks?.instagram]
-  );
   const hero = content?.hero ?? {};
   const brand = content?.brand ?? {};
+  const benefits = useMemo(() => Array.isArray(content?.benefits) ? content.benefits : [], [content?.benefits]);
+  const learningPath = useMemo(() => Array.isArray(content?.learningPath) ? content.learningPath : [], [content?.learningPath]);
+  const visibleInstitutions = useMemo(() => Array.isArray(content?.institutions) ? content.institutions : [], [content?.institutions]);
+  const testimonials = useMemo(() => (Array.isArray(content?.testimonials) ? content.testimonials : []).filter((item) => !item.status || item.status === "approved"), [content?.testimonials]);
+  const programCards = useMemo(() => (Array.isArray(landing?.programCards) && landing.programCards.length ? landing.programCards : []), [landing?.programCards]);
 
-  const benefits = useMemo(
-    () => (landing?.benefits?.length ? landing.benefits : content?.benefits ?? []),
-    [landing?.benefits, content?.benefits]
-  );
-  const learningPath = useMemo(
-    () => normalizeLearningPath(content?.learningPath ?? []).filter((i) => !isSixSigmaItem(i)),
-    [content?.learningPath]
-  );
-  const courses = useMemo(
-    () => (content?.courses ?? []).filter((i) => !isSixSigmaItem(i)),
-    [content?.courses]
-  );
-  const programCards = useMemo(
-    () =>
-      Array.isArray(landing?.programCards) && landing.programCards.length
-        ? landing.programCards
-        : [],
-    [landing?.programCards]
-  );
-  const liveSessions = useMemo(
-    () => (content?.liveSessions ?? []).filter((i) => !isSixSigmaItem(i)),
-    [content?.liveSessions]
-  );
-  const institutions = useMemo(() => content?.institutions ?? [], [content?.institutions]);
-  const featuredInstitutions = useMemo(
-    () => institutions.filter((i) => i.featured),
-    [institutions]
-  );
-  const visibleInstitutions =
-    featuredInstitutions.length > 1 ? featuredInstitutions : institutions;
+  // Split programCards: individual programs (no type:section) vs packages (after section divider)
+  const { individualPrograms, packageSection, packageCards } = useMemo(() => {
+    const cards = programCards;
+    const sectionIdx = cards.findIndex((c) => c.type === "section");
+    if (sectionIdx === -1) {
+      return { individualPrograms: cards, packageSection: null, packageCards: [] };
+    }
+    return {
+      individualPrograms: cards.slice(0, sectionIdx),
+      packageSection: cards[sectionIdx],
+      packageCards: cards.slice(sectionIdx + 1).filter(c => c.type !== "section"),
+    };
+  }, [programCards]);
 
-  const news = useMemo(() => content?.news ?? [], [content?.news]);
-  const publishedNews = useMemo(
-    () =>
-      noticiasPosts.length
-        ? noticiasPosts.map((item) => normalizeSocialNewsItem(item))
-        : getPublishedNews(news),
-    [news, noticiasPosts]
-  );
-  const featuredNews = publishedNews[0] ?? null;
-  const secondaryNews = publishedNews.slice(1, 5);
-  const featuredNewsEmbed = useMemo(
-    () => getEmbedDescriptor(featuredNews?.embed),
-    [featuredNews?.embed]
-  );
-  const secondaryNewsCards = useMemo(
-    () =>
-      secondaryNews.map((item) => {
-        const embed = getEmbedDescriptor(item.embed);
-        return {
-          item: { ...item, image: normalizePublicMediaUrl(item.image) },
-          embed,
-          externalDomain: getDomainLabel(item.link || embed.externalUrl),
-        };
-      }),
-    [secondaryNews]
-  );
-
-  const testimonials = useMemo(
-    () =>
-      (content?.testimonials ?? []).filter((i) => !i.status || i.status === "approved"),
-    [content?.testimonials]
-  );
-  const metrics = useMemo(
-    () => (hero.metrics ?? []).map((i) => normalizeMetric(i)),
-    [hero.metrics]
-  );
-
-  // Nav — respect admin override; fallback always includes all 8 sections
-  const navLabels = landing.nav?.length ? landing.nav : DEFAULT_NAV;
-  const navItems = useMemo(
-    () => navLabels.map((label) => ({ label, id: slugify(label) })),
-    [navLabels]
-  );
-
-  // Section IDs matched by slug — robust when nav items are renamed or reordered
-  const sid = {
-    inicio:        findSectionId(navItems, ["inicio", "home", "principal"],                    "inicio"),
-    sobreNos:      findSectionId(navItems, ["sobre-nosotros", "sobre", "nosotros", "about"],   "sobre-nosotros"),
-    servicios:     findSectionId(navItems, ["servicios", "services", "servicio"],              "servicios"),
-    cursos:        findSectionId(navItems, ["programas", "cursos", "programs", "courses"],     "cursos"),
-    instituciones: findSectionId(navItems, ["instituciones", "institutions", "institucion"],   "instituciones"),
-    testimonios:   findSectionId(navItems, ["testimonios", "testimonials", "testimonio"],      "testimonios"),
-    noticias:      findSectionId(navItems, ["noticias", "news", "noticia"],                    "noticias"),
-    contacto:      findSectionId(navItems, ["contacto", "contact", "contactanos", "formulario"], "contacto"),
-  };
-
-  const [activeSection, setActiveSection] = useState(navItems[0]?.id ?? "inicio");
+  const metrics = useMemo(() => Array.isArray(hero.metrics) ? hero.metrics : [], [hero.metrics]);
+  
+  const navLabels = useMemo(() => (Array.isArray(landing.nav) && landing.nav.length) ? landing.nav : ["Inicio", "Sobre nosotros", "Servicios", "Cursos", "Testimonios", "Contacto"], [landing.nav]);
+  const navItems = useMemo(() => {
+    const labelToId = {
+      "inicio": "inicio",
+      "sobre nosotros": "proyecto",
+      "servicios": "rutas",
+      "cursos": "programas",
+      "programas": "programas",
+      "instituciones": "instituciones",
+      "testimonios": "voces",
+      "noticias": "noticias",
+      "contacto": "contacto",
+      "proyecto": "sobre-nosotros",
+      "rutas": "servicios",
+      "impacto": "impacto",
+      "voces": "voces",
+    };
+    return navLabels.map((label) => {
+      const key = label.toLowerCase().trim();
+      const id = labelToId[key] || slugifySectionLabel(label);
+      return { label, id };
+    });
+  }, [navLabels]);
+  
+  const [activeSection, setActiveSection] = useState("inicio");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [testimonialStartIndex, setTestimonialStartIndex] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
 
-  const rotatingTestimonials = useMemo(() => {
-    if (testimonials.length <= 3) return testimonials;
-    return Array.from({ length: 3 }, (_, offset) =>
-      testimonials[(testimonialStartIndex + offset) % testimonials.length]
-    );
-  }, [testimonialStartIndex, testimonials]);
-
-  // IntersectionObserver: reveal on scroll
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) e.target.classList.add("is-visible");
-        });
-      },
-      { threshold: 0.07, rootMargin: "0px 0px -4% 0px" }
-    );
-    document.querySelectorAll(".gobeyond-reveal").forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Active section tracker
   useEffect(() => {
-    const sections = navItems.map((i) => document.getElementById(i.id)).filter(Boolean);
-    if (!sections.length) return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target?.id) setActiveSection(visible.target.id);
-      },
-      { threshold: [0.15, 0.35, 0.55], rootMargin: "-20% 0px -45% 0px" }
-    );
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
+    // Scroll-reveal observer
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('is-visible');
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.canvas-reveal').forEach(el => revealObserver.observe(el));
+
+    // Scroll-spy observer for nav active state
+    const sectionIds = navItems.map(item => item.id);
+    const spyObserver = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter(e => e.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      if (visible.length > 0) {
+        setActiveSection(visible[0].target.id);
+      }
+    }, { threshold: [0.1, 0.3], rootMargin: '-10% 0px -40% 0px' });
+
+    for (const id of sectionIds) {
+      const el = document.getElementById(id);
+      if (el) spyObserver.observe(el);
+    }
+
+    return () => {
+      revealObserver.disconnect();
+      spyObserver.disconnect();
+    };
   }, [navItems]);
 
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [activeSection]);
+  const blueprintNodes = useMemo(() => {
+    const w = viewportWidth;
+    return [
+      // Hero Section
+      { label: "GO", x: 200, y: 300 },
+      { label: "BEYOND", x: 500, y: 450 },
+      { label: "TRANSFORMA", x: w - 300, y: 200 },
+      { label: "DIGITAL", x: 150, y: 700 },
 
-  useEffect(() => {
-    if (testimonials.length <= 3) {
-      setTestimonialStartIndex(0);
-      return undefined;
-    }
-    const id = window.setInterval(
-      () => setTestimonialStartIndex((c) => (c + 1) % testimonials.length),
-      7500
-    );
-    return () => window.clearInterval(id);
-  }, [testimonials]);
+      // Proyecto Section
+      { label: "VISIÓN", x: w - 200, y: 1200 },
+      { label: "PROPÓSITO", x: 300, y: 1500 },
+      { label: "ALTO IMPACTO", x: w - 400, y: 1700 },
+
+      // Rutas Section
+      { label: "CRECIMIENTO", x: 200, y: 2200 },
+      { label: "LIDERAZGO", x: w - 300, y: 2500 },
+      { label: "SISTEMA", x: 400, y: 2800 },
+
+      // Programas Section
+      { label: "EXCELENCIA", x: w - 450, y: 3300 },
+      { label: "CALIDAD", x: 150, y: 3600 },
+      { label: "TÉCNICA", x: w - 250, y: 3900 },
+      { label: "SOPORTE", x: 400, y: 4100 },
+
+      // Impacto Section
+      { label: "MODALIDAD", x: 200, y: 4500 },
+      { label: "SOCIAL", x: w - 350, y: 4800 },
+      { label: "TALENTO", x: 300, y: 5100 },
+      { label: "BE BEYOND", x: w - 400, y: 5300 },
+
+      // Footer Area
+      { label: "FUTURO", x: 250, y: 5600 },
+      { label: "CAMBIO", x: w - 300, y: 5800 },
+      { label: "ÚNETE", x: 500, y: 6000 },
+    ];
+  }, [viewportWidth]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-blue-500/25 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#fdfdfd] text-[#0f172a] selection:bg-blue-600/10 font-sans paper-texture">
+      {/* Skip to content */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-5 focus:py-3 focus:bg-white focus:text-slate-900 focus:rounded-xl focus:shadow-2xl focus:font-bold focus:text-sm">
+        Saltar al contenido principal
+      </a>
+      <BlueprintDiscovery nodes={blueprintNodes} />
+      <Aurora />
 
-      {/* ── NAVBAR ── */}
-      <header className="fixed top-0 left-0 right-0 z-[100] border-b border-white/5 bg-[#050505]/75 backdrop-blur-xl safe-top">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-6 lg:px-8">
-          <a className="flex min-w-0 shrink-0 items-center gap-3" href="#inicio">
-            <img
-              alt="Logo de GoBeyond"
-              className="h-9 w-9 shrink-0 object-contain"
-              src="/logo-icon.png"
-            />
-            <span className="truncate text-[11px] font-black uppercase tracking-[0.28em]">
-              {shortBrand(brand.name)}
-            </span>
+      {/* FLOATING NAVBAR (LIGHT) */}
+      <header className="fixed top-6 inset-x-0 z-[100] px-4 sm:px-6">
+        <nav className="max-w-7xl mx-auto glass-immersive rounded-full h-16 px-4 sm:px-8 flex items-center justify-between border-slate-100 shadow-xl shadow-slate-200/50">
+          <a className="flex items-center gap-2 shrink-0" href="#inicio">
+            <img alt="GoBeyond" className="h-8 w-8" src="/logo-icon.png" />
+            <span className="hidden lg:block font-black text-xs uppercase tracking-[0.22em] text-slate-900">{brand.name || "GoBeyond"}</span>
           </a>
-
-          <nav className="hidden items-center gap-6 lg:flex">
+          <div className="hidden md:flex items-center gap-1 lg:gap-4 overflow-x-auto scrollbar-none mx-2">
             {navItems.map((item) => (
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className={`whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${
-                  activeSection === item.id ? "text-blue-400" : "text-gray-500 hover:text-white"
+                className={`shrink-0 px-2 lg:px-3 py-2 text-[10px] lg:text-[11px] uppercase tracking-[0.1em] font-bold transition-colors rounded-full hover:bg-slate-50 ${activeSection === item.id ? 'text-blue-600 bg-blue-50/50' : 'text-slate-500 hover:text-slate-900'}`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+             <button onClick={onRequestLogin} className="min-h-[44px] px-4 lg:px-6 rounded-full bg-slate-950 text-white text-[11px] lg:text-[12px] font-bold uppercase tracking-[0.1em] hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10 whitespace-nowrap">
+               Ingresar
+             </button>
+             <button
+                aria-controls="mobile-nav"
+                aria-expanded={mobileMenuOpen}
+                aria-label={mobileMenuOpen ? "Cerrar menu" : "Abrir menu"}
+                className="md:hidden min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1.5 p-2"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                <span className={`block w-5 h-0.5 bg-slate-900 rounded-full transition-all duration-300 ${mobileMenuOpen ? 'rotate-45 translate-y-[7px]' : ''}`} />
+                <span className={`block w-5 h-0.5 bg-slate-900 rounded-full transition-all duration-300 ${mobileMenuOpen ? 'opacity-0 scale-x-0' : ''}`} />
+                <span className={`block w-5 h-0.5 bg-slate-900 rounded-full transition-all duration-300 ${mobileMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} />
+              </button>
+          </div>
+        </nav>
+      </header>
+
+      {/* Mobile nav panel */}
+      {mobileMenuOpen ? (
+        <div id="mobile-nav" className="fixed inset-0 top-24 z-[90] bg-white/95 backdrop-blur-xl md:hidden">
+          <nav className="flex flex-col items-center gap-6 py-16 px-6">
+            {navItems.map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`text-lg font-bold uppercase tracking-[0.08em] transition-colors ${
+                  activeSection === item.id ? "text-blue-600" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {item.label}
               </a>
             ))}
           </nav>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              aria-expanded={mobileMenuOpen}
-              aria-label="Abrir menu"
-              className="lg:hidden inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
-              onClick={() => setMobileMenuOpen((v) => !v)}
-              type="button"
-            >
-              {mobileMenuOpen ? "×" : "≡"}
-            </button>
-            <button
-              className="h-11 rounded-full bg-white px-5 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-blue-50 hover:text-blue-700"
-              onClick={onRequestLogin}
-            >
-              Ingresar
-            </button>
-          </div>
         </div>
+      ) : null}
 
-        {mobileMenuOpen ? (
-          <div className="border-t border-white/5 bg-[#050505]/95 px-5 py-4 lg:hidden">
-            <nav className="grid gap-2">
-              {navItems.map((item) => (
-                <a
-                  key={item.id}
-                  className={`rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] transition-colors ${
-                    activeSection === item.id
-                      ? "bg-blue-600 text-white"
-                      : "bg-white/5 text-gray-300 hover:bg-white/8"
-                  }`}
-                  href={`#${item.id}`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {item.label}
-                </a>
-              ))}
-            </nav>
+      <main id="main-content" className="relative z-10">
+        
+        {/* HERO SECTION: PRISTINE MINIMALIST */}
+        <section id="inicio" className="relative min-h-screen flex items-center justify-center px-6 pt-36 pb-36 overflow-hidden bg-transparent">
+          <div className="max-w-5xl mx-auto w-full relative z-10 text-center">
+            <Reveal delay={100}>
+              <p className="text-caption mb-12">{hero.eyebrow || "Digital Academy"}</p>
+              <h1 className="heading-editorial text-[2.5rem] sm:text-[4rem] lg:text-[5.5rem] mb-12 text-slate-900">
+                  {hero.title || brand.tagline}
+              </h1>
+              <div className="max-w-2xl mx-auto mb-16">
+                <MarkdownContent className="text-xl text-slate-500 font-light leading-relaxed">
+                  {hero.description || brand.description}
+                </MarkdownContent>
+              </div>
+              <div className="flex flex-wrap justify-center gap-6">
+                  <a href="#rutas" className="btn-primary h-16 px-12 rounded-full bg-slate-900 text-white text-sm font-bold tracking-[0.08em] hover:bg-blue-600 shadow-2xl">
+                      Explorar Ahora
+                  </a>
+                  <a href="#contacto" className="btn-primary h-16 px-12 rounded-full border border-slate-200 text-slate-900 text-sm font-bold tracking-[0.08em] shadow-xl hover:bg-slate-50">
+                      Contáctanos
+                  </a>
+              </div>
+            </Reveal>
           </div>
-        ) : null}
-      </header>
 
-      {/* ── SECTIONS ── */}
-      <main>
-        <HeroSection
-          id={sid.inicio}
-          contactoId={sid.contacto}
-          cursosId={sid.cursos}
-          hero={hero}
-          brand={brand}
-          landing={landing}
-          metrics={metrics}
-        />
-        <AboutSection
-          id={sid.sobreNos}
-          landing={landing}
-          brand={brand}
-          benefits={benefits}
-        />
-        <ServicesSection
-          id={sid.servicios}
-          landing={landing}
-          content={content}
-          learningPath={learningPath}
-        />
-        <CoursesSection
-          id={sid.cursos}
-          landing={landing}
-          programCards={programCards}
-          courses={courses}
-          liveSessions={liveSessions}
-        />
-        <InstitutionsSection
-          id={sid.instituciones}
-          landing={landing}
-          visibleInstitutions={visibleInstitutions}
-        />
-        <TestimonialsSection
-          id={sid.testimonios}
-          landing={landing}
-          brand={brand}
-          testimonials={testimonials}
-          rotatingTestimonials={rotatingTestimonials}
-          testimonialStartIndex={testimonialStartIndex}
-          setTestimonialStartIndex={setTestimonialStartIndex}
-        />
-        <NewsLandingSection
-          id={sid.noticias}
-          landing={landing}
-          publishedNews={publishedNews}
-          featuredNews={featuredNews}
-          featuredNewsEmbed={featuredNewsEmbed}
-          secondaryNewsCards={secondaryNewsCards}
-          noticiasLoading={noticiasLoading}
-          noticiasError={noticiasError}
-          onNavigateToNewsArchive={onNavigateToNewsArchive}
-        />
-        <ContactSection
-          id={sid.contacto}
-          landing={landing}
-          contactInfo={contactInfo}
-          news={news}
-          institutions={institutions}
-          socialLinks={socialLinks}
-        />
-      </main>
+          {/* METRICS MARQUEE (LIGHT) */}
+          {metrics.length > 0 ? (
+          <div className="absolute bottom-12 left-0 w-full overflow-hidden border-y border-slate-100 bg-white/50 backdrop-blur-sm py-4">
+               <div className="marquee-container opacity-90">
+                   <div className="marquee-content">
+                       {metrics.map((m, i) => (
+                           <div key={i} className="flex items-center gap-4 whitespace-nowrap">
+                               <span className="text-4xl font-black text-slate-900">{m.value}</span>
+                               <span className="text-[12px] font-semibold tracking-[0.1em] uppercase text-blue-600">{m.label}</span>
+                               <span className="mx-8 text-slate-300">/</span>
+                           </div>
+                       ))}
+                   </div>
+                   <div className="marquee-content" aria-hidden="true">
+                       {metrics.map((m, i) => (
+                           <div key={i} className="flex items-center gap-4 whitespace-nowrap">
+                               <span className="text-4xl font-black text-slate-900">{m.value}</span>
+                               <span className="text-[12px] font-semibold tracking-[0.1em] uppercase text-blue-600">{m.label}</span>
+                               <span className="mx-8 text-slate-300">/</span>
+                           </div>
+                       ))}
+                   </div>
+               </div>
+          </div>
+          ) : null}
+        </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="border-t border-white/5 py-10 safe-bottom safe-x">
-        <div className="container mx-auto grid gap-8 px-5 sm:px-6 lg:px-8 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <div className="flex items-center gap-3">
-              <img alt="Logo de GoBeyond" className="h-7 w-7 shrink-0 object-contain" src="/logo-icon.png" />
-              <span className="text-[11px] font-black uppercase tracking-[0.28em]">
-                {shortBrand(brand.name)}
-              </span>
+        {/* PROYECTO & BENEFICIOS */}
+        <section id="proyecto" className="py-32 px-6">
+            <div className="max-w-7xl mx-auto">
+                <Reveal>
+                    <p className="text-caption mb-4">El Proyecto</p>
+                    <h2 className="heading-editorial text-[3rem] lg:text-[5rem] mb-20 text-slate-900">Visión Real</h2>
+                </Reveal>
+                
+                <div className="grid lg:grid-cols-12 gap-6">
+                    <BentoCard span="lg:col-span-8" className="bg-white/80">
+                        <MarkdownContent className="text-2xl lg:text-3xl font-light leading-snug text-slate-700">
+                            {landing.aboutBody || brand.description}
+                        </MarkdownContent>
+                        {landing.aboutBodyTwo && (
+                            <MarkdownContent className="mt-8 text-lg text-slate-400 font-light italic">
+                                {landing.aboutBodyTwo}
+                            </MarkdownContent>
+                        )}
+                    </BentoCard>
+                    
+                    <div className="lg:col-span-4 grid gap-6">
+                        {benefits.slice(0, 3).map((b, i) => (
+                            <BentoCard key={i} className="flex flex-col justify-center bg-white border-slate-100 group cursor-default">
+                                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-blue-500 mb-5">
+                                    {String(i + 1).padStart(2, "0")}
+                                </span>
+                                <p className="text-base font-semibold text-slate-800 leading-snug">{b}</p>
+                                <div className="mt-5 h-[2px] w-0 bg-blue-500 group-hover:w-full transition-all duration-500 rounded-full" />
+                            </BentoCard>
+                        ))}
+                    </div>
+                </div>
             </div>
-            <p className="mt-4 text-[11px] uppercase tracking-[0.26em] text-gray-600">
-              © {new Date().getFullYear()} · Formación de Alto Impacto · Puerto Limón, CR.
-            </p>
-            {landing.contactFormUrl ? (
-              <a
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest text-white transition hover:bg-blue-500"
-                href={landing.contactFormUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {landing.contactFormLabel || "Contacto"} &rarr;
-              </a>
-            ) : null}
-          </div>
-          <nav className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:justify-items-end">
-            {legalFooterLinks.map((item) => (
-              <a
-                key={item.href}
-                className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 transition hover:text-white"
-                href={item.href}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-        <div className="container mx-auto mt-8 border-t border-white/5 px-5 pt-6 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 opacity-60">
-            <svg aria-hidden="true" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 60 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M42.8 10.8c-.2-.1-.4-.1-.6-.1-.2-2.6-2.4-4.7-5.1-4.7-1.2 0-2.3.4-3.2 1.1C33.1 5.4 31.2 4 29 4c-3.3 0-6 2.7-6 6v.1c-2.2.3-3.9 2.2-3.9 4.5 0 2.5 2 4.5 4.5 4.5h19c2 0 3.6-1.6 3.6-3.6 0-1.8-1.3-3.3-3.4-3.7z" fill="#F6821F"/>
-            </svg>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
-              Protected by <span className="text-[#F6821F]">Cloudflare</span>
-            </span>
-          </div>
-        </div>
-      </footer>
+        </section>
+
+        {/* RUTAS DE APRENDIZAJE */}
+        <section id="rutas" className="py-32 px-6 bg-slate-50/50 border-y border-slate-100">
+            <div className="max-w-7xl mx-auto">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-20 gap-8">
+                    <Reveal>
+                        <p className="text-caption mb-4">Excelencia</p>
+                        <h2 className="heading-editorial text-[3rem] lg:text-[5rem] text-slate-900">Rutas</h2>
+                    </Reveal>
+                    <Reveal delay={200} className="max-w-md">
+                        <MarkdownContent className="text-lg text-slate-400 font-light">
+                            {landing.relevanceBody || content?.subscription?.description}
+                        </MarkdownContent>
+                    </Reveal>
+                </div>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {learningPath.map((item, i) => (
+                        <BentoCard key={i} className="group bg-white border-slate-100 flex flex-col">
+                            <div className="flex items-center justify-between mb-8">
+                                <span className="font-mono text-4xl font-black text-slate-300 group-hover:text-blue-200 transition-colors">
+                                    {String(i + 1).padStart(2, "0")}
+                                </span>
+                                <span className="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-blue-50 flex items-center justify-center transition-colors">
+                                    <svg className="w-4 h-4 text-slate-300 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                    </svg>
+                                </span>
+                            </div>
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-3">{item.title}</h3>
+                            <p className="text-sm text-slate-500 leading-relaxed flex-1">{item.status}</p>
+                            <span className="mt-6 text-[11px] font-semibold uppercase tracking-[0.1em] text-blue-500">{item.type}</span>
+                        </BentoCard>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        {/* PROGRAMAS: RICH CARDS WITH RELEVANCE + OUTCOMES */}
+        <section id="programas" className="py-32 px-6">
+            <div className="max-w-7xl mx-auto">
+                <div className="text-center mb-24">
+                    <p className="text-caption mb-6">{landing.coursesTitle || "Contenidos"}</p>
+                    <h2 className="heading-editorial text-[3rem] lg:text-[5rem] text-slate-900">{landing.coursesHeading || "Programas"}</h2>
+                    {landing.relevanceBody ? (
+                        <p className="mt-6 max-w-2xl mx-auto text-lg text-slate-500 font-light leading-relaxed">
+                            {landing.relevanceBody}
+                        </p>
+                    ) : null}
+                </div>
+
+                <div className="grid gap-32">
+                    {individualPrograms.map((program, i) => (
+                        <Reveal key={program.id} delay={i * 100} className="grid lg:grid-cols-2 gap-16 items-center">
+                            <div className={`overflow-hidden rounded-[3rem] aspect-[16/10] glass-immersive border-slate-100 shadow-2xl ${i % 2 !== 0 ? 'lg:order-2' : ''}`}>
+                                {program.image ? (
+                                    <PublicImageWithFallback
+                                        alt={program.title}
+                                        className="w-full h-full object-cover transition-all duration-1000 scale-105 hover:scale-100"
+                                        src={normalizePublicMediaUrl(program.image)}
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-50">
+                                        <span className="text-6xl font-black text-slate-300">
+                                            {String(program.title || "GB").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-6">
+                                {program.eyebrow ? (
+                                    <span className="px-4 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 text-[11px] font-semibold uppercase tracking-[0.08em]">
+                                        {program.eyebrow}
+                                    </span>
+                                ) : null}
+                                <h3 className="text-4xl lg:text-6xl font-black tracking-tight text-slate-900">{program.title}</h3>
+                                <MarkdownContent className="text-lg text-slate-500 font-light leading-relaxed">
+                                    {program.description}
+                                </MarkdownContent>
+
+                                {/* Why relevant? */}
+                                {program.relevance ? (
+                                    <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-500 mb-2">
+                                            ¿Por qué es relevante?
+                                        </p>
+                                        <p className="text-sm text-slate-600 leading-relaxed">{program.relevance}</p>
+                                    </div>
+                                ) : null}
+
+                                {/* Outcomes as bullet list */}
+                                {Array.isArray(program.outcomes) && program.outcomes.length > 0 ? (
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-3">
+                                            {landing.courseResultsLabel || "Resultados"}
+                                        </p>
+                                        <ul className="grid gap-2">
+                                            {program.outcomes.map((item, j) => (
+                                                <li key={j} className="flex gap-3 text-sm text-slate-600 leading-snug">
+                                                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ) : null}
+
+                                {/* Certification note + CTA */}
+                                <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                                    <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-blue-600">
+                                        {program.certificationNote || "Certificación Oficial"}
+                                    </p>
+                                    {program.ctaLabel ? (
+                                        <a
+                                            href={program.href || "#contacto"}
+                                            className="text-[12px] font-bold uppercase tracking-[0.1em] text-blue-500 hover:text-slate-900 transition-colors flex items-center gap-3"
+                                        >
+                                            {program.ctaLabel}
+                                        </a>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </Reveal>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        {/* PAQUETES: INSTITUTION PACKAGES */}
+        <section id="impacto" className="py-32 px-6">
+             <div className="max-w-7xl mx-auto">
+                 {packageSection ? (
+                     <Reveal className="mb-16 text-center">
+                         <p className="text-caption mb-4">{packageSection.title || "Paquetes"}</p>
+                         <h2 className="heading-editorial text-slate-900 text-[3rem] lg:text-[5rem]">
+                             {packageSection.heading || "Programas disenados para instituciones educativas."}
+                         </h2>
+                         {packageSection.subheading ? (
+                             <MarkdownContent className="mt-4 max-w-2xl mx-auto text-base text-slate-500 leading-relaxed font-light">
+                                 {packageSection.subheading}
+                             </MarkdownContent>
+                         ) : null}
+                     </Reveal>
+                 ) : null}
+
+                 {packageCards.length > 0 ? (
+                     <div className="grid gap-6 lg:grid-cols-3">
+                         {packageCards.map((pkg, i) => {
+                             const initials = String(pkg.title || "GB").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+                             const isHighlighted = i === 1;
+                             return (
+                                 <Reveal key={pkg.id || i} delay={i * 120}>
+                                     <BentoCard className={`flex flex-col h-full bg-white group ${
+                                         isHighlighted
+                                             ? 'border-blue-500/20 shadow-2xl shadow-blue-500/5 ring-1 ring-blue-500/10'
+                                             : 'border-slate-100'
+                                     }`}>
+                                         {/* Dark header with initials */}
+                                         <div className="-mx-8 -mt-8 mb-6 overflow-hidden rounded-t-[2rem] bg-slate-900 px-8 pt-8 pb-6">
+                                             <div className="absolute right-6 top-6 text-4xl font-black text-white/10 select-none">
+                                                 {initials}
+                                             </div>
+                                             <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-blue-400 relative">
+                                                 {brand.name || "Go Beyond"}
+                                             </p>
+                                         </div>
+
+                                         {pkg.eyebrow ? (
+                                             <span className="inline-block rounded-full border border-blue-600/20 bg-blue-600/8 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-3">
+                                                 {pkg.eyebrow}
+                                             </span>
+                                         ) : null}
+
+                                         <h3 className="text-xl font-black tracking-tight text-slate-900 mb-3">{pkg.title}</h3>
+
+                                         {pkg.description ? (
+                                             <MarkdownContent className="text-sm leading-relaxed text-slate-500 mb-4">
+                                                 {pkg.description}
+                                             </MarkdownContent>
+                                         ) : null}
+
+                                         {/* Available programs */}
+                                         {Array.isArray(pkg.availablePrograms) && pkg.availablePrograms.length > 0 ? (
+                                             <div className="mb-4">
+                                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-500 mb-2">
+                                                     Programas disponibles
+                                                 </p>
+                                                 <ul className="grid gap-1.5">
+                                                     {pkg.availablePrograms.map((item, j) => (
+                                                         <li key={j} className="flex gap-2.5 text-sm text-slate-500 leading-relaxed">
+                                                             <span className="mt-[0.4rem] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400/60" />
+                                                             <span className="min-w-0 break-words">{item}</span>
+                                                         </li>
+                                                     ))}
+                                                 </ul>
+                                             </div>
+                                         ) : null}
+
+                                         {/* Includes */}
+                                         {Array.isArray(pkg.includes) && pkg.includes.length > 0 ? (
+                                             <div className="mb-4">
+                                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-500 mb-2">
+                                                     Incluye
+                                                 </p>
+                                                 <ul className="grid gap-1.5">
+                                                     {pkg.includes.map((item, j) => (
+                                                         <li key={j} className="flex gap-2.5 text-sm text-slate-500 leading-relaxed">
+                                                             <span className="mt-[0.4rem] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400/60" />
+                                                             <span className="min-w-0 break-words">{item}</span>
+                                                         </li>
+                                                     ))}
+                                                 </ul>
+                                             </div>
+                                         ) : null}
+
+                                         {/* Benefits */}
+                                         {Array.isArray(pkg.benefits) && pkg.benefits.length > 0 ? (
+                                             <div className="mb-4">
+                                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-500 mb-2">
+                                                     Beneficios adicionales
+                                                 </p>
+                                                 <ul className="grid gap-1.5">
+                                                     {pkg.benefits.map((item, j) => (
+                                                         <li key={j} className="flex gap-2.5 text-sm text-slate-500 leading-relaxed">
+                                                             <span className="mt-[0.4rem] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400/60" />
+                                                             <span className="min-w-0 break-words">{item}</span>
+                                                         </li>
+                                                     ))}
+                                                 </ul>
+                                             </div>
+                                         ) : null}
+
+                                         {/* CTA */}
+                                         {pkg.ctaLabel ? (
+                                             <a
+                                                 className="mt-auto pt-5 border-t border-slate-100 inline-flex items-center justify-between text-[12px] font-bold uppercase tracking-[0.15em] text-blue-500 hover:text-slate-900 transition-colors"
+                                                 href={pkg.href || "#contacto"}
+                                                 rel={pkg.href?.startsWith("http") ? "noreferrer" : undefined}
+                                                 target={pkg.href?.startsWith("http") ? "_blank" : undefined}
+                                             >
+                                                 <span>{pkg.ctaLabel}</span>
+                                                 <span>&rarr;</span>
+                                             </a>
+                                         ) : null}
+                                     </BentoCard>
+                                 </Reveal>
+                             );
+                         })}
+                     </div>
+                 ) : null}
+             </div>
+        </section>
+
+        {/* INSTITUCIONES */}
+        {visibleInstitutions.length > 0 ? (
+        <section id="instituciones" className="py-32 px-6 bg-white border-y border-slate-100">
+             <div className="max-w-7xl mx-auto">
+                 <Reveal className="text-center mb-16">
+                     <p className="text-caption mb-4">Instituciones</p>
+                     <h2 className="heading-editorial text-[3rem] lg:text-[5rem] text-slate-900">Instituciones</h2>
+                     <p className="mt-4 max-w-xl mx-auto text-lg text-slate-500 font-light leading-relaxed">
+                         Organizaciones que confian en GoBeyond para la formacion de alto impacto.
+                     </p>
+                 </Reveal>
+                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8">
+                     {visibleInstitutions.map((inst) => (
+                         <Reveal key={inst.id} className="flex flex-col items-center gap-4">
+                             <div className="w-full aspect-[3/2] rounded-2xl border border-slate-100 bg-white p-6 flex items-center justify-center shadow-sm hover:shadow-md transition-shadow">
+                                 {inst.image ? (
+                                     <PublicImageWithFallback
+                                         alt={inst.name}
+                                         className="max-h-full max-w-full object-contain"
+                                         src={normalizePublicMediaUrl(inst.image)}
+                                     />
+                                 ) : (
+                                     <span className="text-3xl font-black text-slate-200">
+                                         {String(inst.name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                                     </span>
+                                 )}
+                             </div>
+                             <p className="text-xs font-semibold text-slate-500 text-center">{inst.name}</p>
+                         </Reveal>
+                     ))}
+                 </div>
+             </div>
+        </section>
+        ) : null}
+
+        {/* TESTIMONIOS: LIGHT VOICES */}
+        <section id="voces" className="py-32 px-6">
+            <div className="max-w-7xl mx-auto">
+                <div className="grid lg:grid-cols-2 gap-20 items-start">
+                    <Reveal>
+                        <p className="text-caption mb-4">Testimonios</p>
+                        <h2 className="heading-editorial text-[3rem] lg:text-[5rem] mb-12 text-slate-900">Testimonios</h2>
+                        <MarkdownContent className="text-lg text-slate-500 font-light max-w-md">
+                            Historias de transformación que impulsan nuestro propósito. La educación es el motor del cambio.
+                        </MarkdownContent>
+                        
+                    </Reveal>
+
+                    <div className="space-y-6">
+                        {testimonials.slice(0, 3).map((t, i) => (
+                            <BentoCard key={i} className={`bg-white border-slate-100 ${i === 0 ? 'shadow-lg' : 'shadow-none'}`}>
+                                <span aria-hidden="true" className="text-6xl text-slate-300 leading-none select-none block mb-2 font-black" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>"</span>
+                                <p className="text-base font-light leading-relaxed text-slate-600 mb-6 -mt-4">{t.quote}</p>
+                                <div className="flex items-center gap-3 pt-4 border-t border-slate-50">
+                                     <div className="h-9 w-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[10px] font-mono">
+                                         {String(t.author || "A")[0].toUpperCase()}
+                                     </div>
+                                     <div className="min-w-0">
+                                         <p className="text-[11px] font-bold text-slate-900 truncate">{t.author}</p>
+                                         <p className="text-[9px] text-slate-400 font-medium uppercase tracking-wider truncate">{t.organization}</p>
+                                     </div>
+                                </div>
+                            </BentoCard>
+                        ))}
+                        <TestimonialSubmissionForm
+                            createTestimonialSubmission={createTestimonialSubmission}
+                            turnstileSiteKey={content?.securityPublic?.siteKey}
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* CONTACTO */}
+        <section id="contacto" className="py-32 px-6 bg-slate-900 text-white">
+             <div className="max-w-7xl mx-auto grid gap-16 lg:grid-cols-[1fr_0.9fr] items-start">
+                 <Reveal>
+                     <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-400 mb-4">
+                         {landing.contactTitle || "Contacto"}
+                     </p>
+                     <h2 className="heading-editorial text-[3rem] lg:text-[5rem] text-white mb-6">
+                         Ponte en contacto y ayudanos a ampliar oportunidades.
+                     </h2>
+                     <p className="text-base text-slate-400 font-light leading-relaxed max-w-lg mb-10">
+                         {landing.contactBody || "Escribenos para conocer mas sobre nuestros programas, paquetes institucionales o alianzas estrategicas."}
+                     </p>
+                     <div className="grid gap-4">
+                         {landing.contactInfo?.emailValue ? (
+                             <a href={`mailto:${landing.contactInfo.emailValue}`} className="flex items-center gap-4 rounded-xl border border-slate-700 bg-slate-800/50 px-5 py-4 text-white hover:border-slate-600 transition-colors">
+                                 <span className="text-blue-400 text-xl">@</span>
+                                 <div>
+                                     <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">{landing.contactInfo.emailLabel || "Email"}</p>
+                                     <p className="text-sm font-semibold">{landing.contactInfo.emailValue}</p>
+                                 </div>
+                             </a>
+                         ) : null}
+                         {landing.contactInfo?.phoneValue ? (
+                             <a href={`tel:${landing.contactInfo.phoneValue.replace(/[^\d+]/g, "")}`} className="flex items-center gap-4 rounded-xl border border-slate-700 bg-slate-800/50 px-5 py-4 text-white hover:border-slate-600 transition-colors">
+                                 <span className="text-blue-400 text-xl">&#9990;</span>
+                                 <div>
+                                     <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">{landing.contactInfo.phoneLabel || "Telefono"}</p>
+                                     <p className="text-sm font-semibold">{landing.contactInfo.phoneValue}</p>
+                                 </div>
+                             </a>
+                         ) : null}
+                     </div>
+                     <div className="flex flex-wrap gap-3 mt-6">
+                         {(landing.contactActions || []).map((item) => (
+                             <a key={item} href="#contacto" className="text-[11px] font-semibold uppercase tracking-[0.1em] px-4 py-2 rounded-full border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white transition-colors">
+                                 {item}
+                             </a>
+                         ))}
+                     </div>
+                 </Reveal>
+
+                 {landing.contactFormUrl ? (
+                     <Reveal delay={200}>
+                         <div className="rounded-[2rem] border border-slate-700 bg-slate-800/30 p-8 text-center">
+                             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-400 mb-4">Formulario</p>
+                             <p className="text-lg font-semibold text-white mb-6">Completa el formulario y te respondemos pronto.</p>
+                             <a
+                                 href={landing.contactFormUrl}
+                                 target="_blank"
+                                 rel="noreferrer"
+                                 className="btn-primary h-14 px-10 rounded-full bg-blue-600 text-white text-sm font-bold tracking-[0.08em] hover:bg-blue-500 shadow-xl inline-flex items-center gap-3"
+                             >
+                                 {landing.contactFormLabel || "Abrir formulario"} <span>&rarr;</span>
+                             </a>
+                         </div>
+                     </Reveal>
+                 ) : null}
+             </div>
+        </section>
+
+        {/* NOTICIAS */}
+        <section id="noticias" className="py-32 px-6 bg-slate-50/50 border-y border-slate-100">
+             <div className="max-w-7xl mx-auto">
+                 <Reveal className="mb-16">
+                     <p className="text-caption mb-4">Noticias</p>
+                     <h2 className="heading-editorial text-[3rem] lg:text-[5rem] text-slate-900">Noticias</h2>
+                 </Reveal>
+
+                 {noticiasLoading ? (
+                     <p className="text-center text-slate-400 text-sm">Cargando noticias...</p>
+                 ) : noticiasError ? (
+                     <p className="text-center text-slate-400 text-sm">No se pudieron cargar las noticias.</p>
+                 ) : noticiasPosts.length > 0 ? (
+                     <div className="grid gap-8">
+                         {noticiasPosts.slice(0, 1).map((featured) => (
+                             <Reveal key={featured.id}>
+                                 <article className="grid lg:grid-cols-2 gap-8 items-center rounded-[2rem] overflow-hidden border border-slate-100 bg-white shadow-lg hover:shadow-xl transition-shadow">
+                                     <div className="aspect-[16/10] bg-slate-100 overflow-hidden">
+                                         {featured.image ? (
+                                             <PublicImageWithFallback
+                                                 alt={featured.title}
+                                                 className="w-full h-full object-cover"
+                                                 src={normalizePublicMediaUrl(featured.image)}
+                                             />
+                                         ) : (
+                                             <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                                                 <span className="text-6xl font-black text-slate-200">N</span>
+                                             </div>
+                                         )}
+                                     </div>
+                                     <div className="p-8 lg:py-8 lg:pr-8 lg:pl-0">
+                                         <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-500 mb-3">
+                                             {featured.source || "Noticia"}
+                                             {featured.publishedAt ? ` · ${new Date(featured.publishedAt).toLocaleDateString("es-CR")}` : ""}
+                                         </p>
+                                         <h3 className="text-2xl font-black tracking-tight text-slate-900 mb-4">{featured.title}</h3>
+                                         <p className="text-sm text-slate-500 leading-relaxed mb-6">{featured.excerpt || featured.summary}</p>
+                                         {featured.link ? (
+                                             <a href={featured.link} target="_blank" rel="noreferrer" className="text-[12px] font-bold uppercase tracking-[0.1em] text-blue-500 hover:text-slate-900 transition-colors">
+                                                 Ver referencia &rarr;
+                                             </a>
+                                         ) : null}
+                                     </div>
+                                 </article>
+                             </Reveal>
+                         ))}
+                         {noticiasPosts.length > 1 ? (
+                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                 {noticiasPosts.slice(1, 4).map((item) => (
+                                     <BentoCard key={item.id} className="bg-white border-slate-100 flex flex-col">
+                                         {item.image ? (
+                                             <div className="-mx-8 -mt-8 mb-5 overflow-hidden rounded-t-[2rem] aspect-[16/9] bg-slate-100">
+                                                 <PublicImageWithFallback
+                                                     alt={item.title}
+                                                     className="w-full h-full object-cover"
+                                                     src={normalizePublicMediaUrl(item.image)}
+                                                 />
+                                             </div>
+                                         ) : null}
+                                         <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-500 mb-2">
+                                             {item.source || "Noticia"}
+                                         </p>
+                                         <h3 className="text-lg font-black tracking-tight text-slate-900 mb-2 line-clamp-2">{item.title}</h3>
+                                         <p className="text-sm text-slate-500 leading-relaxed line-clamp-3">{item.excerpt || item.summary}</p>
+                                         {item.link ? (
+                                             <a href={item.link} target="_blank" rel="noreferrer" className="mt-4 text-[11px] font-bold uppercase tracking-[0.1em] text-blue-500 hover:text-slate-900 transition-colors">
+                                                 Ver &rarr;
+                                             </a>
+                                         ) : null}
+                                     </BentoCard>
+                                 ))}
+                             </div>
+                         ) : null}
+                         <div className="text-center mt-8">
+                             <a href="/noticias" className="btn-primary h-12 px-8 rounded-full bg-white border border-slate-200 text-slate-900 text-sm font-bold tracking-[0.08em] hover:bg-slate-50 shadow-sm inline-flex items-center gap-3">
+                                 Ver todas las noticias <span>&rarr;</span>
+                             </a>
+                         </div>
+                     </div>
+                 ) : (
+                     <div className="text-center py-16">
+                         <p className="text-slate-400 text-sm mb-6">Las noticias y publicaciones apareceran aqui cuando el administrador las publique.</p>
+                         <a href="/noticias" className="btn-primary h-12 px-8 rounded-full bg-slate-900 text-white text-sm font-bold tracking-[0.08em] hover:bg-blue-600 shadow-xl inline-flex items-center gap-3">
+                             Ir al archivo de noticias <span>&rarr;</span>
+                         </a>
+                     </div>
+                 )}
+             </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="relative py-24 px-6 border-t border-slate-100 bg-white">
+             <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
+                 <img alt="GoBeyond" className="h-12 w-12 mb-8 grayscale opacity-40" src="/logo-icon.png" />
+                 <h2 className="heading-editorial text-[4rem] lg:text-[6rem] mb-10 text-slate-200 select-none">BEYOND</h2>
+                 <div className="flex flex-wrap justify-center gap-x-10 gap-y-4 mb-12">
+                     {legalFooterLinks.map((link, i) => (
+                         <a key={i} href={link.href} className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 hover:text-blue-600 transition-colors">
+                             {link.label}
+                         </a>
+                     ))}
+                 </div>
+                 <p className="text-[11px] font-medium text-slate-400">
+                     &copy; {new Date().getFullYear()} {brand.name || "GoBeyond"}. Puerto Limon, Costa Rica.
+                 </p>
+             </div>
+        </footer>
+
+      </main>
     </div>
   );
 }

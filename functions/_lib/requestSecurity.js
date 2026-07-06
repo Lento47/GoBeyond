@@ -57,6 +57,38 @@ export const throttlePolicies = {
     scope: "user",
     windowMs: 5 * 60 * 1000,
   },
+  studentTicket: {
+    cooldownMs: 10 * 60 * 1000,
+    eventType: "security.request.student_ticket",
+    maxAttempts: 5,
+    message: "Demasiados tickets creados en poco tiempo. Intenta de nuevo mas tarde.",
+    scope: "user",
+    windowMs: 10 * 60 * 1000,
+  },
+  studentCourseRequest: {
+    cooldownMs: 60 * 60 * 1000,
+    eventType: "security.request.student_course_request",
+    maxAttempts: 3,
+    message: "Demasiadas solicitudes de cursos. Intenta de nuevo mas tarde.",
+    scope: "user",
+    windowMs: 60 * 60 * 1000,
+  },
+  studentCommunityThread: {
+    cooldownMs: 10 * 60 * 1000,
+    eventType: "security.request.student_community_thread",
+    maxAttempts: 5,
+    message: "Demasiados hilos creados en la comunidad. Intenta de nuevo mas tarde.",
+    scope: "user",
+    windowMs: 10 * 60 * 1000,
+  },
+  studentCommunityReply: {
+    cooldownMs: 10 * 60 * 1000,
+    eventType: "security.request.student_community_reply",
+    maxAttempts: 10,
+    message: "Demasiadas respuestas en la comunidad. Intenta de nuevo mas tarde.",
+    scope: "user",
+    windowMs: 10 * 60 * 1000,
+  },
 };
 
 function getAllowedOrigins(request, env) {

@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { WorkspaceView } from "../../shared/WorkspaceView";
 import {
   ackStudentNotification,
+  aiStudyBuddy,
   askStudentAssistant,
   createStudentCourseRequest,
   createStudentTicket,
 } from "../../services/contentApi";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MarkdownContent } from "../../shared/MarkdownContent";
 import { getLearningPathThemeClasses, normalizeLearningPath } from "./learningPath";
 import { workspaceChrome } from "./workspaceTheme";
@@ -108,7 +111,7 @@ function LearningRoadmapCard({ item, index, isLast = false }) {
         {item.outcome ? (
           <div className="mt-4 rounded-[18px] border border-[#d7e0ea] bg-white/90 p-4">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Resultado esperado</p>
-            <p className="mt-2 text-sm leading-relaxed text-[#435066]">{item.outcome}</p>
+            <MarkdownContent className="mt-2 text-sm leading-relaxed text-[#435066]">{item.outcome}</MarkdownContent>
           </div>
         ) : null}
       </div>
@@ -130,7 +133,7 @@ function ChatBubble({ role, content }) {
         <p className="text-[9px] font-black uppercase tracking-[0.22em] opacity-70">
           {isAssistant ? "Asistente GoBeyond" : "Consulta del estudiante"}
         </p>
-        <div className="mt-2 whitespace-pre-wrap">{content}</div>
+        <MarkdownContent className="mt-2 text-sm leading-relaxed">{content}</MarkdownContent>
       </div>
     </div>
   );
@@ -218,13 +221,47 @@ const initialCourseRequestForm = {
 
 // --- SUB-COMPONENTE: ASISTENTE CONTEXTUAL ---
 
+const CHAT_SESSIONS_KEY = "gobeyond_chat_sessions";
+const ACTIVE_SESSION_KEY = "gobeyond_active_session";
+
+function createSession(title = "Nueva conversacion") {
+  return { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, createdAt: Date.now(), messages: [{ role: "assistant", content: "¡Bienvenido al Tutor Virtual de GoBeyond! Soy tu asistente academico personal." }] };
+}
+
 function StudentAssistant({ courseCount, availableCount, activeCourses }) {
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: "Bienvenido al centro de consultas. Puedo proporcionarle información precisa sobre sus cursos activos, su progreso académico y las asignaciones pendientes.",
-    },
-  ]);
+  const [sessions, setSessions] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CHAT_SESSIONS_KEY);
+      if (saved) { const p = JSON.parse(saved); if (Array.isArray(p) && p.length) return p; }
+    } catch {}
+    return [createSession()];
+  });
+  const [activeId, setActiveId] = useState(() => {
+    try { return localStorage.getItem(ACTIVE_SESSION_KEY) || sessions[0]?.id || ""; } catch { return ""; }
+  });
+
+  const activeSession = sessions.find(s => s.id === activeId) || sessions[0];
+  const messages = activeSession?.messages || [];
+
+  // Persist
+  useEffect(() => { try { localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(sessions)); } catch {} }, [sessions]);
+  useEffect(() => { if (activeId) try { localStorage.setItem(ACTIVE_SESSION_KEY, activeId); } catch {} }, [activeId]);
+
+  function renameSession(title) {
+    setSessions(current => current.map(s => s.id === activeId ? { ...s, title: title.slice(0, 60) } : s));
+  }
+  function deleteSession(id) {
+    setSessions(current => {
+      const next = current.filter(s => s.id !== id);
+      if (id === activeId && next.length) setActiveId(next[0].id);
+      return next.length ? next : [createSession()];
+    });
+  }
+  function newChat() {
+    const s = createSession();
+    setSessions(current => [s, ...current]);
+    setActiveId(s.id);
+  }
   const [draft, setDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -237,32 +274,58 @@ function StudentAssistant({ courseCount, availableCount, activeCourses }) {
     event.preventDefault();
     const message = draft.trim();
     if (!message || submitting) return;
+    // Target active session; fallback to sessions[0]
+    const sid = sessions.find(s => s.id === activeId)?.id || sessions[0]?.id;
+    if (!sid) return; // no session available
 
-    const nextMessages = [...messages, { role: "user", content: message }];
-    setMessages(nextMessages);
+    // Rename session on first user message
+    if (activeSession?.messages.length <= 1) renameSession(message);
+
+    setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, { role: "user", content: message }] } : s));
     setDraft("");
     setError("");
     setSubmitting(true);
 
     try {
-      const response = await askStudentAssistant(undefined, {
-        message,
-        history: nextMessages.slice(-6),
+      const res = await fetch("/api/student/ai/chat-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
       });
+      if (!res.ok) throw new Error("Error del servidor");
 
-      if (response.suggestedTicket) {
-        setTicketForm((current) => ({
-          ...current,
-          subject: response.suggestedTicket.subject || current.subject,
-          description: response.suggestedTicket.description || current.description,
-          category: response.suggestedTicket.category || current.category,
-          courseId: response.suggestedTicket.courseId || current.courseId,
-        }));
+      setSessions(prev => prev.map(s => s.id === sid ? { ...s, messages: [...s.messages, { role: "assistant", content: "" }] } : s));
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const text = parsed.token || parsed.response || "";
+            if (text) {
+              setSessions(prev => prev.map(s => {
+                if (s.id !== sid) return s;
+                const msgs = [...s.messages];
+                const last = msgs[msgs.length - 1];
+                if (last?.role === "assistant") msgs[msgs.length - 1] = { ...last, content: last.content + text };
+                return { ...s, messages: msgs };
+              }));
+            }
+          } catch {}
+        }
       }
-
-      if (response.suggestTicket) setShowTicketForm(true);
-
-      setMessages((current) => [...current, { role: "assistant", content: response.answer }]);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -275,16 +338,13 @@ function StudentAssistant({ courseCount, availableCount, activeCourses }) {
     setTicketMessage("");
     setError("");
     setTicketSubmitting(true);
-
     try {
       const response = await createStudentTicket(undefined, ticketForm);
       setTicketMessage(response.message);
       setShowTicketForm(false);
       setTicketForm(initialTicketForm);
-      setMessages((current) => [
-        ...current,
-        { role: "assistant", content: "Su solicitud ha sido registrada formalmente en nuestro sistema administrativo." },
-      ]);
+      const sid2 = activeId;
+      setSessions(prev => prev.map(s => s.id === sid2 ? { ...s, messages: [...s.messages, { role: "assistant", content: "Tu solicitud ha sido registrada. Un administrador la revisara pronto." }] } : s));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -293,164 +353,127 @@ function StudentAssistant({ courseCount, availableCount, activeCourses }) {
   }
 
   return (
-    <section className="grid gap-6 scroll-mt-28 xl:grid-cols-[minmax(0,1.25fr)_22rem]" id="portal-support">
-      <div className={`${workspaceChrome.elevatedSurface} p-5 sm:p-6`}>
-        <div className="flex flex-col gap-4 border-b border-[#e7edf5] pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#c6d4ec] bg-[#eef4ff] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-[#1d4ed8]">
-              <span className="h-2 w-2 rounded-full bg-[#16a34a]" />
-              Consola de soporte
-            </div>
-            <h2 className="mt-4 text-[1.7rem] font-semibold leading-tight text-[#172033] sm:text-[2rem]">Centro de consultas del alumno</h2>
-            <p className="mt-3 text-sm leading-relaxed text-[#536277]">
-              Este canal usa el contexto de sus {courseCount} cursos activos y {availableCount} rutas disponibles para responder,
-              orientar y escalar incidencias sin perder trazabilidad.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-[#d7e0ea] bg-[#f7f9fc] px-4 py-3 text-[11px] font-semibold text-[#536277]">
-            Respuestas informativas y tickets formales bajo demanda.
-          </div>
+    <section className="grid gap-0 scroll-mt-28 xl:grid-cols-[18rem_1fr] xl:h-[calc(100vh-10rem)]" id="portal-support">
+      {/* ── Session Sidebar ── */}
+      <div className="hidden xl:flex flex-col border-r border-slate-200 bg-slate-50/50">
+        <div className="p-4 border-b border-slate-200">
+          <Button variant="outline" className="w-full justify-start gap-2 h-9 text-xs font-semibold" onClick={newChat}>
+            <svg className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
+            Nuevo chat
+          </Button>
         </div>
-
-        <div className="mt-5 rounded-[18px] border border-[#d7e0ea] bg-[#f7f9fc] p-4">
-          <div className="flex items-center justify-between border-b border-[#e7edf5] pb-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Canal de asistencia</p>
-              <p className="mt-1 text-sm text-[#536277]">Respuestas institucionales y escalamiento administrativo.</p>
-            </div>
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#435066]">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#86efac] opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
-              </span>
-              Activo
-            </div>
-          </div>
-
-          <div className="mt-4 max-h-[420px] overflow-y-auto rounded-[16px] border border-[#d7e0ea] bg-white p-4">
-            {messages.map((message, index) => (
-              <ChatBubble key={index} content={message.content} role={message.role} />
-            ))}
-          </div>
-
-          <form className="mt-5" onSubmit={handleSubmit}>
-            <div className="relative">
-              <textarea
-                className="min-h-[148px] w-full resize-none rounded-[18px] border border-[#d7e0ea] bg-white p-4 pb-16 pr-36 text-sm text-[#172033] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]"
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="Escriba su consulta academica aqui..."
-                value={draft}
-              />
-              <button
-                className="absolute bottom-4 right-4 rounded-xl bg-[#1d4ed8] px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#1e40af] disabled:opacity-50"
-                disabled={submitting || !draft.trim()}
-                type="submit"
-              >
-                {submitting ? "Procesando..." : "Enviar"}
-              </button>
-            </div>
-            <div className="mt-3 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Maximo 1,000 caracteres por consulta.</p>
-              {ticketMessage ? <p className="text-sm text-[#15803d]">{ticketMessage}</p> : null}
-            </div>
-            {error ? <p className="mt-3 text-sm text-[#b45309]">{error}</p> : null}
-          </form>
-
-          {showTicketForm ? (
-            <form className="mt-6 rounded-[18px] border border-[#d7e0ea] bg-white p-4" onSubmit={handleTicketSubmit}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6b7a90]">Escalamiento formal</p>
-                  <p className="mt-1 text-sm text-[#536277]">Convierta la consulta en ticket administrativo sin salir del portal.</p>
-                </div>
-                <button className="text-[10px] font-black uppercase tracking-[0.2em] text-[#536277]" onClick={() => setShowTicketForm(false)} type="button">
-                  Cancelar
-                </button>
-              </div>
-              <div className="mt-4 grid gap-4">
-                <input
-                  className="rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]"
-                  onChange={(event) => setTicketForm((current) => ({ ...current, subject: event.target.value }))}
-                  placeholder="Asunto de la incidencia"
-                  value={ticketForm.subject}
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <select
-                    className="rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]"
-                    onChange={(event) => setTicketForm((current) => ({ ...current, category: event.target.value }))}
-                    value={ticketForm.category}
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {sessions.map(s => (
+            <button
+              key={s.id}
+              onClick={() => setActiveId(s.id)}
+              className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all duration-150 group ${
+                s.id === activeId
+                  ? "bg-white border border-slate-200 shadow-sm"
+                  : "hover:bg-white/60 border border-transparent"
+              }`}
+            >
+              <p className="font-semibold text-slate-700 truncate">{s.title}</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-[10px] text-slate-400">{new Date(s.createdAt).toLocaleDateString("es-CR")}</p>
+                {s.id === activeId && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500"
                   >
-                    <option value="soporte">Soporte tecnico</option>
-                    <option value="acceso">Problemas de acceso</option>
-                    <option value="curso">Contenido del curso</option>
-                  </select>
-                  <select
-                    className="rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]"
-                    onChange={(event) => setTicketForm((current) => ({ ...current, courseId: event.target.value }))}
-                    value={ticketForm.courseId}
-                  >
-                    <option value="">Referencia general</option>
-                    {activeCourses.map((course) => (
-                      <option key={course.id} value={course.id}>
-                        {course.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <textarea
-                  className="min-h-[150px] rounded-xl border border-[#d7e0ea] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition placeholder:text-[#94a3b8] focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]"
-                  onChange={(event) => setTicketForm((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Detalle los motivos de su solicitud administrativa..."
-                  value={ticketForm.description}
-                />
-                <button
-                  className="w-fit rounded-xl bg-[#1d4ed8] px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#1e40af] disabled:opacity-50"
-                  disabled={ticketSubmitting}
-                  type="submit"
-                >
-                  {ticketSubmitting ? "Enviando..." : "Registrar ticket"}
-                </button>
+                    <svg className="size-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
+                )}
               </div>
-            </form>
-          ) : null}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid gap-6">
-        <div className={`${workspaceChrome.surface} p-5`}>
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Consultas frecuentes</p>
-          <div className="mt-4 grid gap-3">
-            {[
-              "Mis cursos activos y fechas de vencimiento.",
-              "Asignaciones pendientes y material de estudio.",
-              "Progreso detallado de mis modulos.",
-              "Explorar nuevos programas de GoBeyond.",
-            ].map((suggestion) => (
-              <button
-                key={suggestion}
-                className="rounded-[16px] border border-[#d7e0ea] bg-white px-4 py-3 text-left text-sm text-[#435066] transition hover:border-[#1d4ed8] hover:bg-[#eef4ff]"
-                onClick={() => setDraft(suggestion)}
-                type="button"
-              >
-                {suggestion}
-              </button>
-            ))}
+      {/* ── Main Chat ── */}
+      <div className="flex flex-col bg-white min-h-0">
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4 shrink-0">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white font-bold text-sm shadow-[0_4px_10px_rgba(29,78,216,0.25)]">AI</div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-slate-800">Tutor Virtual</h2>
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-[11px] text-slate-500">En linea · GoBeyond AI</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <Badge variant="secondary" className="text-[9px]">{courseCount} cursos</Badge>
+            <button onClick={newChat} className="xl:hidden size-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+              <svg className="size-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
+            </button>
           </div>
         </div>
-        <div className={`${workspaceChrome.mutedSurface} p-5`}>
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Alcance institucional</p>
-          <p className="mt-3 text-sm leading-relaxed text-[#536277]">
-            Este asistente opera bajo un marco academico. Para gestiones sensibles o seguimiento formal,
-            puede elevar un ticket desde esta misma consola.
-          </p>
-          <button
-            className="mt-4 w-full rounded-xl border border-[#d7e0ea] bg-white py-3 text-sm font-medium text-[#172033] transition hover:border-[#bbc8d9] hover:bg-[#fbfcfe]"
-            onClick={() => setShowTicketForm(true)}
-            type="button"
-          >
-            Contactar administracion
-          </button>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-5 py-6 space-y-5">
+          {messages.length <= 1 && (
+            <div className="text-center py-12">
+              <div className="flex size-16 mx-auto items-center justify-center rounded-2xl bg-blue-50 mb-4">
+                <svg className="size-8 text-blue-500" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/></svg>
+              </div>
+              <h3 className="text-base font-bold text-slate-700">Tutor Virtual GoBeyond</h3>
+              <p className="mt-1.5 text-sm text-slate-500 max-w-md mx-auto">Preguntame sobre tus cursos, certificaciones o metodologias de estudio.</p>
+            </div>
+          )}
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
+              {msg.role === "assistant" && (
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white text-[10px] font-bold shadow-sm mt-0.5">AI</div>
+              )}
+              <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-blue-600 text-white rounded-br-md"
+                  : "bg-slate-50 text-slate-700 border border-slate-100 rounded-bl-md"
+              }`}>
+                {msg.role === "assistant" ? (
+                  msg.content ? (
+                    <MarkdownContent className="text-sm">{msg.content}</MarkdownContent>
+                  ) : submitting ? (
+                    <span className="inline-flex gap-1">
+                      <span className="size-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="size-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="size-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </span>
+                  ) : null
+                ) : (
+                  <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                )}
+              </div>
+              {msg.role === "user" && (
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-600 text-[10px] font-bold mt-0.5">U</div>
+              )}
+            </div>
+          ))}
         </div>
+
+        {/* Input */}
+        <form className="border-t border-slate-100 p-4 shrink-0" onSubmit={handleSubmit}>
+          <div className="flex items-end gap-3">
+            <textarea
+              className="flex-1 min-h-[48px] max-h-[120px] resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white"
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
+              placeholder="Pregunta lo que quieras..."
+              rows={1}
+              value={draft}
+            />
+            <Button
+              size="icon"
+              className="shrink-0 size-11 rounded-2xl"
+              disabled={submitting || !draft.trim()}
+              type="submit"
+            >
+              <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+            </Button>
+          </div>
+          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        </form>
       </div>
     </section>
   );
@@ -489,7 +512,7 @@ function CourseDetailModal({ course, onClose }) {
   const bannerColor = gcBannerColors[courseColorIndex(course.id)];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-[#0f172a]/32 backdrop-blur-[8px]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-[#0f172a]/32 ">
       <div className="flex max-h-screen w-full max-w-6xl flex-col overflow-hidden sm:max-h-[calc(100vh-2rem)] sm:mt-4 sm:rounded-[24px] border-0 sm:border sm:border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.22)]">
 
         {/* Google Classroom-style header banner */}
@@ -529,30 +552,30 @@ function CourseDetailModal({ course, onClose }) {
           <div className="grid gap-6 p-5 sm:gap-8 sm:p-8 lg:grid-cols-[minmax(0,1.25fr)_22rem]">
 
             {/* Left — Stream */}
-            <div className="min-w-0 space-y-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Materiales del curso</p>
-                <h4 className="mt-1 text-lg font-semibold text-[#172033]">Stream</h4>
+            <div className="min-w-0 space-y-5">
+              <div className="border-b border-slate-100 pb-4">
+                <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">Materiales del curso</p>
+                <h3 className="mt-1 text-xl font-bold text-slate-800">Stream de clase</h3>
               </div>
 
               {assignments.length ? (
                 assignments.map((assignment) => (
-                  <div key={assignment.id} className="overflow-hidden rounded-[18px] border border-[#d7e0ea] bg-white">
-                    <div className="flex items-start gap-3 p-4">
-                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eef4ff]">
-                        <svg aria-hidden="true" className="h-4 w-4 text-[#1d4ed8]" fill="none" viewBox="0 0 24 24">
+                  <div key={assignment.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <div className="flex items-start gap-4 p-5">
+                      <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                        <svg aria-hidden="true" className="size-5 text-blue-600" fill="none" viewBox="0 0 24 24">
                           <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
                         </svg>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <h5 className="font-semibold text-[#172033]">{assignment.title}</h5>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <h4 className="text-base font-bold text-slate-800">{assignment.title}</h4>
                           {assignment.dueLabel ? (
-                            <span className="shrink-0 rounded-full border border-[#d7e0ea] bg-[#f7f9fc] px-2.5 py-0.5 text-[10px] font-semibold text-[#6b7a90]">{assignment.dueLabel}</span>
+                            <Badge variant="outline" className="shrink-0 text-[10px] font-semibold">{assignment.dueLabel}</Badge>
                           ) : null}
                         </div>
                         {assignment.instruction ? (
-                          <p className="mt-2 text-sm leading-relaxed text-[#536277]">{assignment.instruction}</p>
+                          <MarkdownContent className="mt-3 text-sm leading-relaxed text-slate-600">{assignment.instruction}</MarkdownContent>
                         ) : null}
                       </div>
                     </div>
@@ -720,7 +743,7 @@ function CourseInterestModal({ course, user, onClose, onSubmit, submitting, mess
   if (!course) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#0f172a]/28 px-4 py-4 backdrop-blur-[8px] sm:px-6 sm:py-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#0f172a]/28 px-4 py-4  sm:px-6 sm:py-6">
       <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[24px] border border-[#d7e0ea] bg-[#f5f7fb] shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100vh-3rem)]">
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e2e0db] p-5 sm:p-8">
           <div className="max-w-md">
@@ -893,7 +916,7 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
               <h1 className="mt-2 text-[1.6rem] font-semibold leading-tight text-[#172033] sm:text-[2rem]">
                 {dashboard.dashboard.welcomeTitle || `Bienvenido, ${dashboard.user?.fullName?.split(" ")[0] || "Estudiante"}`}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#536277]">{dashboard.dashboard.summary}</p>
+              <MarkdownContent className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">{dashboard.dashboard.summary}</MarkdownContent>
               {dashboardError ? <p className="mt-3 text-sm text-[#b45309]">{dashboardError}</p> : null}
             </div>
             <div className="shrink-0 text-right">
@@ -1061,7 +1084,7 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#1d4ed8]">Anuncio</p>
                   <p className="mt-1 font-semibold text-[#172033]">{activeNotification.title}</p>
-                  {activeNotification.body ? <p className="mt-1 text-sm text-[#536277]">{activeNotification.body}</p> : null}
+                  {activeNotification.body ? <MarkdownContent className="mt-1 text-sm text-slate-600">{activeNotification.body}</MarkdownContent> : null}
                   {activeNotification.ctaPath ? (
                     <button className="mt-2 text-sm font-semibold text-[#1d4ed8] underline-offset-2 hover:underline" onClick={handleNotificationAction} type="button">
                       Ver más →
@@ -1131,7 +1154,7 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
                                 ) : null}
                               </div>
                               {assignment.instruction ? (
-                                <p className="mt-1 text-xs leading-relaxed text-[#536277] line-clamp-2">{assignment.instruction}</p>
+                                <div className="mt-1 text-xs leading-relaxed text-slate-600 line-clamp-2"><MarkdownContent>{assignment.instruction}</MarkdownContent></div>
                               ) : null}
                               {/* Attachments */}
                               {(assignment.attachments ?? []).length ? (
@@ -1368,7 +1391,7 @@ export function StudentExperience({ activeSection = "portal-overview", dashboard
                 Actualizacion academica
               </div>
               <h2 className="mt-3 text-xl font-semibold text-[#172033]">{activeNotification.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-[#536277]">{activeNotification.body}</p>
+              <MarkdownContent className="mt-2 text-sm leading-relaxed text-slate-600">{activeNotification.body}</MarkdownContent>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <button

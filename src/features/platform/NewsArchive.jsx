@@ -177,8 +177,7 @@ export function NewsArchive({ content, noticiasPosts = [], noticiasLoading = fal
             Archivo de noticias de GoBeyond
           </h1>
           <p className="mt-6 text-base leading-relaxed text-gray-400 sm:text-lg">
-            Aqui reunimos anuncios, alianzas, novedades y publicaciones oficiales para que el landing siga limpio sin
-            perder visibilidad editorial.
+            Anuncios, alianzas, novedades y publicaciones oficiales gestionadas por el equipo de GoBeyond.
           </p>
         </div>
 
@@ -212,7 +211,7 @@ export function NewsArchive({ content, noticiasPosts = [], noticiasLoading = fal
 
           {!publishedNews.length ? (
             <EmptyState
-              body="Cuando Make.com envie nuevas publicaciones desde Facebook o LinkedIn, apareceran aqui ordenadas por fecha."
+              body="Las noticias y publicaciones apareceran aqui cuando el administrador las publique."
               title="Sin noticias publicadas"
             />
           ) : null}

@@ -25,9 +25,32 @@ const markdownComponents = {
 };
 
 function normalizeNewlines(text) {
-  // Preserve existing double newlines, convert lone \n to \n\n so single
-  // line breaks in admin textarea input become paragraph breaks in markdown.
-  return text.replace(/(?<!\n)\n(?!\n)/g, "\n\n");
+  // Convert lone \n to \n\n for paragraph breaks, but preserve:
+  // - Table rows (lines containing |)
+  // - Already-double newlines
+  const lines = text.split("\n");
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const prev = out[out.length - 1];
+    const isTableLine = line.includes("|");
+    const prevWasTableLine = prev != null && prev !== "" && prev.includes("|");
+
+    if (i === 0) {
+      out.push(line);
+    } else if (line === "") {
+      out.push(line);
+    } else if (prev === "") {
+      out.push(line);
+    } else if (isTableLine && prevWasTableLine) {
+      // Table rows stay consecutive — no blank line between them
+      out.push(line);
+    } else {
+      // Regular text: add blank line before this line
+      out.push("", line);
+    }
+  }
+  return out.join("\n");
 }
 
 export function MarkdownContent({ children, className = "" }) {

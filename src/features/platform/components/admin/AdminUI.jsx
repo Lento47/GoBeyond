@@ -2,9 +2,17 @@ import { useEffect, useRef } from "react";
 import { workspaceChrome } from "../../workspaceTheme";
 import { MarkdownContent } from "../../../../shared/MarkdownContent";
 import { revealModal } from "../../../../shared/workspaceAnimations";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select as ShadSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const focusRing =
-  "outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#bfdbfe]";
+  "outline-none transition-all duration-200 focus-visible:border-[#1d4ed8] focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:ring-offset-0";
 
 export function SectionCard({
   title,
@@ -18,16 +26,16 @@ export function SectionCard({
   const padding = density === "compact" ? "p-4 sm:p-5" : "p-5 sm:p-6";
   const frame =
     accent === "dark"
-      ? "rounded-2xl border border-[#c6d4ec] bg-[#eef4ff] text-[#172033] shadow-sm"
+      ? "rounded-2xl border border-[#c6d4ec] bg-[#eef4ff] text-[#172033] shadow-sm hover:shadow-md transition-shadow duration-300"
       : accent === "strong"
-        ? "rounded-2xl border border-[#c6d4ec] bg-[#f3f7ff] text-[#172033] shadow-sm"
-        : "rounded-2xl border border-[#d8e2f0] bg-white text-[#172033] shadow-sm";
+        ? "rounded-2xl border border-[#c6d4ec] bg-[#f3f7ff] text-[#172033] shadow-sm hover:shadow-md transition-shadow duration-300"
+        : "rounded-2xl border border-[#d8e2f0] bg-white text-[#172033] shadow-sm hover:shadow-md hover:border-[#c6d4ec] transition-all duration-300";
   const divider = "border-[#e8eef6]";
 
   return (
     <section className={`${frame} overflow-hidden ${variant === "flat" ? "shadow-none" : ""} ${padding}`}>
       <div className={`mb-5 border-b ${divider} pb-4`}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">{eyebrow}</p>
+        <Badge variant="secondary" className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em]">{eyebrow}</Badge>
         <h3 className="mt-2 text-[1.05rem] font-semibold leading-tight text-[#172033] sm:text-[1.3rem]">{title}</h3>
         {description ? (
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#536277]">{description}</p>
@@ -41,7 +49,7 @@ export function SectionCard({
 export function Input(props) {
   return (
     <input
-      className={`w-full rounded-xl border border-[#d8e2f0] bg-white px-3.5 py-2.5 text-sm text-[#172033] placeholder:text-[#94a3b8] ${focusRing}`}
+      className={`w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 hover:border-slate-300 ${focusRing}`}
       {...props}
     />
   );
@@ -50,7 +58,7 @@ export function Input(props) {
 export function Textarea(props) {
   return (
     <textarea
-      className={`min-h-[120px] w-full rounded-xl border border-[#d8e2f0] bg-white px-3.5 py-2.5 text-sm text-[#172033] placeholder:text-[#94a3b8] ${focusRing}`}
+      className={`min-h-[120px] w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 hover:border-slate-300 ${focusRing}`}
       {...props}
     />
   );
@@ -59,19 +67,47 @@ export function Textarea(props) {
 export function Field({ label, hint, children, className = "" }) {
   return (
     <div className={`grid gap-1.5 ${className}`}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b7a90]">{label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">{label}</p>
       {children}
-      {hint ? <p className="text-[11px] text-[#8899b0] leading-relaxed">{hint}</p> : null}
+      {hint ? <p className="text-[11px] text-slate-400 leading-relaxed">{hint}</p> : null}
     </div>
   );
 }
 
-export function Select(props) {
+export function Select({ value, onChange, children, placeholder, ...props }) {
+  // Parse React <option> children into {value, label} pairs for shadcn Select
+  const options = [];
+  function collectOptions(nodes) {
+    const arr = Array.isArray(nodes) ? nodes : [nodes];
+    for (const child of arr) {
+      if (!child || typeof child !== "object") continue;
+      // Handle .map() results — arrays of elements
+      if (Array.isArray(child)) { collectOptions(child); continue; }
+      // Handle <option value="x">label</option>
+      if (child?.props?.value != null && child?.props?.children != null) {
+        options.push({ value: child.props.value, label: child.props.children, disabled: child.props.disabled });
+      }
+    }
+  }
+  collectOptions(children);
+
+  const currentOption = options.find((o) => String(o.value) === String(value));
+  const displayText = currentOption?.label || placeholder || "Seleccionar...";
+
+  // Always use shadcn Select — no native fallback
   return (
-    <select
-      className={`w-full rounded-xl border border-[#d8e2f0] bg-white px-3.5 py-2.5 text-sm text-[#172033] ${focusRing}`}
-      {...props}
-    />
+    <ShadSelect value={value} onValueChange={(v) => onChange?.({ target: { value: v, name: props.name } })}>
+      <SelectTrigger className="w-full rounded-xl border-slate-200 bg-white text-slate-900 hover:border-slate-300 transition-all duration-200">
+        <SelectValue placeholder={placeholder}>{displayText}</SelectValue>
+      </SelectTrigger>
+      <SelectContent className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-lg">
+        {options.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled} className="rounded-lg text-sm text-slate-900">
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </ShadSelect>
   );
 }
 
@@ -122,19 +158,19 @@ const statusPillMap = {
 export function StatusPill({ status = "draft", label }) {
   const s = statusPillMap[status] ?? statusPillMap.draft;
   return (
-    <span className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${s.bg} ${s.border} ${s.text}`}>
+    <Badge variant="outline" className={`shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] ${s.bg} ${s.text} border-0`}>
       {label}
-    </span>
+    </Badge>
   );
 }
 
 export function PillButton({ active, children, className = "", ...props }) {
   return (
     <button
-      className={`rounded-xl border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition ${
+      className={`rounded-xl border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-200 active:scale-95 ${
         active
-          ? "border-[#1d4ed8] bg-[#1d4ed8] text-white"
-          : "border-[#d7e0ea] bg-white text-[#536277] hover:border-[#bbc8d9] hover:bg-[#f7f9fc]"
+          ? "border-blue-600 bg-blue-600 text-white shadow-[0_2px_8px_rgba(29,78,216,0.25)]"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm"
       } ${className}`}
       {...props}
     >
@@ -146,7 +182,7 @@ export function PillButton({ active, children, className = "", ...props }) {
 export function ActionButton({ children, className = "", ...props }) {
   return (
     <button
-      className={`rounded-xl bg-[#1d4ed8] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e40af] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-700 hover:shadow-[0_4px_14px_rgba(29,78,216,0.3)] hover:-translate-y-px active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 ${className}`}
       {...props}
     >
       {children}
@@ -157,7 +193,7 @@ export function ActionButton({ children, className = "", ...props }) {
 export function SecondaryButton({ children, className = "", ...props }) {
   return (
     <button
-      className={`rounded-xl border border-[#d8e2f0] bg-white px-4 py-2.5 text-sm font-medium text-[#172033] transition hover:border-[#bbc8d9] hover:bg-[#f7f9fc] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm hover:-translate-y-px active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       {...props}
     >
       {children}
@@ -167,12 +203,18 @@ export function SecondaryButton({ children, className = "", ...props }) {
 
 export function FilterInput({ value, onChange, placeholder }) {
   return (
-    <input
-      className={`w-full rounded-xl border border-[#d8e2f0] bg-white px-3.5 py-2.5 text-sm text-[#172033] placeholder:text-[#94a3b8] ${focusRing}`}
-      onChange={onChange}
-      placeholder={placeholder}
-      value={value}
-    />
+    <div className="relative">
+      <svg className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8" />
+        <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
+      </svg>
+      <input
+        className={`w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 hover:border-slate-300 ${focusRing}`}
+        onChange={onChange}
+        placeholder={placeholder}
+        value={value}
+      />
+    </div>
   );
 }
 
@@ -219,9 +261,9 @@ export function MediaLibraryStrip({ items, onSelect, emptyLabel = "Aun no hay ar
 export function SectionToolbar({ action, children, helper }) {
   return (
     <div className="mb-5 grid gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          {helper ? <p className="text-sm leading-relaxed text-[#536277]">{helper}</p> : null}
+          {helper ? <p className="text-[13px] leading-relaxed text-slate-500">{helper}</p> : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
@@ -240,7 +282,22 @@ export function ModalShell({
   panelClassName = "",
 }) {
   const panelRef = useRef(null);
-  useEffect(() => { revealModal(panelRef.current); }, []);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    revealModal(panelRef.current);
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.scrollbarGutter = "auto";
+    const handleEscape = (e) => { if (e.key === "Escape") onCloseRef.current(); };
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.documentElement.style.scrollbarGutter = "";
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   const panelSizeClass =
     size === "full"
@@ -251,23 +308,23 @@ export function ModalShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-[#0f172a]/28 px-2 py-2 backdrop-blur-[8px] sm:px-4 sm:py-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-900/40 px-4 py-6 sm:px-6 sm:py-8 animate-in fade-in duration-200"
       onClick={onClose}
       role="presentation"
     >
       <div
         ref={panelRef}
-        className={`flex w-full flex-col overflow-hidden rounded-[22px] border border-[#d8e2f0] bg-[#f8fbff] shadow-[0_24px_70px_rgba(15,23,42,0.16)] ${panelSizeClass} ${panelClassName}`}
+        className={`flex w-full flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl ${panelSizeClass} ${panelClassName}`}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <div className="sticky top-0 z-10 border-b border-[#d8e2f0] bg-[#f8fbff]/96 px-5 py-5 backdrop-blur sm:px-6">
+        <div className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 px-5 py-5 backdrop-blur sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b7a90]">Editor</p>
-              <h3 className="mt-2 text-2xl font-semibold leading-tight text-[#172033] sm:text-3xl">{title}</h3>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#536277]">{subtitle}</p>
+              <Badge variant="secondary" className="mb-2 text-[9px] font-bold uppercase tracking-[0.15em]">Editor</Badge>
+              <h3 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h3>
+              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-500">{subtitle}</p>
             </div>
             <SecondaryButton onClick={onClose} type="button">
               Cerrar
@@ -282,9 +339,14 @@ export function ModalShell({
 
 export function EmptyState({ title, body }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[#d8e2f0] bg-[#f8fbff] p-6 text-[#536277]">
-      <p className="font-medium text-[#172033]">{title}</p>
-      <p className="mt-2 text-sm leading-relaxed">{body}</p>
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-10 text-center">
+      <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-slate-100">
+        <svg className="size-5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        </svg>
+      </div>
+      <p className="text-sm font-semibold text-slate-700">{title}</p>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">{body}</p>
     </div>
   );
 }
@@ -292,7 +354,7 @@ export function EmptyState({ title, body }) {
 export function RowCard({ eyebrow, title, meta, body, children, density = "comfortable" }) {
   if (density === "compact") {
     return (
-      <div className="flex min-w-0 items-center gap-3 border-b border-[#edf1f7] bg-white px-3 py-3 last:border-b-0 transition hover:bg-[#f7f9fc]">
+      <div className="flex min-w-0 items-center gap-3 border-b border-slate-100 bg-white px-3 py-3 last:border-b-0 transition-all duration-200 hover:bg-slate-50 active:bg-slate-100">
         <div className="min-w-0 flex-1">
           {eyebrow ? <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#8899b0]">{eyebrow}</p> : null}
           <p className={`${eyebrow ? "mt-0.5" : ""} truncate text-sm font-semibold leading-tight text-[#172033]`}>{title}</p>
@@ -304,7 +366,7 @@ export function RowCard({ eyebrow, title, meta, body, children, density = "comfo
     );
   }
   return (
-    <div className="min-w-0 rounded-2xl border border-[#d8e2f0] bg-white p-4 transition hover:border-[#bbc8d9] hover:bg-[#fbfdff]">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm active:bg-slate-50">
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           {eyebrow ? <p className="break-words text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7a90]">{eyebrow}</p> : null}

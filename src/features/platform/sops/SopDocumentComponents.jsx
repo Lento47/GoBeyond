@@ -57,11 +57,11 @@ export function DocumentMetaList({ sop }) {
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
       {items.map(([label, value]) => (
-        <div key={label} className="rounded-[1rem] border border-[#dbe3ec] bg-[#f8fafc] p-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">{label}</p>
-          <p className="mt-2 text-sm leading-relaxed text-[#172033]">{value}</p>
+        <div key={label}>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">{label}</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-900">{value}</p>
         </div>
       ))}
     </div>
@@ -70,23 +70,23 @@ export function DocumentMetaList({ sop }) {
 
 function DocumentSection({ section, collapsed, onToggle }) {
   return (
-    <article className="overflow-hidden rounded-[1.2rem] border border-[#dbe3ec] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.04)]" id={section.id}>
+    <article className="border-b border-slate-100 last:border-b-0" id={section.id}>
       <button
-        className="flex w-full items-center justify-between gap-4 border-b border-[#e7edf5] px-5 py-4 text-left"
+        className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors duration-200 hover:bg-slate-50 active:bg-slate-100"
         onClick={() => onToggle(section.id)}
         type="button"
       >
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6b7a90]">Seccion</p>
-          <h3 className="mt-1 text-lg font-semibold text-[#172033]">{section.title}</h3>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Seccion</p>
+          <h3 className="mt-1 text-lg font-semibold text-slate-800">{section.title}</h3>
         </div>
-        <span className="rounded-full border border-[#d7e0ea] px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#536277]">
+        <span className="rounded-full border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
           {collapsed ? "Expandir" : "Contraer"}
         </span>
       </button>
       {!collapsed ? (
-        <div className="px-5 py-5">
-          <MarkdownContent className="text-sm leading-7 text-[#324154]">{section.content}</MarkdownContent>
+        <div className="pb-5">
+          <MarkdownContent className="text-sm leading-7 text-slate-600">{section.content}</MarkdownContent>
         </div>
       ) : null}
     </article>
@@ -228,7 +228,7 @@ export function SopLibraryPanel({
   action,
 }) {
   return (
-    <SectionCard title="Biblioteca documental" description="Busca, filtra y abre los documentos operativos desde un mismo lugar.">
+    <div className="grid gap-4">
       <SectionToolbar action={action} helper={helper}>
         <div className="grid gap-3">
           <FilterInput onChange={(event) => onQueryChange(event.target.value)} placeholder="Buscar por codigo, titulo, resumen, version o contenido" value={query} />
@@ -265,10 +265,10 @@ export function SopLibraryPanel({
           <div className="grid gap-3">
             {items.map((item) => (
               <button
-                className={`rounded-[1rem] border p-4 text-left transition ${
+                className={`rounded-[1rem] border p-4 text-left transition-all duration-200 ease-out active:scale-[0.98] ${
                   selectedId === item.id
-                    ? "border-[#1d4ed8] bg-[#eff6ff]"
-                    : "border-[#dbe3ec] bg-white hover:border-[#bbc8d9] hover:bg-[#fbfcfe]"
+                    ? "border-blue-500 bg-blue-50 shadow-[0_2px_8px_rgba(29,78,216,0.1)] ring-1 ring-blue-200/50"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm"
                 }`}
                 key={item.id}
                 onClick={() => onSelect(item.id)}
@@ -300,7 +300,7 @@ export function SopLibraryPanel({
       ) : (
         <EmptyState title="Sin documentos" body="Ajusta los filtros o crea el primer documento desde este mismo modulo." />
       )}
-    </SectionCard>
+    </div>
   );
 }
 
