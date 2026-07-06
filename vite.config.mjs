@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   build: {
+    // bust-cache-1783358605751: true,
     // Usamos un target moderno para reducir el tamaño del polyfill
     target: 'esnext',
     // Eliminamos manualChunks manual para que Vite resuelva las dependencias circulares solo
